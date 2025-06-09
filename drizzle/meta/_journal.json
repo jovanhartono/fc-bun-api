@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1748630910887,
+      "tag": "0000_daffy_blue_blade",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1748678324360,
+      "tag": "0001_opposite_toro",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1749406879123,
+      "tag": "0002_charming_kate_bishop",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1749478666334,
+      "tag": "0003_glorious_deathbird",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1749490223779,
+      "tag": "0004_unusual_kylun",
+      "breakpoints": true
+    }
+  ]
+}
