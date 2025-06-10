@@ -91,18 +91,52 @@ export const customersRelations = relations(
   })
 );
 
-export const servicesTable = pgTable(
-  "services",
+export const categoriesTable = pgTable("categories", {
+  id: integer().primaryKey().generatedByDefaultAsIdentity(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  is_active: boolean("is_active").notNull().default(false),
+});
+
+export const productsTable = pgTable(
+  "products",
   {
     id: integer().primaryKey().generatedAlwaysAsIdentity(),
     name: varchar("name", { length: 255 }).notNull(),
-    code: varchar("code", { length: 4 }).unique().notNull(),
+    category_id: integer("category_id")
+      .references(() => categoriesTable.id)
+      .notNull(),
+    sku: varchar("sku", { length: 255 }).unique().notNull(),
+    stock: integer("stock").default(0).notNull(),
+    uom: varchar({ length: 12 }).default("pcs").notNull(),
     description: text("description"),
     is_active: boolean("is_active").default(false).notNull(),
   },
-  (table) => [check("code_len_check", sql`LENGTH(TRIM(${table.code})) = 4`)]
+  (table) => [check("stock_non_negative_check", sql`${table.stock} >= 0`)]
 );
-export const servicesRelations = relations(servicesTable, ({ many }) => ({
+export const productsRelations = relations(productsTable, ({ one, many }) => ({
+  category: one(categoriesTable, {
+    fields: [productsTable.category_id],
+    references: [categoriesTable.id],
+  }),
+  orderProducts: many(ordersProductsTable),
+}));
+
+export const servicesTable = pgTable("services", {
+  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  name: varchar("name", { length: 255 }).notNull(),
+  code: varchar("code", { length: 4 }).unique().notNull(),
+  description: text("description"),
+  is_active: boolean("is_active").default(false).notNull(),
+  category_id: integer("category_id")
+    .references(() => categoriesTable.id)
+    .notNull(),
+});
+export const servicesRelations = relations(servicesTable, ({ one, many }) => ({
+  category: one(categoriesTable, {
+    fields: [servicesTable.category_id],
+    references: [categoriesTable.id],
+  }),
   store_service_prices: many(storeServicePricesTable),
   orders: many(ordersServicesTable),
 }));
@@ -253,6 +287,54 @@ export const ordersServicesRelations = relations(
     service: one(servicesTable, {
       fields: [ordersServicesTable.service_id],
       references: [servicesTable.id],
+    }),
+  })
+);
+
+export const ordersProductsTable = pgTable(
+  "orders_products_table",
+  {
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    order_id: integer("order_id").references(() => ordersTable.id, {
+      onDelete: "cascade",
+    }),
+    product_id: integer("product_id").references(() => productsTable.id, {
+      onDelete: "cascade",
+    }),
+
+    qty: integer("qty").notNull().default(1),
+
+    // snapshot
+    price: decimal("price", { precision: 12, scale: 2 }).default("0"),
+
+    subtotal: decimal("subtotal", {
+      precision: 12,
+      scale: 2,
+    }).generatedAlwaysAs(
+      (): SQL => sql`${ordersProductsTable.price} * ${ordersProductsTable.qty}`
+    ),
+  },
+  (table) => [
+    index("order_products_order_idx").on(table.order_id),
+    index("order_products_product_idx").on(table.product_id),
+    index("order_products_order_product_idx").on(
+      table.order_id,
+      table.product_id
+    ),
+    check("price_non_negative_check", sql`${table.price} >= 0`),
+    check("qty_positive_check", sql`${table.qty} > 0`),
+  ]
+);
+export const ordersProductsRelations = relations(
+  ordersProductsTable,
+  ({ one }) => ({
+    order: one(ordersTable, {
+      fields: [ordersProductsTable.order_id],
+      references: [ordersTable.id],
+    }),
+    product: one(productsTable, {
+      fields: [ordersProductsTable.product_id],
+      references: [productsTable.id],
     }),
   })
 );

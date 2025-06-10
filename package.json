@@ -2,7 +2,18 @@
  "type": "module",
  "name": "fc-bun-api",
  "scripts": {
-  "dev": "bun run --hot src/index.ts"
+  "dev": "bun run --hot src/index.ts",
+  "pull:dev": "bun drizzle-kit pull --config=drizzle-dev.config.ts",
+  "pull:prod": "bun drizzle-kit pull --config=drizzle-prod.config.ts",
+
+  "push:dev": "bun drizzle-kit push --config=drizzle-dev.config.ts",
+  "push:prod": "bun drizzle-kit push --config=drizzle-prod.config.ts",
+
+  "generate:dev": "bun drizzle-kit generate --config=drizzle-dev.config.ts",
+  "generate:prod": "bun drizzle-kit generate --config=drizzle-prod.config.ts",
+
+  "migrate:dev": "bun drizzle-kit migrate --config=drizzle-dev.config.ts",
+  "migrate:prod": "bun drizzle-kit migrate --config=drizzle-prod.config.ts"
  },
  "dependencies": {
   "@hono/zod-validator": "^0.7.0",
