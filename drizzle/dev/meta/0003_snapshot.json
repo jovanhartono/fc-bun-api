@@ -1,6 +1,6 @@
 {
-  "id": "45b86636-329b-4704-9102-3d0f6ee139d1",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "5085c78a-cbd2-4537-a21d-4d04a6572a78",
+  "prevId": "3ffdf351-352b-4229-8e2c-d9a2d637f3fc",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -575,6 +575,12 @@
           "notNull": true,
           "default": "'unpaid'"
         },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "total": {
           "name": "total",
           "type": "numeric(12, 2)",
@@ -875,6 +881,13 @@
           "primaryKey": false,
           "notNull": true
         },
+        "cogs": {
+          "name": "cogs",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
         "stock": {
           "name": "stock",
           "type": "integer",
@@ -986,6 +999,13 @@
           "type": "varchar(4)",
           "primaryKey": false,
           "notNull": true
+        },
+        "cogs": {
+          "name": "cogs",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
         },
         "description": {
           "name": "description",

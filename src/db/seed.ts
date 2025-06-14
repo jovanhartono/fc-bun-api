@@ -1,5 +1,5 @@
 import { db } from "./index";
-import { userRoleEnum, usersTable } from "./schema";
+import { usersTable } from "./schema";
 
 const adminPassword = "rojpyp-2cuzdo-rozmoP";
 async function main() {

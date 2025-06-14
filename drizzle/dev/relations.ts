@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm/relations";
-import { stores, customers, categories, services, users, orders, ordersServicesTable, storeServicePrices, ordersProductsTable, products } from "./schema";
+import { stores, customers, users, orders, paymentMethods, categories, services, ordersServices, storeServicePrices, ordersProducts, products } from "./schema";
 
 export const customersRelations = relations(customers, ({one, many}) => ({
 	store: one(stores, {
@@ -13,20 +13,6 @@ export const storesRelations = relations(stores, ({many}) => ({
 	customers: many(customers),
 	orders: many(orders),
 	storeServicePrices: many(storeServicePrices),
-}));
-
-export const servicesRelations = relations(services, ({one, many}) => ({
-	category: one(categories, {
-		fields: [services.categoryId],
-		references: [categories.id]
-	}),
-	ordersServicesTables: many(ordersServicesTable),
-	storeServicePrices: many(storeServicePrices),
-}));
-
-export const categoriesRelations = relations(categories, ({many}) => ({
-	services: many(services),
-	products: many(products),
 }));
 
 export const ordersRelations = relations(orders, ({one, many}) => ({
@@ -48,8 +34,12 @@ export const ordersRelations = relations(orders, ({one, many}) => ({
 		fields: [orders.customerId],
 		references: [customers.id]
 	}),
-	ordersServicesTables: many(ordersServicesTable),
-	ordersProductsTables: many(ordersProductsTable),
+	paymentMethod: one(paymentMethods, {
+		fields: [orders.paymentMethodId],
+		references: [paymentMethods.id]
+	}),
+	ordersServices: many(ordersServices),
+	ordersProducts: many(ordersProducts),
 }));
 
 export const usersRelations = relations(users, ({many}) => ({
@@ -61,13 +51,31 @@ export const usersRelations = relations(users, ({many}) => ({
 	}),
 }));
 
-export const ordersServicesTableRelations = relations(ordersServicesTable, ({one}) => ({
+export const paymentMethodsRelations = relations(paymentMethods, ({many}) => ({
+	orders: many(orders),
+}));
+
+export const servicesRelations = relations(services, ({one, many}) => ({
+	category: one(categories, {
+		fields: [services.categoryId],
+		references: [categories.id]
+	}),
+	ordersServices: many(ordersServices),
+	storeServicePrices: many(storeServicePrices),
+}));
+
+export const categoriesRelations = relations(categories, ({many}) => ({
+	services: many(services),
+	products: many(products),
+}));
+
+export const ordersServicesRelations = relations(ordersServices, ({one}) => ({
 	order: one(orders, {
-		fields: [ordersServicesTable.orderId],
+		fields: [ordersServices.orderId],
 		references: [orders.id]
 	}),
 	service: one(services, {
-		fields: [ordersServicesTable.serviceId],
+		fields: [ordersServices.serviceId],
 		references: [services.id]
 	}),
 }));
@@ -83,19 +91,19 @@ export const storeServicePricesRelations = relations(storeServicePrices, ({one})
 	}),
 }));
 
-export const ordersProductsTableRelations = relations(ordersProductsTable, ({one}) => ({
+export const ordersProductsRelations = relations(ordersProducts, ({one}) => ({
 	order: one(orders, {
-		fields: [ordersProductsTable.orderId],
+		fields: [ordersProducts.orderId],
 		references: [orders.id]
 	}),
 	product: one(products, {
-		fields: [ordersProductsTable.productId],
+		fields: [ordersProducts.productId],
 		references: [products.id]
 	}),
 }));
 
 export const productsRelations = relations(products, ({one, many}) => ({
-	ordersProductsTables: many(ordersProductsTable),
+	ordersProducts: many(ordersProducts),
 	category: one(categories, {
 		fields: [products.categoryId],
 		references: [categories.id]

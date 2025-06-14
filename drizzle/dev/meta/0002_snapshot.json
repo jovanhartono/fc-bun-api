@@ -1,6 +1,6 @@
 {
-  "id": "45b86636-329b-4704-9102-3d0f6ee139d1",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "3ffdf351-352b-4229-8e2c-d9a2d637f3fc",
+  "prevId": "45b86636-329b-4704-9102-3d0f6ee139d1",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -574,6 +574,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'unpaid'"
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "total": {
           "name": "total",

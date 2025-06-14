@@ -267,90 +267,6 @@
       "policies": {},
       "isRLSEnabled": false
     },
-    "public.services": {
-      "name": "services",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "identity": {
-            "type": "always",
-            "name": "services_id_seq",
-            "increment": "1",
-            "minValue": "1",
-            "maxValue": "2147483647",
-            "startWith": "1",
-            "cache": "1",
-            "cycle": false,
-            "schema": "public"
-          }
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "code": {
-          "name": "code",
-          "type": "varchar(4)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "is_active": {
-          "name": "is_active",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "category_id": {
-          "name": "category_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "services_category_id_categories_id_fk": {
-          "name": "services_category_id_categories_id_fk",
-          "tableFrom": "services",
-          "tableTo": "categories",
-          "schemaTo": "public",
-          "columnsFrom": [
-            "category_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "services_code_unique": {
-          "columns": [
-            "code"
-          ],
-          "nullsNotDistinct": false,
-          "name": "services_code_unique"
-        }
-      },
-      "checkConstraints": {},
-      "policies": {},
-      "isRLSEnabled": false
-    },
     "public.orders": {
       "name": "orders",
       "schema": "",
@@ -386,15 +302,8 @@
           "notNull": true,
           "default": "'unpaid'"
         },
-        "total_amount": {
-          "name": "total_amount",
-          "type": "numeric(12, 2)",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'0'"
-        },
-        "discount_amount": {
-          "name": "discount_amount",
+        "discount": {
+          "name": "discount",
           "type": "numeric(12, 2)",
           "primaryKey": false,
           "notNull": true,
@@ -437,9 +346,38 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true
+        },
+        "payment_method_id": {
+          "name": "payment_method_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "total": {
+          "name": "total",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'0'"
         }
       },
       "indexes": {
+        "order_code_idx": {
+          "name": "order_code_idx",
+          "columns": [
+            {
+              "expression": "code",
+              "asc": true,
+              "nulls": "last",
+              "opclass": "text_ops",
+              "isExpression": false
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "order_customer_idx": {
           "name": "order_customer_idx",
           "columns": [
@@ -545,6 +483,20 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
+        },
+        "orders_payment_method_id_payment_methods_id_fk": {
+          "name": "orders_payment_method_id_payment_methods_id_fk",
+          "tableFrom": "orders",
+          "tableTo": "payment_methods",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "payment_method_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -558,9 +510,17 @@
         }
       },
       "checkConstraints": {
-        "positive_check": {
-          "name": "positive_check",
-          "value": "(total_amount >= (0)::numeric) AND (discount_amount >= (0)::numeric)"
+        "total_non_negative_check": {
+          "name": "total_non_negative_check",
+          "value": "total >= (0)::numeric"
+        },
+        "discount_non_negative_check": {
+          "name": "discount_non_negative_check",
+          "value": "discount >= (0)::numeric"
+        },
+        "discount_valid_check": {
+          "name": "discount_valid_check",
+          "value": "total >= discount"
         }
       },
       "policies": {},
@@ -666,8 +626,130 @@
       "policies": {},
       "isRLSEnabled": false
     },
-    "public.orders_services_table": {
-      "name": "orders_services_table",
+    "public.services": {
+      "name": "services",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "services_id_seq",
+            "increment": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "startWith": "1",
+            "cache": "1",
+            "cycle": false,
+            "schema": "public"
+          }
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "code": {
+          "name": "code",
+          "type": "varchar(4)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "category_id": {
+          "name": "category_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "service_code_idx": {
+          "name": "service_code_idx",
+          "columns": [
+            {
+              "expression": "code",
+              "asc": true,
+              "nulls": "last",
+              "opclass": "text_ops",
+              "isExpression": false
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "service_name_idx": {
+          "name": "service_name_idx",
+          "columns": [
+            {
+              "expression": "name",
+              "asc": true,
+              "nulls": "last",
+              "opclass": "text_ops",
+              "isExpression": false
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "services_category_id_categories_id_fk": {
+          "name": "services_category_id_categories_id_fk",
+          "tableFrom": "services",
+          "tableTo": "categories",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "category_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "services_code_unique": {
+          "columns": [
+            "code"
+          ],
+          "nullsNotDistinct": false,
+          "name": "services_code_unique"
+        }
+      },
+      "checkConstraints": {
+        "code_len_check": {
+          "name": "code_len_check",
+          "value": "(length(TRIM(BOTH FROM code)) >= 1) AND (length(TRIM(BOTH FROM code)) <= 4)"
+        }
+      },
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "public.orders_services": {
+      "name": "orders_services",
       "schema": "",
       "columns": {
         "id": {
@@ -713,15 +795,28 @@
           "notNull": false,
           "default": "'0'"
         },
+        "discount": {
+          "name": "discount",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
         "subtotal": {
           "name": "subtotal",
           "type": "numeric(12, 2)",
           "primaryKey": false,
           "notNull": false,
           "generated": {
-            "as": "(price * (qty)::numeric)",
+            "as": "((price * (qty)::numeric) - discount)",
             "type": "stored"
           }
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -784,7 +879,7 @@
       "foreignKeys": {
         "orders_services_table_order_id_orders_id_fk": {
           "name": "orders_services_table_order_id_orders_id_fk",
-          "tableFrom": "orders_services_table",
+          "tableFrom": "orders_services",
           "tableTo": "orders",
           "schemaTo": "public",
           "columnsFrom": [
@@ -798,7 +893,7 @@
         },
         "orders_services_table_service_id_services_id_fk": {
           "name": "orders_services_table_service_id_services_id_fk",
-          "tableFrom": "orders_services_table",
+          "tableFrom": "orders_services",
           "tableTo": "services",
           "schemaTo": "public",
           "columnsFrom": [
@@ -821,6 +916,10 @@
         "qty_positive_check": {
           "name": "qty_positive_check",
           "value": "qty > 0"
+        },
+        "discount_valid_check": {
+          "name": "discount_valid_check",
+          "value": "(price * (qty)::numeric) >= discount"
         }
       },
       "policies": {},
@@ -932,8 +1031,8 @@
       "policies": {},
       "isRLSEnabled": false
     },
-    "public.orders_products_table": {
-      "name": "orders_products_table",
+    "public.orders_products": {
+      "name": "orders_products",
       "schema": "",
       "columns": {
         "id": {
@@ -979,15 +1078,28 @@
           "notNull": false,
           "default": "'0'"
         },
+        "discount": {
+          "name": "discount",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
         "subtotal": {
           "name": "subtotal",
           "type": "numeric(12, 2)",
           "primaryKey": false,
           "notNull": false,
           "generated": {
-            "as": "(price * (qty)::numeric)",
+            "as": "((price * (qty)::numeric) - discount)",
             "type": "stored"
           }
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -1050,7 +1162,7 @@
       "foreignKeys": {
         "orders_products_table_order_id_orders_id_fk": {
           "name": "orders_products_table_order_id_orders_id_fk",
-          "tableFrom": "orders_products_table",
+          "tableFrom": "orders_products",
           "tableTo": "orders",
           "schemaTo": "public",
           "columnsFrom": [
@@ -1064,7 +1176,7 @@
         },
         "orders_products_table_product_id_products_id_fk": {
           "name": "orders_products_table_product_id_products_id_fk",
-          "tableFrom": "orders_products_table",
+          "tableFrom": "orders_products",
           "tableTo": "products",
           "schemaTo": "public",
           "columnsFrom": [
@@ -1087,6 +1199,10 @@
         "qty_positive_check": {
           "name": "qty_positive_check",
           "value": "qty > 0"
+        },
+        "discount_valid_check": {
+          "name": "discount_valid_check",
+          "value": "(price * (qty)::numeric) >= discount"
         }
       },
       "policies": {},
@@ -1159,7 +1275,24 @@
           "default": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "product_name_idx": {
+          "name": "product_name_idx",
+          "columns": [
+            {
+              "expression": "name",
+              "asc": true,
+              "nulls": "last",
+              "opclass": "text_ops",
+              "isExpression": false
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "products_category_id_categories_id_fk": {
           "name": "products_category_id_categories_id_fk",
@@ -1192,6 +1325,70 @@
           "value": "stock >= 0"
         }
       },
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "public.payment_methods": {
+      "name": "payment_methods",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "payment_methods_id_seq",
+            "increment": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "startWith": "1",
+            "cache": "1",
+            "cycle": false,
+            "schema": "public"
+          }
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "code": {
+          "name": "code",
+          "type": "varchar(6)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "payment_methods_code_unique": {
+          "columns": [
+            "code"
+          ],
+          "nullsNotDistinct": false,
+          "name": "payment_methods_code_unique"
+        }
+      },
+      "checkConstraints": {},
       "policies": {},
       "isRLSEnabled": false
     }

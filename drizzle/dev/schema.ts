@@ -1,4 +1,4 @@
-import { pgTable, index, foreignKey, unique, integer, varchar, text, timestamp, boolean, check, numeric, uniqueIndex, pgEnum } from "drizzle-orm/pg-core"
+import { pgTable, index, foreignKey, unique, integer, varchar, text, timestamp, boolean, uniqueIndex, check, numeric, pgEnum } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 
 export const orderPaymentStatus = pgEnum("order_payment_status", ['paid', 'partial', 'unpaid'])
@@ -45,35 +45,21 @@ export const users = pgTable("users", {
 	unique("users_username_unique").on(table.username),
 ]);
 
-export const services = pgTable("services", {
-	id: integer().primaryKey().generatedAlwaysAsIdentity({ name: "services_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 2147483647, cache: 1 }),
-	name: varchar({ length: 255 }).notNull(),
-	code: varchar({ length: 4 }).notNull(),
-	description: text(),
-	isActive: boolean("is_active").default(false).notNull(),
-	categoryId: integer("category_id").notNull(),
-}, (table) => [
-	foreignKey({
-			columns: [table.categoryId],
-			foreignColumns: [categories.id],
-			name: "services_category_id_categories_id_fk"
-		}),
-	unique("services_code_unique").on(table.code),
-]);
-
 export const orders = pgTable("orders", {
 	id: integer().primaryKey().generatedAlwaysAsIdentity({ name: "orders_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 2147483647, cache: 1 }),
 	code: varchar({ length: 12 }).notNull(),
 	paymentStatus: orderPaymentStatus("payment_status").default('unpaid').notNull(),
-	totalAmount: numeric("total_amount", { precision: 12, scale:  2 }).default('0').notNull(),
-	discountAmount: numeric("discount_amount", { precision: 12, scale:  2 }).default('0').notNull(),
+	discount: numeric({ precision: 12, scale:  2 }).default('0').notNull(),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull(),
 	createdBy: integer("created_by").notNull(),
 	updatedBy: integer("updated_by").notNull(),
 	storeId: integer("store_id").notNull(),
 	customerId: integer("customer_id").notNull(),
+	paymentMethodId: integer("payment_method_id"),
+	total: numeric({ precision: 12, scale:  2 }).default('0'),
 }, (table) => [
+	uniqueIndex("order_code_idx").using("btree", table.code.asc().nullsLast().op("text_ops")),
 	index("order_customer_idx").using("btree", table.customerId.asc().nullsLast().op("int4_ops")),
 	index("order_payment_status_idx").using("btree", table.paymentStatus.asc().nullsLast().op("enum_ops")),
 	index("order_store_idx").using("btree", table.storeId.asc().nullsLast().op("int4_ops")),
@@ -97,8 +83,15 @@ export const orders = pgTable("orders", {
 			foreignColumns: [customers.id],
 			name: "orders_customer_id_customers_id_fk"
 		}),
+	foreignKey({
+			columns: [table.paymentMethodId],
+			foreignColumns: [paymentMethods.id],
+			name: "orders_payment_method_id_payment_methods_id_fk"
+		}),
 	unique("orders_code_unique").on(table.code),
-	check("positive_check", sql`(total_amount >= (0)::numeric) AND (discount_amount >= (0)::numeric)`),
+	check("total_non_negative_check", sql`total >= (0)::numeric`),
+	check("discount_non_negative_check", sql`discount >= (0)::numeric`),
+	check("discount_valid_check", sql`total >= discount`),
 ]);
 
 export const stores = pgTable("stores", {
@@ -117,13 +110,34 @@ export const stores = pgTable("stores", {
 	check("code_len_check", sql`length(TRIM(BOTH FROM code)) = 3`),
 ]);
 
-export const ordersServicesTable = pgTable("orders_services_table", {
+export const services = pgTable("services", {
+	id: integer().primaryKey().generatedAlwaysAsIdentity({ name: "services_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 2147483647, cache: 1 }),
+	name: varchar({ length: 255 }).notNull(),
+	code: varchar({ length: 4 }).notNull(),
+	description: text(),
+	isActive: boolean("is_active").default(false).notNull(),
+	categoryId: integer("category_id").notNull(),
+}, (table) => [
+	index("service_code_idx").using("btree", table.code.asc().nullsLast().op("text_ops")),
+	index("service_name_idx").using("btree", table.name.asc().nullsLast().op("text_ops")),
+	foreignKey({
+			columns: [table.categoryId],
+			foreignColumns: [categories.id],
+			name: "services_category_id_categories_id_fk"
+		}),
+	unique("services_code_unique").on(table.code),
+	check("code_len_check", sql`(length(TRIM(BOTH FROM code)) >= 1) AND (length(TRIM(BOTH FROM code)) <= 4)`),
+]);
+
+export const ordersServices = pgTable("orders_services", {
 	id: integer().primaryKey().generatedAlwaysAsIdentity({ name: "orders_services_table_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 2147483647, cache: 1 }),
 	orderId: integer("order_id"),
 	serviceId: integer("service_id"),
 	qty: integer().default(1).notNull(),
 	price: numeric({ precision: 12, scale:  2 }).default('0'),
-	subtotal: numeric({ precision: 12, scale:  2 }).generatedAlwaysAs(sql`(price * (qty)::numeric)`),
+	discount: numeric({ precision: 12, scale:  2 }).default('0').notNull(),
+	subtotal: numeric({ precision: 12, scale:  2 }).generatedAlwaysAs(sql`((price * (qty)::numeric) - discount)`),
+	notes: text(),
 }, (table) => [
 	index("order_services_order_idx").using("btree", table.orderId.asc().nullsLast().op("int4_ops")),
 	index("order_services_order_service_idx").using("btree", table.orderId.asc().nullsLast().op("int4_ops"), table.serviceId.asc().nullsLast().op("int4_ops")),
@@ -140,6 +154,7 @@ export const ordersServicesTable = pgTable("orders_services_table", {
 		}).onDelete("cascade"),
 	check("price_non_negative_check", sql`price >= (0)::numeric`),
 	check("qty_positive_check", sql`qty > 0`),
+	check("discount_valid_check", sql`(price * (qty)::numeric) >= discount`),
 ]);
 
 export const storeServicePrices = pgTable("store_service_prices", {
@@ -162,13 +177,15 @@ export const storeServicePrices = pgTable("store_service_prices", {
 	check("price_non_negative_check", sql`price >= 0`),
 ]);
 
-export const ordersProductsTable = pgTable("orders_products_table", {
+export const ordersProducts = pgTable("orders_products", {
 	id: integer().primaryKey().generatedAlwaysAsIdentity({ name: "orders_products_table_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 2147483647, cache: 1 }),
 	orderId: integer("order_id"),
 	productId: integer("product_id"),
 	qty: integer().default(1).notNull(),
 	price: numeric({ precision: 12, scale:  2 }).default('0'),
-	subtotal: numeric({ precision: 12, scale:  2 }).generatedAlwaysAs(sql`(price * (qty)::numeric)`),
+	discount: numeric({ precision: 12, scale:  2 }).default('0').notNull(),
+	subtotal: numeric({ precision: 12, scale:  2 }).generatedAlwaysAs(sql`((price * (qty)::numeric) - discount)`),
+	notes: text(),
 }, (table) => [
 	index("order_products_order_idx").using("btree", table.orderId.asc().nullsLast().op("int4_ops")),
 	index("order_products_order_product_idx").using("btree", table.orderId.asc().nullsLast().op("int4_ops"), table.productId.asc().nullsLast().op("int4_ops")),
@@ -185,6 +202,7 @@ export const ordersProductsTable = pgTable("orders_products_table", {
 		}).onDelete("cascade"),
 	check("price_non_negative_check", sql`price >= (0)::numeric`),
 	check("qty_positive_check", sql`qty > 0`),
+	check("discount_valid_check", sql`(price * (qty)::numeric) >= discount`),
 ]);
 
 export const products = pgTable("products", {
@@ -197,6 +215,7 @@ export const products = pgTable("products", {
 	description: text(),
 	isActive: boolean("is_active").default(false).notNull(),
 }, (table) => [
+	index("product_name_idx").using("btree", table.name.asc().nullsLast().op("text_ops")),
 	foreignKey({
 			columns: [table.categoryId],
 			foreignColumns: [categories.id],
@@ -204,4 +223,14 @@ export const products = pgTable("products", {
 		}),
 	unique("products_sku_unique").on(table.sku),
 	check("stock_non_negative_check", sql`stock >= 0`),
+]);
+
+export const paymentMethods = pgTable("payment_methods", {
+	id: integer().primaryKey().generatedAlwaysAsIdentity({ name: "payment_methods_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 2147483647, cache: 1 }),
+	name: varchar({ length: 255 }).notNull(),
+	code: varchar({ length: 6 }).notNull(),
+	isActive: boolean("is_active").default(false).notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	unique("payment_methods_code_unique").on(table.code),
 ]);
