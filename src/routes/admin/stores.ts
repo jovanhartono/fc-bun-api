@@ -43,13 +43,13 @@ app
     const id = c.req.param("id");
     const storeData = c.req.valid("json");
 
-    const [{ name: storeName }] = await db
+    const [store] = await db
       .update(storesTable)
       .set(storeData)
       .where(eq(storesTable.id, Number(id)))
       .returning();
 
-    return c.json(success(undefined, `Successfully updated ${storeName}`));
+    return c.json(success(store, `Successfully updated ${store.name}`));
   });
 
 export default app;

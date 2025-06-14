@@ -1,0 +1,2 @@
+ALTER TABLE "orders_products" ADD COLUMN "subtotal" numeric(12, 2) GENERATED ALWAYS AS (("orders_products"."price" * "orders_products"."qty") - "orders_products"."discount") STORED;--> statement-breakpoint
+ALTER TABLE "orders_services" ADD COLUMN "subtotal" numeric(12, 2) GENERATED ALWAYS AS (("orders_services"."price" * "orders_services"."qty") - "orders_services"."discount") STORED;

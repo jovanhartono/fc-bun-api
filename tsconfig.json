@@ -1,5 +1,8 @@
 {
   "compilerOptions": {
+    "target": "esnext",
+    "module": "esnext",
+      "moduleResolution": "node",
     "strict": true,
     "jsx": "react-jsx",
     "jsxImportSource": "hono/jsx",

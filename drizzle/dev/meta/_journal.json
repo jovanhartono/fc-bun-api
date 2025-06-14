@@ -29,6 +29,20 @@
       "when": 1749666510058,
       "tag": "0003_naive_aaron_stack",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1749904244080,
+      "tag": "0004_solid_colleen_wing",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1749910136878,
+      "tag": "0005_salty_stingray",
+      "breakpoints": true
     }
   ]
 }

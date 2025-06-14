@@ -7,6 +7,7 @@ import {
   integer,
   pgEnum,
   pgTable,
+  smallint,
   text,
   timestamp,
   uniqueIndex,
@@ -37,6 +38,7 @@ export const usersTable = pgTable("users", {
 });
 export const usersRelations = relations(usersTable, ({ many }) => ({
   orders: many(ordersTable),
+  orderServices: many(ordersServicesTable),
 }));
 
 // store
@@ -74,6 +76,16 @@ export const customersTable = pgTable(
       .references(() => storesTable.id)
       .notNull(),
     created_at: timestamp("created_at").defaultNow().notNull(),
+    created_by: integer("created_by")
+      .references(() => usersTable.id)
+      .notNull(),
+    updated_at: timestamp("updated_at")
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+    updated_by: integer("updated_by")
+      .references(() => usersTable.id)
+      .notNull(),
   },
   (table) => [
     index("customer_name_idx").on(table.name),
@@ -88,11 +100,19 @@ export const customersRelations = relations(
       references: [storesTable.id],
     }),
     orders: many(ordersTable),
+    createdBy: one(usersTable, {
+      fields: [customersTable.created_by],
+      references: [usersTable.id],
+    }),
+    updatedBy: one(usersTable, {
+      fields: [customersTable.updated_by],
+      references: [usersTable.id],
+    }),
   })
 );
 
 export const categoriesTable = pgTable("categories", {
-  id: integer().primaryKey().generatedByDefaultAsIdentity(),
+  id: integer().primaryKey().generatedAlwaysAsIdentity(),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
   is_active: boolean("is_active").notNull().default(false),
@@ -161,7 +181,7 @@ export const storeServicePricesTable = pgTable(
   "store_service_prices",
   {
     id: integer().primaryKey().generatedAlwaysAsIdentity(),
-    price: integer("price").notNull(),
+    price: decimal("price", { precision: 12, scale: 2 }).notNull(),
     store_id: integer("store_id").references(() => storesTable.id, {
       onDelete: "cascade",
     }),
@@ -208,6 +228,12 @@ export const orderPaymentStatusEnum = pgEnum("order_payment_status", [
   "partial",
   "unpaid",
 ]);
+export const orderStatusEnum = pgEnum("order_status_enum", [
+  "created",
+  "processing",
+  "completed",
+  "cancelled",
+]);
 export const ordersTable = pgTable(
   "orders",
   {
@@ -220,6 +246,8 @@ export const ordersTable = pgTable(
     customer_id: integer("customer_id")
       .references(() => customersTable.id)
       .notNull(),
+
+    status: orderStatusEnum("status").default("created").notNull(),
 
     payment_method_id: integer("payment_method_id").references(
       () => paymentMethodsTable.id
@@ -241,6 +269,9 @@ export const ordersTable = pgTable(
       .notNull()
       .defaultNow()
       .$onUpdate(() => new Date()),
+
+    completed_at: timestamp("completed_at"),
+    cancelled_at: timestamp("cancelled_at"),
 
     // cashier
     created_by: integer("created_by")
@@ -282,6 +313,7 @@ export const ordersRelations = relations(ordersTable, ({ one, many }) => ({
     references: [usersTable.id],
   }),
   services: many(ordersServicesTable),
+  products: many(ordersProductsTable),
 }));
 
 export const ordersServicesTable = pgTable(
@@ -296,13 +328,15 @@ export const ordersServicesTable = pgTable(
     }),
     notes: text("notes"),
 
-    qty: integer("qty").notNull().default(1),
+    qty: smallint("qty").notNull().default(1),
 
     // snapshot
     price: decimal("price", { precision: 12, scale: 2 }).default("0"),
     discount: decimal("discount", { precision: 12, scale: 2 })
       .default("0")
       .notNull(),
+
+    handler_id: integer("handler_id").references(() => usersTable.id),
 
     subtotal: decimal("subtotal", {
       precision: 12,
@@ -329,7 +363,7 @@ export const ordersServicesTable = pgTable(
 );
 export const ordersServicesRelations = relations(
   ordersServicesTable,
-  ({ one }) => ({
+  ({ one, many }) => ({
     order: one(ordersTable, {
       fields: [ordersServicesTable.order_id],
       references: [ordersTable.id],
@@ -337,6 +371,34 @@ export const ordersServicesRelations = relations(
     service: one(servicesTable, {
       fields: [ordersServicesTable.service_id],
       references: [servicesTable.id],
+    }),
+    images: many(orderServicesImagesTable),
+    handler: one(usersTable, {
+      fields: [ordersServicesTable.handler_id],
+      references: [usersTable.id],
+    }),
+  })
+);
+
+export const orderServicesImagesTable = pgTable("order_services_images", {
+  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  order_service_id: integer("order_service_id").references(
+    () => ordersServicesTable.id,
+    { onDelete: "cascade" }
+  ),
+  image_url: varchar("image_url", { length: 255 }).notNull(),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+  updated_at: timestamp("updated_at")
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+export const orderServicesImagesRelations = relations(
+  orderServicesImagesTable,
+  ({ one }) => ({
+    orderService: one(ordersServicesTable, {
+      fields: [orderServicesImagesTable.order_service_id],
+      references: [ordersServicesTable.id],
     }),
   })
 );
@@ -353,7 +415,7 @@ export const ordersProductsTable = pgTable(
     }),
     notes: text("notes"),
 
-    qty: integer("qty").notNull().default(1),
+    qty: smallint("qty").notNull().default(1),
 
     // snapshot
     price: decimal("price", { precision: 12, scale: 2 }).default("0"),
