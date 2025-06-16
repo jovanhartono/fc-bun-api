@@ -1,21 +1,10 @@
-import { logger } from "hono/logger";
-import { cors } from "hono/cors";
-import { HTTPException } from "hono/http-exception";
-import authRoutes from "@/routes/auth";
-import { adminMiddleware } from "@/middlewares/admin";
 import app from "@/app";
+import { adminMiddleware } from "@/middlewares/admin";
 import adminRoutes from "@/routes/admin";
+import authRoutes from "@/routes/auth";
 import { failure } from "@/utils/http";
+import { HTTPException } from "hono/http-exception";
 import { StatusCodes } from "http-status-codes";
-
-// logger
-app.use(logger());
-// cors
-app.use(
-  cors({
-    origin: ["https://example.org"],
-  })
-);
 
 // routes
 app.route("/auth", authRoutes);
@@ -35,6 +24,11 @@ app.onError((err, c) => {
       switch (err.cause.code) {
         case "23505": {
           statusCode = StatusCodes.CONFLICT;
+          break;
+        }
+
+        default: {
+          statusCode = StatusCodes.INTERNAL_SERVER_ERROR;
         }
       }
     }

@@ -1,5 +1,5 @@
-import { db } from "./index";
-import { usersTable } from "./schema";
+import { db } from "@/db";
+import { usersTable } from "@/db/schema";
 
 const adminPassword = "rojpyp-2cuzdo-rozmoP";
 const passwordHash = await Bun.password.hash(adminPassword);

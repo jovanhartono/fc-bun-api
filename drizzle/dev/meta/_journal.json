@@ -1,48 +1,48 @@
 {
-  "version": "7",
-  "dialect": "postgresql",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "7",
-      "when": 1749666139467,
-      "tag": "0000_handy_blue_shield",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1749666235636,
-      "tag": "0001_high_bloodaxe",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1749666353988,
-      "tag": "0002_grey_leper_queen",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1749666510058,
-      "tag": "0003_naive_aaron_stack",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1749904244080,
-      "tag": "0004_solid_colleen_wing",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1749910136878,
-      "tag": "0005_salty_stingray",
-      "breakpoints": true
-    }
-  ]
+	"version": "7",
+	"dialect": "postgresql",
+	"entries": [
+		{
+			"idx": 0,
+			"version": "7",
+			"when": 1749666139467,
+			"tag": "0000_handy_blue_shield",
+			"breakpoints": true
+		},
+		{
+			"idx": 1,
+			"version": "7",
+			"when": 1749666235636,
+			"tag": "0001_high_bloodaxe",
+			"breakpoints": true
+		},
+		{
+			"idx": 2,
+			"version": "7",
+			"when": 1749666353988,
+			"tag": "0002_grey_leper_queen",
+			"breakpoints": true
+		},
+		{
+			"idx": 3,
+			"version": "7",
+			"when": 1749666510058,
+			"tag": "0003_naive_aaron_stack",
+			"breakpoints": true
+		},
+		{
+			"idx": 4,
+			"version": "7",
+			"when": 1749904244080,
+			"tag": "0004_solid_colleen_wing",
+			"breakpoints": true
+		},
+		{
+			"idx": 5,
+			"version": "7",
+			"when": 1749910136878,
+			"tag": "0005_salty_stingray",
+			"breakpoints": true
+		}
+	]
 }

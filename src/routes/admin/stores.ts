@@ -25,7 +25,7 @@ app
 
     return c.json(
       success(store, "Successfully adding new store"),
-      StatusCodes.CREATED
+      StatusCodes.CREATED,
     );
   });
 

@@ -1,4 +1,4 @@
-import { relations, SQL, sql } from "drizzle-orm";
+import { type SQL, relations, sql } from "drizzle-orm";
 import {
   boolean,
   check,
@@ -55,7 +55,7 @@ export const storesTable = pgTable(
     is_active: boolean().default(false).notNull(),
     created_at: timestamp().defaultNow().notNull(),
   },
-  (table) => [check("code_len_check", sql`LENGTH(TRIM(${table.code})) = 3`)]
+  (table) => [check("code_len_check", sql`LENGTH(TRIM(${table.code})) = 3`)],
 );
 export const storesRelations = relations(storesTable, ({ many }) => ({
   servicePrices: many(storeServicePricesTable),
@@ -90,7 +90,7 @@ export const customersTable = pgTable(
   (table) => [
     index("customer_name_idx").on(table.name),
     index("customer_phone_idx").on(table.phone_number),
-  ]
+  ],
 );
 export const customersRelations = relations(
   customersTable,
@@ -108,7 +108,7 @@ export const customersRelations = relations(
       fields: [customersTable.updated_by],
       references: [usersTable.id],
     }),
-  })
+  }),
 );
 
 export const categoriesTable = pgTable("categories", {
@@ -136,7 +136,7 @@ export const productsTable = pgTable(
   (table) => [
     index("product_name_idx").on(table.name),
     check("stock_non_negative_check", sql`${table.stock} >= 0`),
-  ]
+  ],
 );
 export const productsRelations = relations(productsTable, ({ one, many }) => ({
   category: one(categoriesTable, {
@@ -164,9 +164,9 @@ export const servicesTable = pgTable(
     index("service_code_idx").on(table.code),
     check(
       "code_len_check",
-      sql`LENGTH(TRIM(${table.code})) >= 1 AND LENGTH(TRIM(${table.code})) <= 4`
+      sql`LENGTH(TRIM(${table.code})) >= 1 AND LENGTH(TRIM(${table.code})) <= 4`,
     ),
-  ]
+  ],
 );
 export const servicesRelations = relations(servicesTable, ({ one, many }) => ({
   category: one(categoriesTable, {
@@ -192,7 +192,7 @@ export const storeServicePricesTable = pgTable(
   (table) => [
     uniqueIndex("store_service_idx").on(table.store_id, table.service_id),
     check("price_non_negative_check", sql`${table.price} >= 0`),
-  ]
+  ],
 );
 export const storeServicePricesRelations = relations(
   storeServicePricesTable,
@@ -205,7 +205,7 @@ export const storeServicePricesRelations = relations(
       fields: [storeServicePricesTable.service_id],
       references: [servicesTable.id],
     }),
-  })
+  }),
 );
 
 // order
@@ -220,7 +220,7 @@ export const paymentMethodsRelations = relations(
   paymentMethodsTable,
   ({ many }) => ({
     orders: many(ordersTable),
-  })
+  }),
 );
 
 export const orderPaymentStatusEnum = pgEnum("order_payment_status", [
@@ -250,7 +250,7 @@ export const ordersTable = pgTable(
     status: orderStatusEnum("status").default("created").notNull(),
 
     payment_method_id: integer("payment_method_id").references(
-      () => paymentMethodsTable.id
+      () => paymentMethodsTable.id,
     ),
     payment_status: orderPaymentStatusEnum("payment_status")
       .default("unpaid")
@@ -289,7 +289,7 @@ export const ordersTable = pgTable(
     check("total_non_negative_check", sql`${table.total} >= 0`),
     check("discount_non_negative_check", sql`${table.discount} >= 0`),
     check("discount_valid_check", sql`(${table.total}) >= ${table.discount}`),
-  ]
+  ],
 );
 export const ordersRelations = relations(ordersTable, ({ one, many }) => ({
   store: one(storesTable, {
@@ -343,7 +343,7 @@ export const ordersServicesTable = pgTable(
       scale: 2,
     }).generatedAlwaysAs(
       (): SQL =>
-        sql`(${ordersServicesTable.price} * ${ordersServicesTable.qty}) - ${ordersServicesTable.discount}`
+        sql`(${ordersServicesTable.price} * ${ordersServicesTable.qty}) - ${ordersServicesTable.discount}`,
     ),
   },
   (table) => [
@@ -351,15 +351,15 @@ export const ordersServicesTable = pgTable(
     index("order_services_service_idx").on(table.service_id),
     index("order_services_order_service_idx").on(
       table.order_id,
-      table.service_id
+      table.service_id,
     ),
     check("price_non_negative_check", sql`${table.price} >= 0`),
     check("qty_positive_check", sql`${table.qty} > 0`),
     check(
       "discount_valid_check",
-      sql`(${table.price} * ${table.qty}) >= ${table.discount}`
+      sql`(${table.price} * ${table.qty}) >= ${table.discount}`,
     ),
-  ]
+  ],
 );
 export const ordersServicesRelations = relations(
   ordersServicesTable,
@@ -377,14 +377,14 @@ export const ordersServicesRelations = relations(
       fields: [ordersServicesTable.handler_id],
       references: [usersTable.id],
     }),
-  })
+  }),
 );
 
 export const orderServicesImagesTable = pgTable("order_services_images", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
   order_service_id: integer("order_service_id").references(
     () => ordersServicesTable.id,
-    { onDelete: "cascade" }
+    { onDelete: "cascade" },
   ),
   image_url: varchar("image_url", { length: 255 }).notNull(),
   created_at: timestamp("created_at").defaultNow().notNull(),
@@ -400,7 +400,7 @@ export const orderServicesImagesRelations = relations(
       fields: [orderServicesImagesTable.order_service_id],
       references: [ordersServicesTable.id],
     }),
-  })
+  }),
 );
 
 export const ordersProductsTable = pgTable(
@@ -428,7 +428,7 @@ export const ordersProductsTable = pgTable(
       scale: 2,
     }).generatedAlwaysAs(
       (): SQL =>
-        sql`(${ordersProductsTable.price} * ${ordersProductsTable.qty}) - ${ordersProductsTable.discount}`
+        sql`(${ordersProductsTable.price} * ${ordersProductsTable.qty}) - ${ordersProductsTable.discount}`,
     ),
   },
   (table) => [
@@ -436,15 +436,15 @@ export const ordersProductsTable = pgTable(
     index("order_products_product_idx").on(table.product_id),
     index("order_products_order_product_idx").on(
       table.order_id,
-      table.product_id
+      table.product_id,
     ),
     check("price_non_negative_check", sql`${table.price} >= 0`),
     check("qty_positive_check", sql`${table.qty} > 0`),
     check(
       "discount_valid_check",
-      sql`(${table.price} * ${table.qty}) >= ${table.discount}`
+      sql`(${table.price} * ${table.qty}) >= ${table.discount}`,
     ),
-  ]
+  ],
 );
 export const ordersProductsRelations = relations(
   ordersProductsTable,
@@ -457,5 +457,5 @@ export const ordersProductsRelations = relations(
       fields: [ordersProductsTable.product_id],
       references: [productsTable.id],
     }),
-  })
+  }),
 );
