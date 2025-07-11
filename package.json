@@ -1,6 +1,7 @@
 {
+  "name": "fc-api",
   "type": "module",
-  "name": "fc-bun-api",
+  "sideEffects": false,
   "scripts": {
     "dev": "bun run --hot src/index.ts",
     "pull:dev": "bun drizzle-kit pull --config=drizzle-dev.config.ts",
@@ -19,10 +20,10 @@
     "drizzle-zod": "^0.8.2",
     "hono": "^4.7.10",
     "http-status-codes": "^2.3.0",
-    "zod": "^3.25.42"
+    "zod": "^4.0.5"
   },
   "devDependencies": {
-    "@biomejs/biome": "1.9.4",
+    "@biomejs/biome": "2.1.1",
     "@types/bun": "latest",
     "drizzle-kit": "^0.31.1"
   }

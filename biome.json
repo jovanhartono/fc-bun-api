@@ -1,34 +1,37 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
-  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "$schema": "https://biomejs.dev/schemas/2.1.1/schema.json",
+  "assist": {
+    "actions": { "source": { "organizeImports": "on", "useSortedKeys": "on" } },
+    "includes": ["src"]
+  },
   "files": {
     "ignoreUnknown": false,
-    "ignore": ["dist", "drizzle", "bun.lock"]
+    "includes": ["**", "!**/dist", "!**/drizzle", "!**/bun.lock"]
   },
   "formatter": {
     "enabled": true,
     "indentStyle": "space"
   },
   "javascript": {
-    "globals": ["Bun"],
     "formatter": {
       "trailingCommas": "all"
-    }
+    },
+    "globals": ["Bun"]
   },
   "linter": {
     "rules": {
-      "style": {
-        "all": true,
-        "useNamingConvention": "off",
-        "noDefaultExport": "off"
-      },
+      "complexity": "on",
       "correctness": {
-        "all": true
+        "useImportExtensions": "off"
       },
-      "performance": {
-        "all": true
-      }
+      "performance": "on",
+      "security": "on",
+      "style": {
+        "noDefaultExport": "off",
+        "useNamingConvention": "off"
+      },
+      "suspicious": "warn"
     }
   },
-  "organizeImports": { "enabled": true }
+  "vcs": { "clientKind": "git", "enabled": true, "useIgnoreFile": true }
 }

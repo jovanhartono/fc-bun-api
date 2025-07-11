@@ -1,10 +1,10 @@
+import { HTTPException } from "hono/http-exception";
+import { StatusCodes } from "http-status-codes";
 import app from "@/app";
 import { adminMiddleware } from "@/middlewares/admin";
 import adminRoutes from "@/routes/admin";
 import authRoutes from "@/routes/auth";
 import { failure } from "@/utils/http";
-import { HTTPException } from "hono/http-exception";
-import { StatusCodes } from "http-status-codes";
 
 // routes
 app.route("/auth", authRoutes);
@@ -41,6 +41,6 @@ app.onError((err, c) => {
 });
 
 export default {
-  port: "8000",
   fetch: app.fetch,
+  port: "8000",
 };

@@ -1,4 +1,4 @@
-import { type SQL, relations, sql } from "drizzle-orm";
+import { relations, type SQL, sql } from "drizzle-orm";
 import {
   boolean,
   check,
@@ -22,63 +22,63 @@ export const userRoleEnum = pgEnum("user_role", [
 export type UserRole = (typeof userRoleEnum.enumValues)[number];
 
 export const usersTable = pgTable("users", {
+  created_at: timestamp("created_at").defaultNow().notNull(),
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
-  role: userRoleEnum("role").notNull(),
+  is_active: boolean().default(true).notNull(),
   name: varchar("name", { length: 255 }).notNull(),
-  username: varchar("username", { length: 255 }).notNull().unique(),
   password: varchar("password", {
     length: 255,
   }).notNull(),
-  is_active: boolean().default(true).notNull(),
-  created_at: timestamp("created_at").defaultNow().notNull(),
+  role: userRoleEnum("role").notNull(),
   updated_at: timestamp("updated_at")
     .defaultNow()
     .notNull()
     .$onUpdate(() => new Date()),
+  username: varchar("username", { length: 255 }).notNull().unique(),
 });
 export const usersRelations = relations(usersTable, ({ many }) => ({
-  orders: many(ordersTable),
   orderServices: many(ordersServicesTable),
+  orders: many(ordersTable),
 }));
 
 // store
 export const storesTable = pgTable(
   "stores",
   {
-    id: integer().primaryKey().generatedAlwaysAsIdentity(),
-    name: varchar("name", { length: 255 }).notNull(),
-    code: varchar("code", { length: 3 }).unique().notNull(),
-    phone_number: varchar("phone_number", { length: 16 }).unique().notNull(),
     address: varchar("address", { length: 255 }).notNull(),
+    code: varchar("code", { length: 3 }).unique().notNull(),
+    created_at: timestamp().defaultNow().notNull(),
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    is_active: boolean().default(false).notNull(),
     latitude: decimal("latitude", { precision: 11, scale: 8 }).notNull(),
     longitude: decimal("longitude", { precision: 11, scale: 8 }).notNull(),
-    is_active: boolean().default(false).notNull(),
-    created_at: timestamp().defaultNow().notNull(),
+    name: varchar("name", { length: 255 }).notNull(),
+    phone_number: varchar("phone_number", { length: 16 }).unique().notNull(),
   },
   (table) => [check("code_len_check", sql`LENGTH(TRIM(${table.code})) = 3`)],
 );
 export const storesRelations = relations(storesTable, ({ many }) => ({
-  servicePrices: many(storeServicePricesTable),
   customers: many(customersTable),
   orders: many(ordersTable),
+  servicePrices: many(storeServicePricesTable),
 }));
 
 // customer
 export const customersTable = pgTable(
   "customers",
   {
-    id: integer().primaryKey().generatedAlwaysAsIdentity(),
-    name: varchar("name", { length: 255 }).notNull(),
-    phone_number: varchar("phone_number", { length: 16 }).notNull().unique(),
-    email: varchar("email", { length: 255 }).unique(),
     address: text("address"),
-    origin_store_id: integer("origin_store_id")
-      .references(() => storesTable.id)
-      .notNull(),
     created_at: timestamp("created_at").defaultNow().notNull(),
     created_by: integer("created_by")
       .references(() => usersTable.id)
       .notNull(),
+    email: varchar("email", { length: 255 }).unique(),
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    name: varchar("name", { length: 255 }).notNull(),
+    origin_store_id: integer("origin_store_id")
+      .references(() => storesTable.id)
+      .notNull(),
+    phone_number: varchar("phone_number", { length: 16 }).notNull().unique(),
     updated_at: timestamp("updated_at")
       .defaultNow()
       .notNull()
@@ -95,14 +95,14 @@ export const customersTable = pgTable(
 export const customersRelations = relations(
   customersTable,
   ({ one, many }) => ({
-    originStore: one(storesTable, {
-      fields: [customersTable.origin_store_id],
-      references: [storesTable.id],
-    }),
-    orders: many(ordersTable),
     createdBy: one(usersTable, {
       fields: [customersTable.created_by],
       references: [usersTable.id],
+    }),
+    orders: many(ordersTable),
+    originStore: one(storesTable, {
+      fields: [customersTable.origin_store_id],
+      references: [storesTable.id],
     }),
     updatedBy: one(usersTable, {
       fields: [customersTable.updated_by],
@@ -112,26 +112,26 @@ export const customersRelations = relations(
 );
 
 export const categoriesTable = pgTable("categories", {
-  id: integer().primaryKey().generatedAlwaysAsIdentity(),
-  name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
+  id: integer().primaryKey().generatedAlwaysAsIdentity(),
   is_active: boolean("is_active").notNull().default(false),
+  name: varchar("name", { length: 255 }).notNull(),
 });
 
 export const productsTable = pgTable(
   "products",
   {
-    id: integer().primaryKey().generatedAlwaysAsIdentity(),
-    name: varchar("name", { length: 255 }).notNull(),
     category_id: integer("category_id")
       .references(() => categoriesTable.id)
       .notNull(),
-    sku: varchar("sku", { length: 255 }).unique().notNull(),
     cogs: decimal("cogs", { precision: 12, scale: 2 }).default("0").notNull(),
+    description: text("description"),
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    is_active: boolean("is_active").default(false).notNull(),
+    name: varchar("name", { length: 255 }).notNull(),
+    sku: varchar("sku", { length: 255 }).unique().notNull(),
     stock: integer("stock").default(0).notNull(),
     uom: varchar("uom", { length: 12 }).default("pcs").notNull(),
-    description: text("description"),
-    is_active: boolean("is_active").default(false).notNull(),
   },
   (table) => [
     index("product_name_idx").on(table.name),
@@ -149,15 +149,15 @@ export const productsRelations = relations(productsTable, ({ one, many }) => ({
 export const servicesTable = pgTable(
   "services",
   {
-    id: integer().primaryKey().generatedAlwaysAsIdentity(),
-    name: varchar("name", { length: 255 }).notNull(),
-    code: varchar("code", { length: 4 }).unique().notNull(),
-    cogs: decimal("cogs", { precision: 12, scale: 2 }).default("0").notNull(),
-    description: text("description"),
-    is_active: boolean("is_active").default(false).notNull(),
     category_id: integer("category_id")
       .references(() => categoriesTable.id)
       .notNull(),
+    code: varchar("code", { length: 4 }).unique().notNull(),
+    cogs: decimal("cogs", { precision: 12, scale: 2 }).default("0").notNull(),
+    description: text("description"),
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    is_active: boolean("is_active").default(false).notNull(),
+    name: varchar("name", { length: 255 }).notNull(),
   },
   (table) => [
     index("service_name_idx").on(table.name),
@@ -173,8 +173,8 @@ export const servicesRelations = relations(servicesTable, ({ one, many }) => ({
     fields: [servicesTable.category_id],
     references: [categoriesTable.id],
   }),
-  servicePrices: many(storeServicePricesTable),
   orders: many(ordersServicesTable),
+  servicePrices: many(storeServicePricesTable),
 }));
 
 export const storeServicePricesTable = pgTable(
@@ -182,10 +182,10 @@ export const storeServicePricesTable = pgTable(
   {
     id: integer().primaryKey().generatedAlwaysAsIdentity(),
     price: decimal("price", { precision: 12, scale: 2 }).notNull(),
-    store_id: integer("store_id").references(() => storesTable.id, {
+    service_id: integer("service_id").references(() => servicesTable.id, {
       onDelete: "cascade",
     }),
-    service_id: integer("service_id").references(() => servicesTable.id, {
+    store_id: integer("store_id").references(() => storesTable.id, {
       onDelete: "cascade",
     }),
   },
@@ -197,24 +197,24 @@ export const storeServicePricesTable = pgTable(
 export const storeServicePricesRelations = relations(
   storeServicePricesTable,
   ({ one }) => ({
-    store: one(storesTable, {
-      fields: [storeServicePricesTable.store_id],
-      references: [storesTable.id],
-    }),
     service: one(servicesTable, {
       fields: [storeServicePricesTable.service_id],
       references: [servicesTable.id],
+    }),
+    store: one(storesTable, {
+      fields: [storeServicePricesTable.store_id],
+      references: [storesTable.id],
     }),
   }),
 );
 
 // order
 export const paymentMethodsTable = pgTable("payment_methods", {
-  id: integer().primaryKey().generatedAlwaysAsIdentity(),
-  name: varchar("name", { length: 255 }).notNull(),
   code: varchar("code", { length: 6 }).notNull().unique(),
-  is_active: boolean("is_active").default(false).notNull(),
   created_at: timestamp("created_at").defaultNow().notNull(),
+  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  is_active: boolean("is_active").default(false).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
 });
 export const paymentMethodsRelations = relations(
   paymentMethodsTable,
@@ -237,17 +237,26 @@ export const orderStatusEnum = pgEnum("order_status_enum", [
 export const ordersTable = pgTable(
   "orders",
   {
-    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    cancelled_at: timestamp("cancelled_at"),
     code: varchar("code", { length: 12 }).notNull().unique(),
 
-    store_id: integer("store_id")
-      .references(() => storesTable.id)
+    completed_at: timestamp("completed_at"),
+
+    created_at: timestamp("created_at").notNull().defaultNow(),
+
+    // cashier
+    created_by: integer("created_by")
+      .references(() => usersTable.id)
       .notNull(),
     customer_id: integer("customer_id")
       .references(() => customersTable.id)
       .notNull(),
+    discount: decimal("discount", { precision: 12, scale: 2 })
+      .default("0")
+      .notNull(),
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
 
-    status: orderStatusEnum("status").default("created").notNull(),
+    notes: text("notes"),
 
     payment_method_id: integer("payment_method_id").references(
       () => paymentMethodsTable.id,
@@ -256,27 +265,18 @@ export const ordersTable = pgTable(
       .default("unpaid")
       .notNull(),
 
-    notes: text("notes"),
+    status: orderStatusEnum("status").default("created").notNull(),
+
+    store_id: integer("store_id")
+      .references(() => storesTable.id)
+      .notNull(),
 
     // snapshot
     total: decimal("total", { precision: 12, scale: 2 }).default("0"),
-    discount: decimal("discount", { precision: 12, scale: 2 })
-      .default("0")
-      .notNull(),
-
-    created_at: timestamp("created_at").notNull().defaultNow(),
     updated_at: timestamp("updated_at")
       .notNull()
       .defaultNow()
       .$onUpdate(() => new Date()),
-
-    completed_at: timestamp("completed_at"),
-    cancelled_at: timestamp("cancelled_at"),
-
-    // cashier
-    created_by: integer("created_by")
-      .references(() => usersTable.id)
-      .notNull(),
     updated_by: integer("updated_by")
       .references(() => usersTable.id)
       .notNull(),
@@ -292,9 +292,9 @@ export const ordersTable = pgTable(
   ],
 );
 export const ordersRelations = relations(ordersTable, ({ one, many }) => ({
-  store: one(storesTable, {
-    fields: [ordersTable.store_id],
-    references: [storesTable.id],
+  createdBy: one(usersTable, {
+    fields: [ordersTable.created_by],
+    references: [usersTable.id],
   }),
   customer: one(customersTable, {
     fields: [ordersTable.customer_id],
@@ -304,39 +304,39 @@ export const ordersRelations = relations(ordersTable, ({ one, many }) => ({
     fields: [ordersTable.payment_method_id],
     references: [paymentMethodsTable.id],
   }),
-  createdBy: one(usersTable, {
-    fields: [ordersTable.created_by],
-    references: [usersTable.id],
+  products: many(ordersProductsTable),
+  services: many(ordersServicesTable),
+  store: one(storesTable, {
+    fields: [ordersTable.store_id],
+    references: [storesTable.id],
   }),
   updatedBy: one(usersTable, {
     fields: [ordersTable.updated_by],
     references: [usersTable.id],
   }),
-  services: many(ordersServicesTable),
-  products: many(ordersProductsTable),
 }));
 
 export const ordersServicesTable = pgTable(
   "orders_services",
   {
-    id: integer().primaryKey().generatedAlwaysAsIdentity(),
-    order_id: integer("order_id").references(() => ordersTable.id, {
-      onDelete: "cascade",
-    }),
-    service_id: integer("service_id").references(() => servicesTable.id, {
-      onDelete: "cascade",
-    }),
-    notes: text("notes"),
-
-    qty: smallint("qty").notNull().default(1),
-
-    // snapshot
-    price: decimal("price", { precision: 12, scale: 2 }).default("0"),
     discount: decimal("discount", { precision: 12, scale: 2 })
       .default("0")
       .notNull(),
 
     handler_id: integer("handler_id").references(() => usersTable.id),
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    notes: text("notes"),
+    order_id: integer("order_id").references(() => ordersTable.id, {
+      onDelete: "cascade",
+    }),
+
+    // snapshot
+    price: decimal("price", { precision: 12, scale: 2 }).default("0"),
+
+    qty: smallint("qty").notNull().default(1),
+    service_id: integer("service_id").references(() => servicesTable.id, {
+      onDelete: "cascade",
+    }),
 
     subtotal: decimal("subtotal", {
       precision: 12,
@@ -364,6 +364,11 @@ export const ordersServicesTable = pgTable(
 export const ordersServicesRelations = relations(
   ordersServicesTable,
   ({ one, many }) => ({
+    handler: one(usersTable, {
+      fields: [ordersServicesTable.handler_id],
+      references: [usersTable.id],
+    }),
+    images: many(orderServicesImagesTable),
     order: one(ordersTable, {
       fields: [ordersServicesTable.order_id],
       references: [ordersTable.id],
@@ -372,22 +377,17 @@ export const ordersServicesRelations = relations(
       fields: [ordersServicesTable.service_id],
       references: [servicesTable.id],
     }),
-    images: many(orderServicesImagesTable),
-    handler: one(usersTable, {
-      fields: [ordersServicesTable.handler_id],
-      references: [usersTable.id],
-    }),
   }),
 );
 
 export const orderServicesImagesTable = pgTable("order_services_images", {
+  created_at: timestamp("created_at").defaultNow().notNull(),
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  image_url: varchar("image_url", { length: 255 }).notNull(),
   order_service_id: integer("order_service_id").references(
     () => ordersServicesTable.id,
     { onDelete: "cascade" },
   ),
-  image_url: varchar("image_url", { length: 255 }).notNull(),
-  created_at: timestamp("created_at").defaultNow().notNull(),
   updated_at: timestamp("updated_at")
     .defaultNow()
     .notNull()
@@ -406,22 +406,22 @@ export const orderServicesImagesRelations = relations(
 export const ordersProductsTable = pgTable(
   "orders_products",
   {
-    id: integer().primaryKey().generatedAlwaysAsIdentity(),
-    order_id: integer("order_id").references(() => ordersTable.id, {
-      onDelete: "cascade",
-    }),
-    product_id: integer("product_id").references(() => productsTable.id, {
-      onDelete: "cascade",
-    }),
-    notes: text("notes"),
-
-    qty: smallint("qty").notNull().default(1),
-
-    // snapshot
-    price: decimal("price", { precision: 12, scale: 2 }).default("0"),
     discount: decimal("discount", { precision: 12, scale: 2 })
       .default("0")
       .notNull(),
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    notes: text("notes"),
+    order_id: integer("order_id").references(() => ordersTable.id, {
+      onDelete: "cascade",
+    }),
+
+    // snapshot
+    price: decimal("price", { precision: 12, scale: 2 }).default("0"),
+    product_id: integer("product_id").references(() => productsTable.id, {
+      onDelete: "cascade",
+    }),
+
+    qty: smallint("qty").notNull().default(1),
 
     subtotal: decimal("subtotal", {
       precision: 12,

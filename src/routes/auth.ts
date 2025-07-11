@@ -1,18 +1,18 @@
-import { db } from "@/db";
-import { usersTable } from "@/db/schema";
-import { failure, success } from "@/utils/http";
-import { zodValidator } from "@/utils/zod-validator-wrapper";
 import { eq } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { Hono } from "hono";
 import { sign } from "hono/jwt";
 import { StatusCodes } from "http-status-codes";
+import { db } from "@/db";
+import { usersTable } from "@/db/schema";
+import { failure, success } from "@/utils/http";
+import { zodValidator } from "@/utils/zod-validator-wrapper";
 
 const app = new Hono();
 
 const loginSchema = createInsertSchema(usersTable).pick({
-  username: true,
   password: true,
+  username: true,
 });
 app.post("/login", zodValidator("json", loginSchema), async (c) => {
   const { username, password } = c.req.valid("json");
@@ -21,7 +21,7 @@ app.post("/login", zodValidator("json", loginSchema), async (c) => {
     where: eq(usersTable.username, username),
   });
 
-  if (!user || !(await Bun.password.verify(password, user.password))) {
+  if (!(user && (await Bun.password.verify(password, user.password)))) {
     return c.json(
       failure("Invalid username or password"),
       StatusCodes.UNAUTHORIZED,
@@ -30,8 +30,8 @@ app.post("/login", zodValidator("json", loginSchema), async (c) => {
 
   const jwtPayload = {
     id: user.id,
-    username: user.username,
     name: user.name,
+    username: user.username,
   };
   const token = await sign(jwtPayload, process.env.JWT_SECRET);
 

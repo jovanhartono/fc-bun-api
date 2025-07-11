@@ -20,16 +20,16 @@ interface ErrorResponse {
 
 export function success<T>(data?: T, message?: string): SuccessResponse<T> {
   return {
-    success: true,
-    message,
     data,
+    message,
+    success: true,
   };
 }
 
 export function failure(message: string, errors?: unknown): ErrorResponse {
   return {
-    success: false,
-    message,
     errors,
+    message,
+    success: false,
   };
 }

@@ -2,7 +2,7 @@ import { zValidator as zv } from "@hono/zod-validator";
 import { HTTPException } from "hono/http-exception";
 import type { ValidationTargets } from "hono/types";
 import { StatusCodes } from "http-status-codes";
-import { type ZodSchema, z } from "zod/v4";
+import { type ZodSchema, z } from "zod";
 
 export const zodValidator = <
   T extends ZodSchema,

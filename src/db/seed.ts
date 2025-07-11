@@ -7,6 +7,6 @@ const passwordHash = await Bun.password.hash(adminPassword);
 await db.insert(usersTable).values({
   name: "admin",
   password: passwordHash,
-  username: "admin",
   role: "admin",
+  username: "admin",
 });
