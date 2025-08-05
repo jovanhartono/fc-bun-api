@@ -1,8 +1,10 @@
 import { Hono } from "hono";
-import adminStoresRoutes from "@/routes/admin/stores";
+import storeRoutes from "@/routes/admin/stores";
+import customerRoutes from "@/routes/admin/customer";
 
 const app = new Hono();
-app.route("/stores", adminStoresRoutes);
+app.route("/stores", storeRoutes);
+app.route("/customers", customerRoutes);
 
 app.get("/test", (c) => {
   const jwtPayload = c.get("jwtPayload");

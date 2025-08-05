@@ -6,7 +6,7 @@ import { StatusCodes } from "http-status-codes";
 import { db } from "@/db";
 import { usersTable } from "@/db/schema";
 import { failure, success } from "@/utils/http";
-import { zodValidator } from "@/utils/zod-validator-wrapper";
+import { zValidator } from "@hono/zod-validator";
 
 const app = new Hono();
 
@@ -14,7 +14,7 @@ const loginSchema = createInsertSchema(usersTable).pick({
   password: true,
   username: true,
 });
-app.post("/login", zodValidator("json", loginSchema), async (c) => {
+app.post("/login", zValidator("json", loginSchema), async (c) => {
   const { username, password } = c.req.valid("json");
 
   const user = await db.query.usersTable.findFirst({
@@ -24,7 +24,7 @@ app.post("/login", zodValidator("json", loginSchema), async (c) => {
   if (!(user && (await Bun.password.verify(password, user.password)))) {
     return c.json(
       failure("Invalid username or password"),
-      StatusCodes.UNAUTHORIZED,
+      StatusCodes.UNAUTHORIZED
     );
   }
 

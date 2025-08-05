@@ -4,7 +4,7 @@ import { Hono } from "hono";
 import { StatusCodes } from "http-status-codes";
 import { db } from "@/db";
 import { storesTable } from "@/db/schema";
-import { success } from "@/utils/http";
+import { failure, success } from "@/utils/http";
 import { idParamSchema } from "@/utils/schema";
 import { zodValidator } from "@/utils/zod-validator-wrapper";
 
@@ -25,11 +25,9 @@ app
 
     return c.json(
       success(store, "Successfully adding new store"),
-      StatusCodes.CREATED,
+      StatusCodes.CREATED
     );
-  });
-
-app
+  })
   .get("/:id", idParamSchema, async (c) => {
     const { id } = c.req.valid("param");
 
@@ -37,19 +35,28 @@ app
       where: eq(storesTable.id, id),
     });
 
+    if (!store) {
+      return c.json(failure("Store does not exist"), StatusCodes.NOT_FOUND);
+    }
+
     return c.json(success(store));
   })
-  .put("/:id", zodValidator("json", PUTStoreSchema), async (c) => {
-    const id = c.req.param("id");
-    const storeData = c.req.valid("json");
+  .put(
+    "/:id",
+    idParamSchema,
+    zodValidator("json", PUTStoreSchema),
+    async (c) => {
+      const { id } = c.req.valid("param");
+      const storeData = c.req.valid("json");
 
-    const [store] = await db
-      .update(storesTable)
-      .set(storeData)
-      .where(eq(storesTable.id, Number(id)))
-      .returning();
+      const [store] = await db
+        .update(storesTable)
+        .set(storeData)
+        .where(eq(storesTable.id, id))
+        .returning();
 
-    return c.json(success(store, `Successfully updated ${store.name}`));
-  });
+      return c.json(success(store, `Successfully updated ${store.name}`));
+    }
+  );
 
 export default app;

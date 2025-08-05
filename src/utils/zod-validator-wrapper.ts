@@ -2,14 +2,15 @@ import { zValidator as zv } from "@hono/zod-validator";
 import { HTTPException } from "hono/http-exception";
 import type { ValidationTargets } from "hono/types";
 import { StatusCodes } from "http-status-codes";
-import { type ZodSchema, z } from "zod";
+import { z } from "zod";
+import type { $ZodType } from "zod/v4/core";
 
 export const zodValidator = <
-  T extends ZodSchema,
-  Target extends keyof ValidationTargets,
+  T extends $ZodType,
+  Target extends keyof ValidationTargets
 >(
   target: Target,
-  schema: T,
+  schema: T
 ) =>
   zv(target, schema, (result) => {
     if (!result.success) {
