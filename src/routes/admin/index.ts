@@ -1,15 +1,15 @@
-import { Hono } from "hono";
-import storeRoutes from "@/routes/admin/stores";
-import customerRoutes from "@/routes/admin/customer";
+import { Hono } from 'hono';
+import customerRoutes from '@/routes/admin/customer';
+import storeRoutes from '@/routes/admin/stores';
 
 const app = new Hono();
-app.route("/stores", storeRoutes);
-app.route("/customers", customerRoutes);
+app.route('/stores', storeRoutes);
+app.route('/customers', customerRoutes);
 
-app.get("/test", (c) => {
-  const jwtPayload = c.get("jwtPayload");
+app.get('/test', (c) => {
+  const _jwtPayload = c.get('jwtPayload');
 
-  return c.text("masuk");
+  return c.text('masuk');
 });
 
 export default app;

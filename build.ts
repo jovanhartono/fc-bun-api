@@ -1,10 +1,10 @@
 await Bun.build({
-  entrypoints: ["./server/index.ts"],
-  env: "disable",
+  entrypoints: ['./server/index.ts'],
+  env: 'disable',
   minify: true,
-  outdir: "./dist",
+  outdir: './dist',
   splitting: true,
-  target: "bun",
+  target: 'bun',
 });
 
 export {};
