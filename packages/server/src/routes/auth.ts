@@ -4,9 +4,9 @@ import { createInsertSchema } from 'drizzle-zod';
 import { Hono } from 'hono';
 import { sign } from 'hono/jwt';
 import { StatusCodes } from 'http-status-codes';
-import { db } from '@/db';
-import { usersTable } from '@/db/schema';
-import { failure, success } from '@/utils/http';
+import { db } from '@/server/db';
+import { usersTable } from '@/server/db/schema';
+import { failure, success } from '@/server/utils/http';
 
 const app = new Hono();
 

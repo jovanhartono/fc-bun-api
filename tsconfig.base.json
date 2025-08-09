@@ -1,12 +1,12 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
     "jsx": "react-jsx",
     "jsxImportSource": "hono/jsx",
     "module": "esnext",
     "moduleResolution": "node",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/web/*": ["./packages/web/src/*"],
+      "@/server/*": ["./packages/server/src/*"]
     },
     "skipLibCheck": true,
     "strict": true,
