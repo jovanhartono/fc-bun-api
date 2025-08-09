@@ -1,10 +1,10 @@
 import { HTTPException } from 'hono/http-exception';
 import { StatusCodes } from 'http-status-codes';
-import app from '@/app';
-import { adminMiddleware } from '@/middlewares/admin';
-import adminRoutes from '@/routes/admin';
-import authRoutes from '@/routes/auth';
-import { failure } from '@/utils/http';
+import app from '@/server/app';
+import { adminMiddleware } from '@/server/middlewares/admin';
+import adminRoutes from '@/server/routes/admin';
+import authRoutes from '@/server/routes/auth';
+import { failure } from '@/server/utils/http';
 
 // routes
 app.route('/auth', authRoutes);

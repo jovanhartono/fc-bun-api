@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
-import customerRoutes from '@/routes/admin/customer';
-import storeRoutes from '@/routes/admin/stores';
+import customerRoutes from '@/server/routes/admin/customer';
+import storeRoutes from '@/server/routes/admin/stores';
 
 const app = new Hono();
 app.route('/stores', storeRoutes);
