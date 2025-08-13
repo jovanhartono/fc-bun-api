@@ -8,34 +8,36 @@ import { db } from '@/server/db';
 import { usersTable } from '@/server/db/schema';
 import { failure, success } from '@/server/utils/http';
 
-const app = new Hono();
-
 const loginSchema = createInsertSchema(usersTable).pick({
-  password: true,
   username: true,
+  password: true,
 });
-app.post('/login', zValidator('json', loginSchema), async (c) => {
-  const { username, password } = c.req.valid('json');
+const app = new Hono().post(
+  '/login',
+  zValidator('json', loginSchema),
+  async (c) => {
+    const { username, password } = c.req.valid('json');
 
-  const user = await db.query.usersTable.findFirst({
-    where: eq(usersTable.username, username),
-  });
+    const user = await db.query.usersTable.findFirst({
+      where: eq(usersTable.username, username),
+    });
 
-  if (!(user && (await Bun.password.verify(password, user.password)))) {
-    return c.json(
-      failure('Invalid username or password'),
-      StatusCodes.UNAUTHORIZED
-    );
+    if (!(user && (await Bun.password.verify(password, user.password)))) {
+      return c.json(
+        failure('Invalid username or password'),
+        StatusCodes.UNAUTHORIZED
+      );
+    }
+
+    const jwtPayload = {
+      id: user.id,
+      name: user.name,
+      username: user.username,
+    };
+    const token = await sign(jwtPayload, process.env.JWT_SECRET);
+
+    return c.json(success({ token }, 'Login Sucessfull!'), StatusCodes.OK);
   }
-
-  const jwtPayload = {
-    id: user.id,
-    name: user.name,
-    username: user.username,
-  };
-  const token = await sign(jwtPayload, process.env.JWT_SECRET);
-
-  return c.json(success({ token }, 'Login Sucessfull!'), StatusCodes.OK);
-});
+);
 
 export default app;

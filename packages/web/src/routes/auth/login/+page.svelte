@@ -1,5 +1,5 @@
 <script>
-	import LoginForm from '$lib/components/login-form.svelte';
+	import LoginForm from './login-form.svelte';
 </script>
 
 <div class="m-auto">

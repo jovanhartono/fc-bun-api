@@ -8,8 +8,8 @@ const app = new Hono<{ Variables: JwtVariables }>()
   .use(logger())
   .use(
     cors({
-      origin: ['https://example.org'],
+      origin: ['http://localhost:5173'],
     })
-  );
+  )
 
 export default app;

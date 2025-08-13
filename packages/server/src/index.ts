@@ -1,4 +1,5 @@
 import { HTTPException } from 'hono/http-exception';
+import type { JwtVariables } from 'hono/jwt';
 import { StatusCodes } from 'http-status-codes';
 import app from '@/server/app';
 import { adminMiddleware } from '@/server/middlewares/admin';
@@ -6,11 +7,9 @@ import adminRoutes from '@/server/routes/admin';
 import authRoutes from '@/server/routes/auth';
 import { failure } from '@/server/utils/http';
 
-// routes
-app.route('/auth', authRoutes);
-
 app.use('/admin/*', adminMiddleware);
-app.route('/admin', adminRoutes);
+
+const router = app.route('/auth', authRoutes).route('/admin', adminRoutes);
 
 // error handling
 app.onError((err, c) => {
@@ -36,10 +35,11 @@ app.onError((err, c) => {
     return c.json(failure(err.cause.detail as string), statusCode);
   }
 
-  console.error(err);
+  // console.error(err);
   return c.json(failure(err.message), StatusCodes.INTERNAL_SERVER_ERROR);
 });
 
+export type AppType = typeof router;
 export default {
   fetch: app.fetch,
   port: '8000',

@@ -10,9 +10,7 @@ import { zodValidator } from '@/server/utils/zod-validator-wrapper';
 
 const POSTCustomerSchema = createInsertSchema(customersTable);
 const PUTCustomerSchema = createUpdateSchema(customersTable);
-const app = new Hono();
-
-app
+const app = new Hono()
   .post('/', zodValidator('json', POSTCustomerSchema), async (c) => {
     const customer = c.req.valid('json');
 

@@ -8,11 +8,10 @@ import { failure, success } from '@/server/utils/http';
 import { idParamSchema } from '@/server/utils/schema';
 import { zodValidator } from '@/server/utils/zod-validator-wrapper';
 
-const app = new Hono();
 const POSTStoreSchema = createInsertSchema(storesTable);
 const PUTStoreSchema = createUpdateSchema(storesTable);
 
-app
+const app = new Hono()
   .get('/', async (c) => {
     const stores = await db.query.storesTable.findMany();
 
