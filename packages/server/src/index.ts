@@ -1,5 +1,4 @@
 import { HTTPException } from 'hono/http-exception';
-import type { JwtVariables } from 'hono/jwt';
 import { StatusCodes } from 'http-status-codes';
 import app from '@/server/app';
 import { adminMiddleware } from '@/server/middlewares/admin';

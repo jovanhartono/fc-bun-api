@@ -10,6 +10,6 @@ const app = new Hono<{ Variables: JwtVariables }>()
     cors({
       origin: ['http://localhost:5173'],
     })
-  )
+  );
 
 export default app;
