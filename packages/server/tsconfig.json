@@ -6,8 +6,9 @@
     "verbatimModuleSyntax": true,
     "strict": true,
     "skipLibCheck": true,
+    "lib": ["ESNext"],
     "paths": {
-      "@/server/*": ["./src/*"]
+      "@/*": ["./src/*"]
     },
     "strictNullChecks": true,
     "composite": true

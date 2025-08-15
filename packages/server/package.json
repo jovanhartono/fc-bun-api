@@ -4,11 +4,17 @@
   "version": "0.0.1",
   "sideEffects": false,
   "exports": {
-    ".": "./src/index.ts"
+    "./rpc": {
+      "import": {
+        "default": "./dist/src/rpc.js",
+        "types": "./dist/src/rpc.d.ts"
+      }
+    }
   },
   "scripts": {
     "dev": "bun run --hot src/index.ts",
     "pull:dev": "bun drizzle-kit pull --config=drizzle-dev.config.ts",
+    "dev:tsc": "tsc -p tsconfig.build.json --watch",
     "pull:prod": "bun drizzle-kit pull --config=drizzle-prod.config.ts",
     "push:dev": "bun drizzle-kit push --config=drizzle-dev.config.ts",
     "push:prod": "bun drizzle-kit push --config=drizzle-prod.config.ts",
@@ -24,7 +30,7 @@
     "drizzle-zod": "^0.8.2",
     "hono": "^4.9.1",
     "http-status-codes": "^2.3.0",
-    "zod": "^4.0.14"
+    "zod": "^4.0.17"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.1.4",
