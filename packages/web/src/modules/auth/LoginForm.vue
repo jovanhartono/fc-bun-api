@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { effect, type HTMLAttributes } from 'vue'
+import { type HTMLAttributes } from 'vue'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
 import { cn } from '@/shared/utils'
 import { useForm } from 'vee-validate'
-import { toTypedSchema } from '@vee-validate/zod'
 import { z } from 'zod'
 import {
   FormControl,
@@ -14,17 +13,43 @@ import {
   FormMessage,
 } from '@/shared/components/ui/form'
 import { rpc } from '@/core/rpc'
+import { parseResponse } from 'hono/client'
+import { useMutation } from '@tanstack/vue-query'
+import { toast } from 'vue-sonner'
+import { useAuth } from '@/core/stores/auth-store'
+import { useRouter } from 'vue-router'
 
 const props = defineProps<{
   class?: HTMLAttributes['class']
 }>()
 
-const loginSchema = toTypedSchema(
-  z.object({
-    username: z.string().min(1, { error: 'Username is required' }),
-    password: z.string().min(1, { error: 'Password is required' }),
-  }),
-)
+const loginSchema = z.object({
+  username: z.string().min(1, 'Username is required'),
+  password: z.string().min(1, 'Password is required'),
+})
+
+const { setToken } = useAuth()
+const router = useRouter()
+const { mutateAsync } = useMutation({
+  mutationKey: ['login'],
+  mutationFn: async (data: z.infer<typeof loginSchema>) =>
+    await parseResponse(
+      rpc.api.auth.login.$post({
+        json: data,
+      }),
+    ),
+  onSuccess: (data) => {
+    if (data.message) {
+      toast.success(data.message)
+    }
+
+    const token = data.data?.token
+    if (token) {
+      setToken(token)
+      router.push('/')
+    }
+  },
+})
 
 const { handleSubmit, isSubmitting } = useForm({
   validationSchema: loginSchema,
@@ -34,19 +59,7 @@ const { handleSubmit, isSubmitting } = useForm({
   },
 })
 
-effect(() => {
-  console.log(isSubmitting.value)
-})
-
-const onSubmit = handleSubmit(async (values) => {
-  console.log('Form submitted!', values)
-  const res = await rpc.api.auth.login.$post({
-    json: values,
-  })
-
-  const response = await res.json()
-  console.log(response)
-})
+const onSubmit = handleSubmit((data) => mutateAsync(data))
 </script>
 
 <template>
