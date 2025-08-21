@@ -19,8 +19,28 @@ const router = createRouter({
       children: [
         {
           path: '',
-          name: 'home',
+          name: 'dashboard',
           component: () => import('@/modules/dashboard/HomePage.vue'),
+        },
+        {
+          path: '/users',
+          name: 'users',
+          component: () => import('@/modules/users/UsersPage.vue'),
+        },
+        {
+          path: '/stores',
+          name: 'stores',
+          component: () => import('@/modules/users/UsersPage.vue'),
+        },
+        {
+          path: '/services',
+          name: 'services',
+          component: () => import('@/modules/users/UsersPage.vue'),
+        },
+        {
+          path: '/products',
+          name: 'products',
+          component: () => import('@/modules/users/UsersPage.vue'),
         },
       ],
     },
@@ -32,9 +52,7 @@ router.beforeEach((to, from) => {
     document.title = `${to.meta.title} - Fresclean POS`
   }
 
-  const { token, user } = useAuth()
-
-  console.log(user)
+  const { token } = useAuth()
 
   // checking is not needed if the page is guest page.
   if (to.meta.guest) {
