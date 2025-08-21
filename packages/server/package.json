@@ -9,6 +9,12 @@
         "default": "./dist/src/rpc.js",
         "types": "./dist/src/rpc.d.ts"
       }
+    },
+    "./types/*": {
+      "import": {
+        "default": "./dist/src/types/*.js",
+        "types": "./dist/src/types/*.d.ts"
+      }
     }
   },
   "scripts": {

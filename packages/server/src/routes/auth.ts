@@ -6,6 +6,7 @@ import { sign } from 'hono/jwt';
 import { StatusCodes } from 'http-status-codes';
 import { db } from '@/db';
 import { usersTable } from '@/db/schema';
+import type { JWTPayload } from '@/types/jwt';
 import { failure, success } from '@/utils/http';
 
 const loginSchema = createInsertSchema(usersTable).pick({
@@ -29,10 +30,19 @@ const app = new Hono().post(
       );
     }
 
-    const jwtPayload = {
+    if (!user.is_active) {
+      return c.json(
+        failure('User is not active. Please contact admin.'),
+        StatusCodes.FORBIDDEN
+      );
+    }
+
+    const jwtPayload: JWTPayload = {
       id: user.id,
       name: user.name,
       username: user.username,
+      role: user.role,
+      is_active: user.is_active,
     };
     const token = await sign(jwtPayload, process.env.JWT_SECRET);
 
