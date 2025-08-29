@@ -9,13 +9,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/shared/components/ui/dropdown-menu'
+import { storeToRefs } from 'pinia'
 
-const { user, logout } = useAuth()
+const authStore = useAuth()
+const { user } = storeToRefs(authStore)
 
 const { isMobile } = useSidebar()
 
 function onSelect() {
-  logout()
+  authStore.logout()
 }
 </script>
 

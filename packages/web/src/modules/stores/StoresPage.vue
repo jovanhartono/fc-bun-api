@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { useDialogStore } from '@/core/stores/dialog-store'
+import StoresTable from '@/modules/stores/StoresTable.vue'
 import { Button } from '@/shared/components/ui/button'
 import { LoaderIcon, PlusIcon } from 'lucide-vue-next'
-import UsersTable from '@/modules/users/UsersTable.vue'
 import { defineAsyncComponent, h } from 'vue'
 
-const AddNewUser = defineAsyncComponent({
-  loader: () => import('./AddNewUser.vue'),
+const AddNewStore = defineAsyncComponent({
+  loader: () => import('./AddNewStore.vue'),
+  delay: 0,
   loadingComponent: h(
     'div',
     { class: 'w-full h-[500px] flex items-center justify-center' },
@@ -15,11 +16,11 @@ const AddNewUser = defineAsyncComponent({
 })
 
 const { openDialog } = useDialogStore()
-function handleNewUserClick() {
+function handleAddStore() {
   openDialog({
-    title: 'Add New User',
-    description: 'Make sure user has not been registered yet on the system.',
-    content: h(AddNewUser),
+    title: 'Add New Store',
+    description: 'Make sure store has not been registered yet on the system.',
+    content: h(AddNewStore),
   })
 }
 </script>
@@ -27,12 +28,10 @@ function handleNewUserClick() {
 <template>
   <div class="flex flex-col gap-y-6">
     <div class="flex items-center justify-between">
-      <h1 class="font-medium text-lg">Users</h1>
-      <Button size="sm" variant="outline" @click="handleNewUserClick">
-        <PlusIcon /> New User
-      </Button>
+      <h1 class="font-medium text-lg">Stores</h1>
+      <Button size="sm" variant="outline" @click="handleAddStore"> <PlusIcon /> New Store </Button>
     </div>
 
-    <UsersTable />
+    <StoresTable />
   </div>
 </template>

@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import { createInsertSchema, createUpdateSchema } from 'drizzle-zod';
 import { Hono } from 'hono';
 import { StatusCodes } from 'http-status-codes';
@@ -13,7 +13,9 @@ const PUTStoreSchema = createUpdateSchema(storesTable);
 
 const app = new Hono()
   .get('/', async (c) => {
-    const stores = await db.query.storesTable.findMany();
+    const stores = await db.query.storesTable.findMany({
+      orderBy: [asc(storesTable.id)],
+    });
 
     return c.json(success(stores));
   })

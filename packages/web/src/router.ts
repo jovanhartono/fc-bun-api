@@ -30,7 +30,7 @@ const router = createRouter({
         {
           path: '/stores',
           name: 'stores',
-          component: () => import('@/modules/users/UsersPage.vue'),
+          component: () => import('@/modules/stores/StoresPage.vue'),
         },
         {
           path: '/services',
@@ -52,12 +52,12 @@ router.beforeEach((to, from) => {
     document.title = `${to.meta.title} - Fresclean POS`
   }
 
-  const { token } = useAuth()
+  const authStore = useAuth()
 
   // checking is not needed if the page is guest page.
   if (to.meta.guest) {
     // prevent navigation when user try to load login page, but already has the valid access_token
-    if (to.name === 'login' && token) {
+    if (to.name === 'login' && authStore.token) {
       return from
     }
 
@@ -65,7 +65,7 @@ router.beforeEach((to, from) => {
   }
 
   // page need auth, redirect to login page if access-token is undefined
-  if (!token) {
+  if (!authStore.token) {
     return {
       name: 'login',
     }

@@ -1,10 +1,20 @@
 <script setup lang="ts">
 import { cn } from '@/shared/utils'
 import type { ClassValue } from 'clsx'
+import { AsYouType } from 'libphonenumber-js'
 import { useAttrs } from 'vue'
 
 const attrs = useAttrs()
-const modelValue = defineModel<string | number>({ default: '' })
+const [modelValue, modifiers] = defineModel<string, 'phone'>({
+  default: '',
+  set(value) {
+    if (modifiers.phone) {
+      return new AsYouType('ID').input(value)
+    }
+
+    return value
+  },
+})
 </script>
 
 <template>
