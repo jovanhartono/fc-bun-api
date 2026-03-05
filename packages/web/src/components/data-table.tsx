@@ -36,7 +36,7 @@ export function DataTable<TData extends RowData>({
 	const colSpan = Math.max(columns.length, 1);
 
 	return (
-		<Table>
+		<Table className="min-w-[720px] md:min-w-full">
 			<TableHeader>
 				{table.getHeaderGroups().map((headerGroup) => (
 					<TableRow key={headerGroup.id}>
@@ -58,7 +58,7 @@ export function DataTable<TData extends RowData>({
 					<TableRow>
 						<TableCell
 							colSpan={colSpan}
-							className="h-24 text-center text-muted-foreground"
+							className="h-20 text-center text-muted-foreground md:h-24"
 						>
 							Loading...
 						</TableCell>
@@ -77,7 +77,7 @@ export function DataTable<TData extends RowData>({
 					<TableRow>
 						<TableCell
 							colSpan={colSpan}
-							className="h-24 text-center text-muted-foreground"
+							className="h-20 text-center text-muted-foreground md:h-24"
 						>
 							{emptyMessage}
 						</TableCell>

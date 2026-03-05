@@ -1,0 +1,177 @@
+import { Plus } from "@phosphor-icons/react";
+import {
+	Controller,
+	type Control,
+	type SubmitHandler,
+	type UseFormHandleSubmit,
+} from "react-hook-form";
+import { PhoneNumberField } from "@/components/form/phone-number-field";
+import { Combobox } from "@/components/ui/combobox";
+import { Button } from "@/components/ui/button";
+import { Field, FieldError, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+
+export type CustomerFormState = {
+	name: string;
+	phone_number: string;
+	email: string;
+	address: string;
+	origin_store_id: string;
+};
+
+type CustomerFormProps = {
+	control: Control<CustomerFormState>;
+	handleSubmit: UseFormHandleSubmit<CustomerFormState>;
+	onSubmit: SubmitHandler<CustomerFormState>;
+	isSubmitting: boolean;
+	isEditing: boolean;
+	stores: Array<{ id: number; name: string }>;
+	storesLoading?: boolean;
+	onReset: () => void;
+};
+
+export function CustomerForm({
+	control,
+	handleSubmit,
+	onSubmit,
+	isSubmitting,
+	isEditing,
+	stores,
+	storesLoading,
+	onReset,
+}: CustomerFormProps) {
+	return (
+		<form
+			className="grid gap-4 p-4 md:grid-cols-2"
+			onSubmit={handleSubmit(onSubmit)}
+		>
+			<Controller
+				name="name"
+				control={control}
+				render={({ field, fieldState }) => (
+					<Field data-invalid={fieldState.invalid}>
+						<FieldLabel htmlFor="customer-name">Name</FieldLabel>
+						<Input
+							{...field}
+							id="customer-name"
+							placeholder="e.g. John Doe"
+							aria-invalid={fieldState.invalid}
+							disabled={isSubmitting}
+							required
+							className="h-10"
+						/>
+						<FieldError errors={[fieldState.error]} />
+					</Field>
+				)}
+			/>
+
+			<Controller
+				name="phone_number"
+				control={control}
+				render={({ field, fieldState }) => (
+					<PhoneNumberField
+						id="customer-phone"
+						label="Phone"
+						value={field.value}
+						onValueChange={field.onChange}
+						placeholder="e.g. +628123456789"
+						disabled={isSubmitting}
+						required
+						error={fieldState.error}
+					/>
+				)}
+			/>
+
+			<Controller
+				name="email"
+				control={control}
+				render={({ field, fieldState }) => (
+					<Field data-invalid={fieldState.invalid}>
+						<FieldLabel htmlFor="customer-email">Email</FieldLabel>
+						<Input
+							{...field}
+							id="customer-email"
+							type="email"
+							placeholder="e.g. john@example.com"
+							aria-invalid={fieldState.invalid}
+							disabled={isSubmitting}
+							className="h-10"
+						/>
+						<FieldError errors={[fieldState.error]} />
+					</Field>
+				)}
+			/>
+
+			<Controller
+				name="address"
+				control={control}
+				render={({ field, fieldState }) => (
+					<Field data-invalid={fieldState.invalid} className="md:col-span-2">
+						<FieldLabel htmlFor="customer-address">Address</FieldLabel>
+						<Input
+							{...field}
+							id="customer-address"
+							placeholder="e.g. Jl. Sudirman No. 1"
+							aria-invalid={fieldState.invalid}
+							disabled={isSubmitting}
+							className="h-10"
+						/>
+						<FieldError errors={[fieldState.error]} />
+					</Field>
+				)}
+			/>
+
+			<Controller
+				name="origin_store_id"
+				control={control}
+				render={({ field, fieldState }) => (
+					<Field data-invalid={fieldState.invalid}>
+						<FieldLabel htmlFor="customer-origin-store">
+							Origin Store
+						</FieldLabel>
+						<Combobox
+							id="customer-origin-store"
+							required={!isEditing}
+							triggerClassName="h-10 w-full text-sm"
+							options={stores.map((store) => ({
+								value: String(store.id),
+								label: store.name,
+							}))}
+							value={field.value}
+							onValueChange={(nextValue) => field.onChange(nextValue)}
+							loading={storesLoading}
+							placeholder="Select store"
+							searchPlaceholder="Search store..."
+							emptyText="No store found"
+							disabled={isSubmitting || isEditing}
+						/>
+						<FieldError errors={[fieldState.error]} />
+					</Field>
+				)}
+			/>
+
+			<div className="flex flex-wrap items-center gap-2 md:col-span-2 md:justify-end">
+				{isEditing ? (
+					<Button
+						type="button"
+						variant="outline"
+						onClick={onReset}
+						disabled={isSubmitting}
+					>
+						Cancel edit
+					</Button>
+				) : null}
+				<Button
+					type="submit"
+					loading={isSubmitting}
+					loadingText={
+						isEditing ? "Updating customer..." : "Creating customer..."
+					}
+				>
+					<Plus className="size-4" weight="duotone" />
+					{isEditing ? "Update Customer" : "Create Customer"}
+				</Button>
+			</div>
+		</form>
+	);
+}

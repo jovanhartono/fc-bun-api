@@ -125,4 +125,15 @@
 	body {
 		@apply bg-background font-sans text-foreground antialiased;
 	}
+
+	html {
+		-webkit-text-size-adjust: 100%;
+	}
+
+	button,
+	[role="button"],
+	a {
+		-webkit-tap-highlight-color: transparent;
+		touch-action: manipulation;
+	}
 }

@@ -7,59 +7,60 @@ import { DetailedError } from "hono/client";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { toast } from "sonner";
+import { ThemeProvider } from "@/components/theme-provider";
 import { routeTree } from "@/routeTree.gen";
 
 const queryClient = new QueryClient({
-	defaultOptions: {
-		mutations: {
-			onSuccess: (response) => {
-				if (
-					typeof response === "object" &&
-					response !== null &&
-					"message" in response &&
-					typeof response.message === "string"
-				) {
-					toast.success(response.message);
-				}
-			},
-			onError: (error) => {
-				if (error instanceof DetailedError) {
-					const details = error.detail as
-						| { data?: { message?: string } }
-						| undefined;
-					toast.error(details?.data?.message ?? "Something went wrong");
-					return;
-				}
+  defaultOptions: {
+    mutations: {
+      onSuccess: (response) => {
+        if (
+          typeof response === "object" &&
+          response !== null &&
+          "message" in response &&
+          typeof response.message === "string"
+        ) {
+          toast.success(response.message);
+        }
+      },
+      onError: (error) => {
+        if (error instanceof DetailedError) {
+          const details = error.detail as { data?: { message?: string } } | undefined;
+          toast.error(details?.data?.message ?? "Something went wrong");
+          return;
+        }
 
-				if (error instanceof Error) {
-					toast.error(error.message);
-					return;
-				}
+        if (error instanceof Error) {
+          toast.error(error.message);
+          return;
+        }
 
-				toast.error("Something went wrong");
-			},
-		},
-	},
+        toast.error("Something went wrong");
+      },
+    },
+  },
 });
 
 const router = createRouter({ routeTree });
 
 declare module "@tanstack/react-router" {
-	interface Register {
-		router: typeof router;
-	}
+  interface Register {
+    router: typeof router;
+  }
 }
 
 const rootElement = document.getElementById("root");
 if (!rootElement) {
-	throw new Error("Root element not found");
+  throw new Error("Root element not found");
 }
 
 createRoot(rootElement).render(
-	<StrictMode>
-		<QueryClientProvider client={queryClient}>
-			<RouterProvider router={router} />
-			<ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />
-		</QueryClientProvider>
-	</StrictMode>,
+  <StrictMode>
+    <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+        <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />
+      </QueryClientProvider>
+    </ThemeProvider>
+  </StrictMode>,
 );
