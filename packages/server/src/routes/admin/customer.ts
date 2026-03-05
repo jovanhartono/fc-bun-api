@@ -6,6 +6,7 @@ import { customersTable } from "@/db/schema";
 import { POSTCustomerSchema, PUTCustomerSchema } from "@/schema";
 import { idParamSchema } from "@/schema/param";
 import type { JWTPayload } from "@/types";
+import { notFoundOrFirst } from "@/utils/helper";
 import { failure, success } from "@/utils/http";
 import { zodValidator } from "@/utils/zod-validator-wrapper";
 
@@ -67,7 +68,7 @@ const app = new Hono()
       const { id } = c.req.valid("param");
       const body = c.req.valid("json");
 
-      const [customer] = await db
+      const rows = await db
         .update(customersTable)
         .set({
           ...body,
@@ -75,6 +76,11 @@ const app = new Hono()
         })
         .where(eq(customersTable.id, id))
         .returning();
+
+      const customer = notFoundOrFirst(rows, c, "Customer does not exist");
+      if (customer instanceof Response) {
+        return customer;
+      }
 
       return c.json(
         success(customer, `Update customer ${customer.name} success`)

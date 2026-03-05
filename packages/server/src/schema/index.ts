@@ -170,8 +170,8 @@ export const POSTProductSchema = z.object({
 
 export const POSTOrderSchema = z
   .object({
-    customer_name: varcharSchema("Customer Name"),
-    customer_phone: phoneSchema,
+    customer_name: varcharSchema("Customer Name").optional(),
+    customer_phone: phoneSchema.optional(),
     customer_id: z.number("Customer is required"),
     store_id: z.number("Store ID is required"),
     products: z
@@ -209,11 +209,10 @@ export const POSTOrderSchema = z
   })
   .refine(
     (val) => {
-      const emptyServiceOrProduct = !(
+      const hasAtLeastOneItem = !!(
         val.products?.length || val.services?.length
       );
-
-      return emptyServiceOrProduct;
+      return hasAtLeastOneItem;
     },
     {
       error: "Product or Service is required",

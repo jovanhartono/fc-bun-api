@@ -1,39 +1,37 @@
 import dayjs from "dayjs";
-import type { InferInsertModel } from "drizzle-orm";
-import { eq, sql } from "drizzle-orm/sql";
 import type z from "zod";
 import { db } from "@/db";
+import { BadRequestException, NotFoundException } from "@/errors";
 import {
-  orderCountersTable,
-  ordersProductsTable,
-  ordersServicesTable,
-  ordersTable,
-} from "@/db/schema";
-import { NotFoundException } from "@/errors";
+  findOrders,
+  insertOrder,
+  insertOrderProducts,
+  insertOrderServices,
+  reserveNextOrderNumber,
+  updateOrderTotal,
+} from "@/modules/orders/order.repository";
+import {
+  type GetOrdersQuery,
+  normalizeOrderListQuery,
+} from "@/modules/orders/order.schema";
 import { findProducts } from "@/modules/products/product.repository";
 import { findServices } from "@/modules/services/service.repository";
 import type { POSTOrderSchema } from "@/schema";
 import type { Store, User } from "@/types/entity";
+import { buildPaginationMeta } from "@/utils/pagination";
 
-export type DrizzleTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+function formatOrderCode(storeCode: string, dateStr: string, sequence: number) {
+  return `#${storeCode}/${dateStr}/${sequence}`;
+}
 
-export async function generateOrderCode(tx: DrizzleTx, store_code: string) {
-  const today = dayjs().format("YYYYMM");
+export async function listOrders(query?: GetOrdersQuery) {
+  const normalized = normalizeOrderListQuery(query);
+  const { items, total } = await findOrders(normalized);
 
-  const [counter] = await tx
-    .insert(orderCountersTable)
-    .values({ store_code, date_str: today, last_number: 1 })
-    .onConflictDoUpdate({
-      target: [orderCountersTable.store_code, orderCountersTable.date_str],
-      set: {
-        last_number: sql`${orderCountersTable.last_number} + 1`,
-      },
-    })
-    .returning();
-
-  const code = `${store_code}-${today}-${counter.last_number}`;
-
-  return code;
+  return {
+    items,
+    meta: buildPaginationMeta(total, normalized),
+  };
 }
 
 export async function createOrder(
@@ -41,80 +39,109 @@ export async function createOrder(
   store: Store,
   payload: z.infer<typeof POSTOrderSchema>
 ) {
-  const { services = [], products = [], ...restPayload } = payload;
+  const {
+    products = [],
+    services = [],
+    customer_name: _customerName,
+    customer_phone: _customerPhone,
+    ...orderPayload
+  } = payload;
 
-  await db.transaction(async (tx) => {
-    const orderCode = await generateOrderCode(tx, store.code);
+  const productIds = [...new Set(products.map((item) => item.id))];
+  const serviceIds = [...new Set(services.map((item) => item.id))];
 
-    const [{ order_id }] = await tx
-      .insert(ordersTable)
-      .values({
-        ...restPayload,
-        code: orderCode,
-        store_id: store.id,
-        updated_by: user.id,
-        created_by: user.id,
-      })
-      .returning({ order_id: ordersTable.id });
+  const [dbProducts, dbServices] = await Promise.all([
+    productIds.length > 0 ? findProducts(productIds) : Promise.resolve([]),
+    serviceIds.length > 0 ? findServices(serviceIds) : Promise.resolve([]),
+  ]);
 
-    let total = 0;
+  const productMap = new Map(
+    dbProducts.map((product) => [product.id, product])
+  );
+  const serviceMap = new Map(
+    dbServices.map((service) => [service.id, service])
+  );
 
-    // Helper to process services/products
-    const processItems = async <T extends "service" | "product">(
-      type: T,
-      items: {
-        id: number;
-        qty: number;
-        notes?: string | null;
-      }[]
-    ) => {
-      if (!items.length) {
-        return 0;
-      }
+  const missingProducts = productIds.filter((id) => !productMap.has(id));
+  if (missingProducts.length > 0) {
+    throw new NotFoundException(
+      `Product not found: ${missingProducts.join(", ")}`
+    );
+  }
 
-      const findFn = type === "service" ? findServices : findProducts;
-      const table =
-        type === "service" ? ordersServicesTable : ordersProductsTable;
+  const missingServices = serviceIds.filter((id) => !serviceMap.has(id));
+  if (missingServices.length > 0) {
+    throw new NotFoundException(
+      `Service not found: ${missingServices.join(", ")}`
+    );
+  }
 
-      const dbRows = await findFn(items.map(({ id }) => id));
+  return db.transaction(async (tx) => {
+    const dateStr = dayjs().format("DDMMYYYY");
+    const sequence = await reserveNextOrderNumber(tx, store.code, dateStr);
+    const code = formatOrderCode(store.code, dateStr, sequence);
 
-      const insertRows = items.map((item) => {
-        const match = dbRows.find(({ id }) => id === item.id);
-        if (!match) {
-          throw new NotFoundException(`${type} not found.`);
-        }
+    const orderId = await insertOrder(tx, {
+      code,
+      customer_id: orderPayload.customer_id,
+      payment_method_id: orderPayload.payment_method_id,
+      payment_status: orderPayload.payment_status,
+      discount: orderPayload.discount,
+      total: orderPayload.discount,
+      notes: orderPayload.notes,
+      store_id: store.id,
+      created_by: user.id,
+      updated_by: user.id,
+    });
 
-        return {
-          order_id,
-          [`${type}_id`]: match.id,
-          price: match.price,
-          notes: item.notes,
-          qty: item.qty,
-        } as InferInsertModel<typeof table>;
-      });
-
-      const inserted = await tx
-        .insert(table)
-        .values(insertRows)
-        .returning({ subtotal: table.subtotal });
-
-      return inserted.reduce(
-        (sum, curr) => sum + Number(curr.subtotal ?? 0),
-        0
-      );
-    };
-
-    // Process both types
     const [serviceSubtotal, productSubtotal] = await Promise.all([
-      processItems("service", services),
-      processItems("product", products),
+      insertOrderServices(
+        tx,
+        services.map((item) => {
+          const service = serviceMap.get(item.id);
+          if (!service) {
+            throw new NotFoundException(`Service not found: ${item.id}`);
+          }
+
+          return {
+            order_id: orderId,
+            service_id: service.id,
+            price: service.price,
+            qty: item.qty,
+            notes: item.notes,
+          };
+        })
+      ),
+      insertOrderProducts(
+        tx,
+        products.map((item) => {
+          const product = productMap.get(item.id);
+          if (!product) {
+            throw new NotFoundException(`Product not found: ${item.id}`);
+          }
+
+          return {
+            order_id: orderId,
+            product_id: product.id,
+            price: product.price,
+            qty: item.qty,
+            notes: item.notes,
+          };
+        })
+      ),
     ]);
 
-    total = serviceSubtotal + productSubtotal;
+    const total = serviceSubtotal + productSubtotal;
+    if (Number(orderPayload.discount) > total) {
+      throw new BadRequestException("Order discount cannot exceed order total");
+    }
 
-    await tx
-      .update(ordersTable)
-      .set({ total: total.toString() })
-      .where(eq(ordersTable.id, order_id));
+    await updateOrderTotal(tx, orderId, total);
+
+    return {
+      code,
+      id: orderId,
+      total,
+    };
   });
 }

@@ -4,11 +4,15 @@ import app from "@/app";
 import { adminMiddleware } from "@/middlewares/admin";
 import adminRoutes from "@/routes/admin";
 import authRoutes from "@/routes/auth";
+import publicRoutes from "@/routes/public";
 import { failure } from "@/utils/http";
 
 app.use("/admin/*", adminMiddleware);
 
-const router = app.route("/auth", authRoutes).route("/admin", adminRoutes);
+const router = app
+  .route("/auth", authRoutes)
+  .route("/admin", adminRoutes)
+  .route("/public", publicRoutes);
 
 // error handling
 app.onError((err, c) => {
@@ -22,6 +26,13 @@ app.onError((err, c) => {
       switch (err.cause.code) {
         case "23505": {
           statusCode = StatusCodes.CONFLICT;
+          break;
+        }
+        case "23502":
+        case "23503":
+        case "23514":
+        case "22P02": {
+          statusCode = StatusCodes.BAD_REQUEST;
           break;
         }
 

@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import categoriesRoutes from "@/routes/admin/categories";
 import customerRoutes from "@/routes/admin/customer";
+import orderServiceImagesRoutes from "@/routes/admin/order-service-images";
 import ordersRoutes from "@/routes/admin/orders";
 import paymentMethodsRoutes from "@/routes/admin/payment-methods";
 import productsRoutes from "@/routes/admin/products";
@@ -17,10 +18,6 @@ const app = new Hono()
   .route("/categories", categoriesRoutes)
   .route("/payment-methods", paymentMethodsRoutes)
   .route("/orders", ordersRoutes)
-  .get("/test", (c) => {
-    const _jwtPayload = c.get("jwtPayload");
-
-    return c.text("masuk");
-  });
+  .route("/order-service-images", orderServiceImagesRoutes);
 
 export default app;

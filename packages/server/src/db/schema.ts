@@ -214,7 +214,7 @@ export const ordersTable = pgTable(
   "orders",
   {
     cancelled_at: timestamp("cancelled_at"),
-    code: varchar("code", { length: 12 }).notNull().unique(),
+    code: varchar("code", { length: 32 }).notNull().unique(),
 
     completed_at: timestamp("completed_at"),
 
@@ -257,8 +257,11 @@ export const ordersTable = pgTable(
   },
   (table) => [
     index("order_store_idx").on(table.store_id),
+    index("order_store_created_at_idx").on(table.store_id, table.created_at),
     index("order_customer_idx").on(table.customer_id),
     index("order_payment_status_idx").on(table.payment_status),
+    index("order_status_idx").on(table.status),
+    index("order_created_at_idx").on(table.created_at),
     uniqueIndex("order_code_idx").on(table.code),
     check("total_non_negative_check", sql`${table.total} >= 0`),
     check("discount_non_negative_check", sql`${table.discount} >= 0`),
@@ -290,12 +293,21 @@ export const ordersRelations = relations(ordersTable, ({ one, many }) => ({
   }),
 }));
 
-export const orderCountersTable = pgTable("order_counters", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-  store_code: varchar("store_code", { length: 10 }).notNull(),
-  date_str: varchar("date_str", { length: 6 }).notNull(), // e.g. 202510
-  last_number: integer("last_number").notNull().default(1),
-});
+export const orderCountersTable = pgTable(
+  "order_counters",
+  {
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    store_code: varchar("store_code", { length: 10 }).notNull(),
+    date_str: varchar("date_str", { length: 8 }).notNull(), // e.g. 05102025
+    last_number: integer("last_number").notNull().default(0),
+  },
+  (table) => [
+    uniqueIndex("order_counter_store_date_uidx").on(
+      table.store_code,
+      table.date_str
+    ),
+  ]
+);
 
 export const ordersServicesTable = pgTable(
   "orders_services",
