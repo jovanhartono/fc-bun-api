@@ -398,8 +398,8 @@ export const orderServicesImagesRelations = relations(
 export const ordersProductsTable = pgTable(
   "orders_products",
   {
-    discount: decimal("discount", { precision: 12 }).default("0").notNull(),
     id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    discount: decimal("discount", { precision: 12 }).default("0").notNull(),
     notes: text("notes"),
     order_id: integer("order_id").references(() => ordersTable.id, {
       onDelete: "cascade",

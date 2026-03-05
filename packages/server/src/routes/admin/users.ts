@@ -92,11 +92,7 @@ const app = new Hono()
     ]);
 
     return c.json(
-      success(
-        users,
-        undefined,
-        buildPaginationMeta(totalRows, pagination)
-      )
+      success(users, undefined, buildPaginationMeta(totalRows, pagination))
     );
   })
   .get("/:id", idParamSchema, async (c) => {
