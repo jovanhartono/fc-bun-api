@@ -13,10 +13,10 @@ import {
 } from "@phosphor-icons/react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
-	useEffect,
-	useState,
 	type ComponentType,
 	type PropsWithChildren,
+	useEffect,
+	useState,
 } from "react";
 import { ModeToggle } from "@/components/mode-toggle";
 import { useTheme } from "@/components/theme-provider";
@@ -190,8 +190,8 @@ export function AppShell({ title, description, children }: AppShellProps) {
 							variant="outline"
 							className="mt-3 w-full justify-start"
 							onClick={handleLogout}
+							icon={<SignOut className="size-4" weight="duotone" />}
 						>
-							<SignOut className="size-4" weight="duotone" />
 							Logout
 						</Button>
 					</div>

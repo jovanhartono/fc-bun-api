@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { Combobox } from "@/components/ui/combobox";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
-import { fetchCustomers, queryKeys } from "@/lib/api";
+import { fetchCategories, queryKeys } from "@/lib/api";
 
-type CustomerAutocompleteProps = {
+type CategoryAutocompleteProps = {
 	value: string;
 	onValueChange: (value: string) => void;
 	disabled?: boolean;
@@ -11,35 +11,35 @@ type CustomerAutocompleteProps = {
 	error?: { message?: string };
 };
 
-export function CustomerAutocomplete({
+export function CategoryAutocomplete({
 	value,
 	onValueChange,
 	disabled,
 	required,
 	error,
-}: CustomerAutocompleteProps) {
-	const { data: customers = [], isPending } = useQuery({
-		queryKey: queryKeys.customers,
-		queryFn: fetchCustomers,
+}: CategoryAutocompleteProps) {
+	const { data: categories = [], isPending } = useQuery({
+		queryKey: queryKeys.categories,
+		queryFn: fetchCategories,
 	});
 
 	return (
 		<Field data-invalid={!!error}>
-			<FieldLabel htmlFor="order-customer">Customer Reference</FieldLabel>
+			<FieldLabel htmlFor="entity-category">Category</FieldLabel>
 			<Combobox
-				id="order-customer"
+				id="entity-category"
 				required={required}
 				triggerClassName="h-10 w-full text-sm"
-				options={customers.map((customer) => ({
-					value: String(customer.id),
-					label: customer.name,
+				options={categories.map((category) => ({
+					value: String(category.id),
+					label: category.name,
 				}))}
 				value={value}
 				onValueChange={onValueChange}
 				loading={isPending}
-				placeholder="Select customer"
-				searchPlaceholder="Search customer..."
-				emptyText="No customer found"
+				placeholder="Select category"
+				searchPlaceholder="Search category..."
+				emptyText="No category found"
 				disabled={disabled}
 			/>
 			<FieldError errors={[error]} />

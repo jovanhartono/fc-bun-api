@@ -1,199 +1,255 @@
-import type { Dispatch, FormEvent, SetStateAction } from "react";
-import { Plus } from "@phosphor-icons/react";
+import { POSTProductSchema } from "@fresclean/api/schema";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { PlusIcon } from "@phosphor-icons/react";
+import { Controller, useForm } from "react-hook-form";
+import { z } from "zod";
 import { CurrencyInput } from "@/components/form/currency-input";
-import { Combobox } from "@/components/ui/combobox";
 import { Button } from "@/components/ui/button";
-import { Field, FieldLabel } from "@/components/ui/field";
+import {
+	Field,
+	FieldError,
+	FieldGroup,
+	FieldLabel,
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { CategoryAutocomplete } from "@/features/orders/components/category-autocomplete";
 
-export type ProductFormState = {
-	name: string;
-	description: string;
-	is_active: boolean;
-	sku: string;
-	uom: string;
-	stock: string;
-	category_id: string;
-	cogs: string;
-	price: string;
+const productFormResolverSchema = z.object({
+	...POSTProductSchema.shape,
+	stock: z.preprocess((value) => Number(value), POSTProductSchema.shape.stock),
+	category_id: z.preprocess(
+		(value) => Number(value),
+		POSTProductSchema.shape.category_id,
+	),
+});
+
+export type ProductFormState = z.infer<typeof productFormResolverSchema>;
+
+const defaultForm: ProductFormState = {
+	name: "",
+	description: "",
+	is_active: true,
+	sku: "",
+	uom: "pcs",
+	stock: 0,
+	category_id: 0,
+	cogs: "",
+	price: "",
 };
 
 type ProductFormProps = {
-	form: ProductFormState;
-	setForm: Dispatch<SetStateAction<ProductFormState>>;
-	categories: Array<{ id: number; name: string }>;
-	categoriesLoading?: boolean;
-	isSubmitting: boolean;
+	defaultValues?: ProductFormState;
+	handleOnSubmit: (values: ProductFormState) => Promise<void> | void;
 	isEditing: boolean;
-	onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 	onReset: () => void;
 };
 
 export function ProductForm({
-	form,
-	setForm,
-	categories,
-	categoriesLoading,
-	isSubmitting,
+	defaultValues,
+	handleOnSubmit,
 	isEditing,
-	onSubmit,
 	onReset,
 }: ProductFormProps) {
+	const form = useForm({
+		resolver: zodResolver(productFormResolverSchema),
+		defaultValues: defaultValues ?? defaultForm,
+	});
+	const isSubmitting = form.formState.isSubmitting;
+
 	return (
-		<form className="grid gap-4 p-4 md:grid-cols-2" onSubmit={onSubmit}>
-			<Field>
-				<FieldLabel htmlFor="product-name">Name</FieldLabel>
-				<input
-					className="h-10 w-full min-w-0 rounded-none border border-input bg-transparent px-3 py-2 text-sm transition-colors outline-none file:inline-flex file:h-8 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-1 aria-invalid:ring-destructive/20 dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40"
-					id="product-name"
-					placeholder="e.g. Liquid Detergent"
-					value={form.name}
-					onChange={(event) =>
-						setForm((prev) => ({ ...prev, name: event.target.value }))
-					}
-					disabled={isSubmitting}
-					required
+		<form onSubmit={form.handleSubmit(handleOnSubmit)}>
+			<FieldGroup>
+				<Controller
+					name="name"
+					control={form.control}
+					render={({ field, fieldState }) => (
+						<Field data-invalid={fieldState.invalid}>
+							<FieldLabel htmlFor="product-name">Name</FieldLabel>
+							<Input
+								{...field}
+								id="product-name"
+								placeholder="e.g. Liquid Detergent"
+								aria-invalid={fieldState.invalid}
+								disabled={isSubmitting}
+								required
+								className="h-10"
+							/>
+							<FieldError errors={[fieldState.error]} />
+						</Field>
+					)}
 				/>
-			</Field>
 
-			<Field>
-				<FieldLabel htmlFor="product-sku">SKU</FieldLabel>
-				<input
-					className="h-10 w-full min-w-0 rounded-none border border-input bg-transparent px-3 py-2 text-sm transition-colors outline-none file:inline-flex file:h-8 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-1 aria-invalid:ring-destructive/20 dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40"
-					id="product-sku"
-					placeholder="e.g. PRD-001"
-					value={form.sku}
-					onChange={(event) =>
-						setForm((prev) => ({ ...prev, sku: event.target.value }))
-					}
-					disabled={isSubmitting}
-					required
+				<Controller
+					name="sku"
+					control={form.control}
+					render={({ field, fieldState }) => (
+						<Field data-invalid={fieldState.invalid}>
+							<FieldLabel htmlFor="product-sku">SKU</FieldLabel>
+							<Input
+								{...field}
+								id="product-sku"
+								placeholder="e.g. PRD-001"
+								aria-invalid={fieldState.invalid}
+								disabled={isSubmitting}
+								required
+								className="h-10"
+							/>
+							<FieldError errors={[fieldState.error]} />
+						</Field>
+					)}
 				/>
-			</Field>
 
-			<Field>
-				<FieldLabel htmlFor="product-category">Category</FieldLabel>
-				<Combobox
-					id="product-category"
-					required
-					triggerClassName="h-10 w-full text-sm"
-					options={categories.map((category) => ({
-						value: String(category.id),
-						label: category.name,
-					}))}
-					value={form.category_id}
-					onValueChange={(value) =>
-						setForm((prev) => ({ ...prev, category_id: value }))
-					}
-					loading={categoriesLoading}
-					placeholder="Select category"
-					searchPlaceholder="Search category..."
-					emptyText="No category found"
-					disabled={isSubmitting}
+				<Controller
+					name="category_id"
+					control={form.control}
+					render={({ field, fieldState }) => (
+						<CategoryAutocomplete
+							value={field.value ? String(field.value) : ""}
+							onValueChange={(value) => field.onChange(Number(value))}
+							required
+							disabled={isSubmitting}
+							error={fieldState.error}
+						/>
+					)}
 				/>
-			</Field>
 
-			<Field>
-				<FieldLabel htmlFor="product-uom">UOM</FieldLabel>
-				<input
-					className="h-10 w-full min-w-0 rounded-none border border-input bg-transparent px-3 py-2 text-sm transition-colors outline-none file:inline-flex file:h-8 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-1 aria-invalid:ring-destructive/20 dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40"
-					id="product-uom"
-					placeholder="e.g. pcs"
-					value={form.uom}
-					onChange={(event) =>
-						setForm((prev) => ({ ...prev, uom: event.target.value }))
-					}
-					disabled={isSubmitting}
-					required
+				<Controller
+					name="uom"
+					control={form.control}
+					render={({ field, fieldState }) => (
+						<Field data-invalid={fieldState.invalid}>
+							<FieldLabel htmlFor="product-uom">UOM</FieldLabel>
+							<Input
+								{...field}
+								id="product-uom"
+								placeholder="e.g. pcs"
+								aria-invalid={fieldState.invalid}
+								disabled={isSubmitting}
+								required
+								className="h-10"
+							/>
+							<FieldError errors={[fieldState.error]} />
+						</Field>
+					)}
 				/>
-			</Field>
 
-			<Field>
-				<FieldLabel htmlFor="product-stock">Stock</FieldLabel>
-				<input
-					className="h-10 w-full min-w-0 rounded-none border border-input bg-transparent px-3 py-2 text-sm transition-colors outline-none file:inline-flex file:h-8 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-1 aria-invalid:ring-destructive/20 dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40"
-					id="product-stock"
-					type="number"
-					placeholder="e.g. 100"
-					value={form.stock}
-					onChange={(event) =>
-						setForm((prev) => ({ ...prev, stock: event.target.value }))
-					}
-					disabled={isSubmitting}
-					required
+				<Controller
+					name="stock"
+					control={form.control}
+					render={({ field, fieldState }) => (
+						<Field data-invalid={fieldState.invalid}>
+							<FieldLabel htmlFor="product-stock">Stock</FieldLabel>
+							<Input
+								id="product-stock"
+								type="number"
+								placeholder="e.g. 100"
+								aria-invalid={fieldState.invalid}
+								value={String(field.value)}
+								onChange={(event) => field.onChange(Number(event.target.value))}
+								disabled={isSubmitting}
+								required
+								className="h-10"
+							/>
+							<FieldError errors={[fieldState.error]} />
+						</Field>
+					)}
 				/>
-			</Field>
 
-			<Field className="md:col-span-2">
-				<FieldLabel htmlFor="product-description">Description</FieldLabel>
-				<input
-					className="h-10 w-full min-w-0 rounded-none border border-input bg-transparent px-3 py-2 text-sm transition-colors outline-none file:inline-flex file:h-8 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-1 aria-invalid:ring-destructive/20 dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40"
-					id="product-description"
-					placeholder="e.g. 1L refill bottle"
-					value={form.description}
-					onChange={(event) =>
-						setForm((prev) => ({ ...prev, description: event.target.value }))
-					}
-					disabled={isSubmitting}
+				<Controller
+					name="description"
+					control={form.control}
+					render={({ field, fieldState }) => (
+						<Field data-invalid={fieldState.invalid} className="md:col-span-2">
+							<FieldLabel htmlFor="product-description">Description</FieldLabel>
+							<Input
+								{...field}
+								id="product-description"
+								placeholder="e.g. 1L refill bottle"
+								aria-invalid={fieldState.invalid}
+								value={field.value ?? ""}
+								disabled={isSubmitting}
+								className="h-10"
+							/>
+							<FieldError errors={[fieldState.error]} />
+						</Field>
+					)}
 				/>
-			</Field>
 
-			<Field>
-				<FieldLabel htmlFor="product-cogs">COGS</FieldLabel>
-				<CurrencyInput
-					id="product-cogs"
-					placeholder="Rp0"
-					value={form.cogs}
-					onValueChange={(value) =>
-						setForm((prev) => ({ ...prev, cogs: value }))
-					}
-					disabled={isSubmitting}
-					required
+				<Controller
+					name="cogs"
+					control={form.control}
+					render={({ field, fieldState }) => (
+						<Field data-invalid={fieldState.invalid}>
+							<FieldLabel htmlFor="product-cogs">COGS</FieldLabel>
+							<CurrencyInput
+								id="product-cogs"
+								placeholder="Rp0"
+								value={field.value}
+								onValueChange={field.onChange}
+								disabled={isSubmitting}
+								required
+							/>
+							<FieldError errors={[fieldState.error]} />
+						</Field>
+					)}
 				/>
-			</Field>
 
-			<Field>
-				<FieldLabel htmlFor="product-price">Price</FieldLabel>
-				<CurrencyInput
-					id="product-price"
-					placeholder="Rp0"
-					value={form.price}
-					onValueChange={(value) =>
-						setForm((prev) => ({ ...prev, price: value }))
-					}
-					disabled={isSubmitting}
-					required
+				<Controller
+					name="price"
+					control={form.control}
+					render={({ field, fieldState }) => (
+						<Field data-invalid={fieldState.invalid}>
+							<FieldLabel htmlFor="product-price">Price</FieldLabel>
+							<CurrencyInput
+								id="product-price"
+								placeholder="Rp0"
+								value={field.value}
+								onValueChange={field.onChange}
+								disabled={isSubmitting}
+								required
+							/>
+							<FieldError errors={[fieldState.error]} />
+						</Field>
+					)}
 				/>
-			</Field>
 
-			<Field className="flex-row items-center justify-between md:col-span-2">
-				<FieldLabel htmlFor="product-active">Active</FieldLabel>
-				<Switch
-					id="product-active"
-					checked={form.is_active}
-					onCheckedChange={(checked) =>
-						setForm((prev) => ({ ...prev, is_active: !!checked }))
-					}
-					disabled={isSubmitting}
+				<Controller
+					name="is_active"
+					control={form.control}
+					render={({ field }) => (
+						<Field className="flex-row items-center justify-between md:col-span-2">
+							<FieldLabel htmlFor="product-active">Active</FieldLabel>
+							<Switch
+								id="product-active"
+								checked={field.value}
+								onCheckedChange={(checked) => field.onChange(!!checked)}
+								disabled={isSubmitting}
+							/>
+						</Field>
+					)}
 				/>
-			</Field>
 
-			<div className="flex flex-wrap gap-2 md:col-span-2 md:justify-end">
-				{isEditing ? (
+				<div className="flex flex-wrap gap-2 md:col-span-2 md:justify-end">
+					{isEditing ? (
+						<Button
+							type="button"
+							variant="outline"
+							onClick={onReset}
+							disabled={isSubmitting}
+						>
+							Cancel edit
+						</Button>
+					) : null}
 					<Button
-						type="button"
-						variant="outline"
-						onClick={onReset}
-						disabled={isSubmitting}
+						type="submit"
+						loading={isSubmitting}
+						icon={<PlusIcon className="size-4" weight="duotone" />}
 					>
-						Cancel edit
+						{isEditing ? "Update Product" : "Create Product"}
 					</Button>
-				) : null}
-				<Button type="submit" disabled={isSubmitting}>
-					<Plus className="size-4" weight="duotone" />
-					{isEditing ? "Update Product" : "Create Product"}
-				</Button>
-			</div>
+				</div>
+			</FieldGroup>
 		</form>
 	);
 }

@@ -9,104 +9,110 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from "./routes/__root";
-import { Route as UsersRouteImport } from "./routes/users";
-import { Route as StoresRouteImport } from "./routes/stores";
-import { Route as ServicesRouteImport } from "./routes/services";
-import { Route as ProductsRouteImport } from "./routes/products";
-import { Route as PaymentMethodsRouteImport } from "./routes/payment-methods";
-import { Route as OrdersRouteImport } from "./routes/orders";
-import { Route as CustomersRouteImport } from "./routes/customers";
-import { Route as CategoriesRouteImport } from "./routes/categories";
-import { Route as IndexRouteImport } from "./routes/index";
+import { Route as AdminRouteRouteImport } from "./routes/_admin/route";
+import { Route as AdminIndexRouteImport } from "./routes/_admin/index";
 import { Route as AuthLoginRouteImport } from "./routes/auth/login";
+import { Route as AdminUsersRouteImport } from "./routes/_admin/users";
+import { Route as AdminStoresRouteImport } from "./routes/_admin/stores";
+import { Route as AdminServicesRouteImport } from "./routes/_admin/services";
+import { Route as AdminProductsRouteImport } from "./routes/_admin/products";
+import { Route as AdminPaymentMethodsRouteImport } from "./routes/_admin/payment-methods";
+import { Route as AdminOrdersRouteImport } from "./routes/_admin/orders";
+import { Route as AdminCustomersRouteImport } from "./routes/_admin/customers";
+import { Route as AdminCategoriesRouteImport } from "./routes/_admin/categories";
 
-const UsersRoute = UsersRouteImport.update({
-  id: "/users",
-  path: "/users",
+const AdminRouteRoute = AdminRouteRouteImport.update({
+  id: "/_admin",
   getParentRoute: () => rootRouteImport,
 } as any);
-const StoresRoute = StoresRouteImport.update({
-  id: "/stores",
-  path: "/stores",
-  getParentRoute: () => rootRouteImport,
-} as any);
-const ServicesRoute = ServicesRouteImport.update({
-  id: "/services",
-  path: "/services",
-  getParentRoute: () => rootRouteImport,
-} as any);
-const ProductsRoute = ProductsRouteImport.update({
-  id: "/products",
-  path: "/products",
-  getParentRoute: () => rootRouteImport,
-} as any);
-const PaymentMethodsRoute = PaymentMethodsRouteImport.update({
-  id: "/payment-methods",
-  path: "/payment-methods",
-  getParentRoute: () => rootRouteImport,
-} as any);
-const OrdersRoute = OrdersRouteImport.update({
-  id: "/orders",
-  path: "/orders",
-  getParentRoute: () => rootRouteImport,
-} as any);
-const CustomersRoute = CustomersRouteImport.update({
-  id: "/customers",
-  path: "/customers",
-  getParentRoute: () => rootRouteImport,
-} as any);
-const CategoriesRoute = CategoriesRouteImport.update({
-  id: "/categories",
-  path: "/categories",
-  getParentRoute: () => rootRouteImport,
-} as any);
-const IndexRoute = IndexRouteImport.update({
+const AdminIndexRoute = AdminIndexRouteImport.update({
   id: "/",
   path: "/",
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AdminRouteRoute,
 } as any);
 const AuthLoginRoute = AuthLoginRouteImport.update({
   id: "/auth/login",
   path: "/auth/login",
   getParentRoute: () => rootRouteImport,
 } as any);
+const AdminUsersRoute = AdminUsersRouteImport.update({
+  id: "/users",
+  path: "/users",
+  getParentRoute: () => AdminRouteRoute,
+} as any);
+const AdminStoresRoute = AdminStoresRouteImport.update({
+  id: "/stores",
+  path: "/stores",
+  getParentRoute: () => AdminRouteRoute,
+} as any);
+const AdminServicesRoute = AdminServicesRouteImport.update({
+  id: "/services",
+  path: "/services",
+  getParentRoute: () => AdminRouteRoute,
+} as any);
+const AdminProductsRoute = AdminProductsRouteImport.update({
+  id: "/products",
+  path: "/products",
+  getParentRoute: () => AdminRouteRoute,
+} as any);
+const AdminPaymentMethodsRoute = AdminPaymentMethodsRouteImport.update({
+  id: "/payment-methods",
+  path: "/payment-methods",
+  getParentRoute: () => AdminRouteRoute,
+} as any);
+const AdminOrdersRoute = AdminOrdersRouteImport.update({
+  id: "/orders",
+  path: "/orders",
+  getParentRoute: () => AdminRouteRoute,
+} as any);
+const AdminCustomersRoute = AdminCustomersRouteImport.update({
+  id: "/customers",
+  path: "/customers",
+  getParentRoute: () => AdminRouteRoute,
+} as any);
+const AdminCategoriesRoute = AdminCategoriesRouteImport.update({
+  id: "/categories",
+  path: "/categories",
+  getParentRoute: () => AdminRouteRoute,
+} as any);
 
 export interface FileRoutesByFullPath {
-  "/": typeof IndexRoute;
-  "/categories": typeof CategoriesRoute;
-  "/customers": typeof CustomersRoute;
-  "/orders": typeof OrdersRoute;
-  "/payment-methods": typeof PaymentMethodsRoute;
-  "/products": typeof ProductsRoute;
-  "/services": typeof ServicesRoute;
-  "/stores": typeof StoresRoute;
-  "/users": typeof UsersRoute;
+  "/": typeof AdminIndexRoute;
+  "/categories": typeof AdminCategoriesRoute;
+  "/customers": typeof AdminCustomersRoute;
+  "/orders": typeof AdminOrdersRoute;
+  "/payment-methods": typeof AdminPaymentMethodsRoute;
+  "/products": typeof AdminProductsRoute;
+  "/services": typeof AdminServicesRoute;
+  "/stores": typeof AdminStoresRoute;
+  "/users": typeof AdminUsersRoute;
   "/auth/login": typeof AuthLoginRoute;
 }
 export interface FileRoutesByTo {
-  "/": typeof IndexRoute;
-  "/categories": typeof CategoriesRoute;
-  "/customers": typeof CustomersRoute;
-  "/orders": typeof OrdersRoute;
-  "/payment-methods": typeof PaymentMethodsRoute;
-  "/products": typeof ProductsRoute;
-  "/services": typeof ServicesRoute;
-  "/stores": typeof StoresRoute;
-  "/users": typeof UsersRoute;
+  "/categories": typeof AdminCategoriesRoute;
+  "/customers": typeof AdminCustomersRoute;
+  "/orders": typeof AdminOrdersRoute;
+  "/payment-methods": typeof AdminPaymentMethodsRoute;
+  "/products": typeof AdminProductsRoute;
+  "/services": typeof AdminServicesRoute;
+  "/stores": typeof AdminStoresRoute;
+  "/users": typeof AdminUsersRoute;
   "/auth/login": typeof AuthLoginRoute;
+  "/": typeof AdminIndexRoute;
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport;
-  "/": typeof IndexRoute;
-  "/categories": typeof CategoriesRoute;
-  "/customers": typeof CustomersRoute;
-  "/orders": typeof OrdersRoute;
-  "/payment-methods": typeof PaymentMethodsRoute;
-  "/products": typeof ProductsRoute;
-  "/services": typeof ServicesRoute;
-  "/stores": typeof StoresRoute;
-  "/users": typeof UsersRoute;
+  "/_admin": typeof AdminRouteRouteWithChildren;
+  "/_admin/categories": typeof AdminCategoriesRoute;
+  "/_admin/customers": typeof AdminCustomersRoute;
+  "/_admin/orders": typeof AdminOrdersRoute;
+  "/_admin/payment-methods": typeof AdminPaymentMethodsRoute;
+  "/_admin/products": typeof AdminProductsRoute;
+  "/_admin/services": typeof AdminServicesRoute;
+  "/_admin/stores": typeof AdminStoresRoute;
+  "/_admin/users": typeof AdminUsersRoute;
   "/auth/login": typeof AuthLoginRoute;
+  "/_admin/": typeof AdminIndexRoute;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
@@ -123,7 +129,6 @@ export interface FileRouteTypes {
     | "/auth/login";
   fileRoutesByTo: FileRoutesByTo;
   to:
-    | "/"
     | "/categories"
     | "/customers"
     | "/orders"
@@ -132,98 +137,43 @@ export interface FileRouteTypes {
     | "/services"
     | "/stores"
     | "/users"
-    | "/auth/login";
+    | "/auth/login"
+    | "/";
   id:
     | "__root__"
-    | "/"
-    | "/categories"
-    | "/customers"
-    | "/orders"
-    | "/payment-methods"
-    | "/products"
-    | "/services"
-    | "/stores"
-    | "/users"
-    | "/auth/login";
+    | "/_admin"
+    | "/_admin/categories"
+    | "/_admin/customers"
+    | "/_admin/orders"
+    | "/_admin/payment-methods"
+    | "/_admin/products"
+    | "/_admin/services"
+    | "/_admin/stores"
+    | "/_admin/users"
+    | "/auth/login"
+    | "/_admin/";
   fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute;
-  CategoriesRoute: typeof CategoriesRoute;
-  CustomersRoute: typeof CustomersRoute;
-  OrdersRoute: typeof OrdersRoute;
-  PaymentMethodsRoute: typeof PaymentMethodsRoute;
-  ProductsRoute: typeof ProductsRoute;
-  ServicesRoute: typeof ServicesRoute;
-  StoresRoute: typeof StoresRoute;
-  UsersRoute: typeof UsersRoute;
+  AdminRouteRoute: typeof AdminRouteRouteWithChildren;
   AuthLoginRoute: typeof AuthLoginRoute;
 }
 
 declare module "@tanstack/react-router" {
   interface FileRoutesByPath {
-    "/users": {
-      id: "/users";
-      path: "/users";
-      fullPath: "/users";
-      preLoaderRoute: typeof UsersRouteImport;
+    "/_admin": {
+      id: "/_admin";
+      path: "";
+      fullPath: "/";
+      preLoaderRoute: typeof AdminRouteRouteImport;
       parentRoute: typeof rootRouteImport;
     };
-    "/stores": {
-      id: "/stores";
-      path: "/stores";
-      fullPath: "/stores";
-      preLoaderRoute: typeof StoresRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/services": {
-      id: "/services";
-      path: "/services";
-      fullPath: "/services";
-      preLoaderRoute: typeof ServicesRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/products": {
-      id: "/products";
-      path: "/products";
-      fullPath: "/products";
-      preLoaderRoute: typeof ProductsRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/payment-methods": {
-      id: "/payment-methods";
-      path: "/payment-methods";
-      fullPath: "/payment-methods";
-      preLoaderRoute: typeof PaymentMethodsRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/orders": {
-      id: "/orders";
-      path: "/orders";
-      fullPath: "/orders";
-      preLoaderRoute: typeof OrdersRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/customers": {
-      id: "/customers";
-      path: "/customers";
-      fullPath: "/customers";
-      preLoaderRoute: typeof CustomersRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/categories": {
-      id: "/categories";
-      path: "/categories";
-      fullPath: "/categories";
-      preLoaderRoute: typeof CategoriesRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/": {
-      id: "/";
+    "/_admin/": {
+      id: "/_admin/";
       path: "/";
       fullPath: "/";
-      preLoaderRoute: typeof IndexRouteImport;
-      parentRoute: typeof rootRouteImport;
+      preLoaderRoute: typeof AdminIndexRouteImport;
+      parentRoute: typeof AdminRouteRoute;
     };
     "/auth/login": {
       id: "/auth/login";
@@ -232,19 +182,95 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AuthLoginRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    "/_admin/users": {
+      id: "/_admin/users";
+      path: "/users";
+      fullPath: "/users";
+      preLoaderRoute: typeof AdminUsersRouteImport;
+      parentRoute: typeof AdminRouteRoute;
+    };
+    "/_admin/stores": {
+      id: "/_admin/stores";
+      path: "/stores";
+      fullPath: "/stores";
+      preLoaderRoute: typeof AdminStoresRouteImport;
+      parentRoute: typeof AdminRouteRoute;
+    };
+    "/_admin/services": {
+      id: "/_admin/services";
+      path: "/services";
+      fullPath: "/services";
+      preLoaderRoute: typeof AdminServicesRouteImport;
+      parentRoute: typeof AdminRouteRoute;
+    };
+    "/_admin/products": {
+      id: "/_admin/products";
+      path: "/products";
+      fullPath: "/products";
+      preLoaderRoute: typeof AdminProductsRouteImport;
+      parentRoute: typeof AdminRouteRoute;
+    };
+    "/_admin/payment-methods": {
+      id: "/_admin/payment-methods";
+      path: "/payment-methods";
+      fullPath: "/payment-methods";
+      preLoaderRoute: typeof AdminPaymentMethodsRouteImport;
+      parentRoute: typeof AdminRouteRoute;
+    };
+    "/_admin/orders": {
+      id: "/_admin/orders";
+      path: "/orders";
+      fullPath: "/orders";
+      preLoaderRoute: typeof AdminOrdersRouteImport;
+      parentRoute: typeof AdminRouteRoute;
+    };
+    "/_admin/customers": {
+      id: "/_admin/customers";
+      path: "/customers";
+      fullPath: "/customers";
+      preLoaderRoute: typeof AdminCustomersRouteImport;
+      parentRoute: typeof AdminRouteRoute;
+    };
+    "/_admin/categories": {
+      id: "/_admin/categories";
+      path: "/categories";
+      fullPath: "/categories";
+      preLoaderRoute: typeof AdminCategoriesRouteImport;
+      parentRoute: typeof AdminRouteRoute;
+    };
   }
 }
 
+interface AdminRouteRouteChildren {
+  AdminCategoriesRoute: typeof AdminCategoriesRoute;
+  AdminCustomersRoute: typeof AdminCustomersRoute;
+  AdminOrdersRoute: typeof AdminOrdersRoute;
+  AdminPaymentMethodsRoute: typeof AdminPaymentMethodsRoute;
+  AdminProductsRoute: typeof AdminProductsRoute;
+  AdminServicesRoute: typeof AdminServicesRoute;
+  AdminStoresRoute: typeof AdminStoresRoute;
+  AdminUsersRoute: typeof AdminUsersRoute;
+  AdminIndexRoute: typeof AdminIndexRoute;
+}
+
+const AdminRouteRouteChildren: AdminRouteRouteChildren = {
+  AdminCategoriesRoute: AdminCategoriesRoute,
+  AdminCustomersRoute: AdminCustomersRoute,
+  AdminOrdersRoute: AdminOrdersRoute,
+  AdminPaymentMethodsRoute: AdminPaymentMethodsRoute,
+  AdminProductsRoute: AdminProductsRoute,
+  AdminServicesRoute: AdminServicesRoute,
+  AdminStoresRoute: AdminStoresRoute,
+  AdminUsersRoute: AdminUsersRoute,
+  AdminIndexRoute: AdminIndexRoute,
+};
+
+const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
+  AdminRouteRouteChildren,
+);
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  CategoriesRoute: CategoriesRoute,
-  CustomersRoute: CustomersRoute,
-  OrdersRoute: OrdersRoute,
-  PaymentMethodsRoute: PaymentMethodsRoute,
-  ProductsRoute: ProductsRoute,
-  ServicesRoute: ServicesRoute,
-  StoresRoute: StoresRoute,
-  UsersRoute: UsersRoute,
+  AdminRouteRoute: AdminRouteRouteWithChildren,
   AuthLoginRoute: AuthLoginRoute,
 };
 export const routeTree = rootRouteImport

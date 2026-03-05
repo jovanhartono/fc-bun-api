@@ -1,14 +1,12 @@
-import { POSTCustomerSchema, PUTCustomerSchema } from "@fresclean/api/schema";
+import { POSTCustomerSchema } from "@fresclean/api/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PencilSimpleLine, Plus } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useCallback, useMemo, useState } from "react";
-import { useForm, type SubmitHandler } from "react-hook-form";
-import { toast } from "sonner";
+import { type SubmitHandler, useForm } from "react-hook-form";
 import { z } from "zod";
-import { AppShell } from "@/components/app-shell";
 import { CustomerSelect } from "@/components/customer-select";
 import { DataTable } from "@/components/data-table";
 import { ProductSelect } from "@/components/product-select";
@@ -22,25 +20,21 @@ import {
 	SheetHeader,
 	SheetTitle,
 	SheetTrigger,
-	useSheet,
 } from "@/components/ui/sheet";
 import {
 	CustomerForm,
 	type CustomerFormState,
 } from "@/features/customers/components/customer-form";
 import {
+	type Customer,
 	createCustomer,
 	fetchCustomers,
-	fetchStores,
 	queryKeys,
-	type Customer,
 	updateCustomer,
 } from "@/lib/api";
-import { requireAuth } from "@/lib/auth";
-import { isValidPhoneNumber, normalizePhoneNumber } from "@/lib/phone-number";
+import { normalizePhoneNumber } from "@/lib/phone-number";
 
-export const Route = createFileRoute("/customers")({
-	beforeLoad: requireAuth,
+export const Route = createFileRoute("/_admin/customers")({
 	component: CustomersPage,
 });
 
@@ -52,27 +46,25 @@ const defaultForm: CustomerFormState = {
 	origin_store_id: "",
 };
 
-const customerFormSchema = z.object({
-	name: z.string().trim().min(1, "Name is required"),
-	phone_number: z
-		.string()
-		.trim()
-		.min(1, "Phone is required")
-		.refine((value) => isValidPhoneNumber(value), "Invalid phone number"),
-	email: z.string(),
-	address: z.string(),
-	origin_store_id: z.string(),
+const customerFormResolverSchema = z.object({
+	...POSTCustomerSchema.shape,
+	origin_store_id: z.preprocess(
+		(value) => Number(value),
+		POSTCustomerSchema.shape.origin_store_id,
+	),
 });
 
 function CustomersPage() {
 	const queryClient = useQueryClient();
 	const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
-	const sheet = useSheet();
+	const [isSheetOpen, setSheetOpen] = useState(false);
 	const [selectedCustomerId, setSelectedCustomerId] = useState("");
 	const [selectedProductId, setSelectedProductId] = useState("");
 
 	const form = useForm<CustomerFormState>({
-		resolver: zodResolver(customerFormSchema),
+		resolver: zodResolver(customerFormResolverSchema, undefined, {
+			raw: true,
+		}) as any,
 		defaultValues: defaultForm,
 	});
 
@@ -82,16 +74,11 @@ function CustomersPage() {
 	});
 	const customerCount = customers.length;
 
-	const { data: stores = [], isPending: isStoresPending } = useQuery({
-		queryKey: queryKeys.stores,
-		queryFn: fetchStores,
-	});
-
 	const resetForm = useCallback(() => {
 		form.reset(defaultForm);
 		setEditingCustomer(null);
-		sheet.close();
-	}, [form, sheet]);
+		setSheetOpen(false);
+	}, [form]);
 
 	const createMutation = useMutation({
 		mutationKey: ["create-customer"],
@@ -130,9 +117,9 @@ function CustomersPage() {
 				address: customer.address ?? "",
 				origin_store_id: String(customer.origin_store_id),
 			});
-			sheet.open();
+			setSheetOpen(true);
 		},
-		[form, sheet],
+		[form],
 	);
 
 	const columns = useMemo<ColumnDef<Customer>[]>(
@@ -163,8 +150,8 @@ function CustomersPage() {
 						variant="outline"
 						size="sm"
 						onClick={() => handleEdit(row.original)}
+						icon={<PencilSimpleLine className="size-4" weight="duotone" />}
 					>
-						<PencilSimpleLine className="size-4" weight="duotone" />
 						Edit
 					</Button>
 				),
@@ -177,131 +164,107 @@ function CustomersPage() {
 		const normalizedPhoneNumber = normalizePhoneNumber(values.phone_number);
 
 		if (editingCustomer) {
-			const updateParsed = PUTCustomerSchema.safeParse({
+			const payload: Parameters<typeof updateCustomer>[1] = {
 				name: values.name,
 				phone_number: normalizedPhoneNumber,
 				email: values.email?.length ? values.email : undefined,
 				address: values.address ?? "",
-			});
-
-			if (!updateParsed.success) {
-				toast.error(
-					updateParsed.error.issues[0]?.message ?? "Invalid customer payload",
-				);
-				return;
-			}
+			};
 
 			await updateMutation.mutateAsync({
 				id: editingCustomer.id,
-				payload: updateParsed.data,
+				payload,
 			});
 			return;
 		}
 
-		const createParsed = POSTCustomerSchema.safeParse({
+		const payload: Parameters<typeof createCustomer>[0] = {
 			name: values.name,
 			phone_number: normalizedPhoneNumber,
 			email: values.email?.length ? values.email : undefined,
 			address: values.address ?? "",
 			origin_store_id: Number(values.origin_store_id),
-		});
+		};
 
-		if (!createParsed.success) {
-			toast.error(
-				createParsed.error.issues[0]?.message ?? "Invalid customer payload",
-			);
-			return;
-		}
-
-		await createMutation.mutateAsync(createParsed.data);
+		await createMutation.mutateAsync(payload);
 	};
 
 	return (
-		<AppShell
-			title="Customers"
-			description="Insert and edit customer master data."
-		>
-			<div className="grid gap-4">
+		<div className="grid gap-4">
+			<Card>
+				<CardHeader className="flex flex-row items-center justify-between space-y-0">
+					<CardTitle>Quick Select</CardTitle>
+					<Badge variant="outline">Customer & Product</Badge>
+				</CardHeader>
+				<CardContent className="grid gap-4 md:grid-cols-2">
+					<CustomerSelect
+						id="quick-customer-select"
+						label="Customer Select"
+						value={selectedCustomerId}
+						onValueChange={setSelectedCustomerId}
+					/>
+					<ProductSelect
+						id="quick-product-select"
+						label="Product Select"
+						value={selectedProductId}
+						onValueChange={setSelectedProductId}
+					/>
+				</CardContent>
+			</Card>
+
+			<Sheet open={isSheetOpen} onOpenChange={setSheetOpen}>
+				<SheetContent side="right" className="w-full max-w-xl overflow-y-auto">
+					<SheetHeader>
+						<SheetTitle>
+							{editingCustomer ? "Edit Customer" : "Add Customer"}
+						</SheetTitle>
+						<SheetDescription>
+							{editingCustomer
+								? `Editing ID ${editingCustomer.id}`
+								: "Create a new customer record"}
+						</SheetDescription>
+					</SheetHeader>
+					<CustomerForm
+						control={form.control}
+						handleSubmit={form.handleSubmit}
+						onSubmit={handleSubmit}
+						isSubmitting={isSubmitting}
+						isEditing={!!editingCustomer}
+						onReset={resetForm}
+					/>
+				</SheetContent>
+
 				<Card>
 					<CardHeader className="flex flex-row items-center justify-between space-y-0">
-						<CardTitle>Quick Select</CardTitle>
-						<Badge variant="outline">Customer & Product</Badge>
+						<CardTitle>Customer List</CardTitle>
+						<div className="flex items-center gap-2">
+							<Badge
+								variant={isPending ? "secondary" : "outline"}
+							>{`${customerCount} items`}</Badge>
+							<SheetTrigger
+								render={
+									<Button
+										icon={<Plus className="size-4" weight="duotone" />}
+										onClick={() => {
+											setEditingCustomer(null);
+											form.reset(defaultForm);
+										}}
+									/>
+								}
+							>
+								Add Customer
+							</SheetTrigger>
+						</div>
 					</CardHeader>
-					<CardContent className="grid gap-4 md:grid-cols-2">
-						<CustomerSelect
-							id="quick-customer-select"
-							label="Customer Select"
-							value={selectedCustomerId}
-							onValueChange={setSelectedCustomerId}
-						/>
-						<ProductSelect
-							id="quick-product-select"
-							label="Product Select"
-							value={selectedProductId}
-							onValueChange={setSelectedProductId}
+					<CardContent>
+						<DataTable
+							columns={columns}
+							data={customers}
+							isLoading={isPending}
 						/>
 					</CardContent>
 				</Card>
-
-				<Sheet open={sheet.isOpen} onOpenChange={sheet.setOpen}>
-					<SheetContent
-						side="right"
-						className="w-full max-w-xl overflow-y-auto"
-					>
-						<SheetHeader>
-							<SheetTitle>
-								{editingCustomer ? "Edit Customer" : "Add Customer"}
-							</SheetTitle>
-							<SheetDescription>
-								{editingCustomer
-									? `Editing ID ${editingCustomer.id}`
-									: "Create a new customer record"}
-							</SheetDescription>
-						</SheetHeader>
-						<CustomerForm
-							control={form.control}
-							handleSubmit={form.handleSubmit}
-							onSubmit={handleSubmit}
-							isSubmitting={isSubmitting}
-							isEditing={!!editingCustomer}
-							stores={stores}
-							storesLoading={isStoresPending}
-							onReset={resetForm}
-						/>
-					</SheetContent>
-
-					<Card>
-						<CardHeader className="flex flex-row items-center justify-between space-y-0">
-							<CardTitle>Customer List</CardTitle>
-							<div className="flex items-center gap-2">
-								<Badge
-									variant={isPending ? "secondary" : "outline"}
-								>{`${customerCount} items`}</Badge>
-								<SheetTrigger
-									render={
-										<Button
-											onClick={() => {
-												setEditingCustomer(null);
-												form.reset(defaultForm);
-											}}
-										/>
-									}
-								>
-									<Plus className="size-4" weight="duotone" />
-									Add Customer
-								</SheetTrigger>
-							</div>
-						</CardHeader>
-						<CardContent>
-							<DataTable
-								columns={columns}
-								data={customers}
-								isLoading={isPending}
-							/>
-						</CardContent>
-					</Card>
-				</Sheet>
-			</div>
-		</AppShell>
+			</Sheet>
+		</div>
 	);
 }

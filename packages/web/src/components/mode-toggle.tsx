@@ -1,4 +1,5 @@
 import { Monitor, Moon, Sun } from "@phosphor-icons/react";
+import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -6,7 +7,6 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useTheme } from "@/components/theme-provider";
 
 export function ModeToggle() {
 	const { setTheme } = useTheme();
@@ -18,14 +18,16 @@ export function ModeToggle() {
 					<Button
 						variant="outline"
 						size="default"
-						className="justify-start gap-2"
+						className="justify-start"
+						icon={
+							<span className="relative size-4">
+								<Sun className="absolute inset-0 size-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+								<Moon className="absolute inset-0 size-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+							</span>
+						}
 					/>
 				}
 			>
-				<span className="relative size-4">
-					<Sun className="absolute inset-0 size-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-					<Moon className="absolute inset-0 size-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-				</span>
 				<span>Theme</span>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="end">

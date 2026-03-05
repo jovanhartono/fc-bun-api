@@ -1,6 +1,6 @@
 import {
-	parsePhoneNumberFromString,
 	type CountryCode,
+	parsePhoneNumberFromString,
 } from "libphonenumber-js";
 
 const DEFAULT_COUNTRY: CountryCode = "ID";

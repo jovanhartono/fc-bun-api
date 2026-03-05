@@ -1,11 +1,21 @@
 import { Plus } from "@phosphor-icons/react";
-import type { Dispatch, FormEvent, SetStateAction } from "react";
+import {
+	type Control,
+	Controller,
+	type SubmitHandler,
+	type UseFormHandleSubmit,
+} from "react-hook-form";
 import { CurrencyInput } from "@/components/form/currency-input";
 import { PhoneNumberField } from "@/components/form/phone-number-field";
-import { Combobox } from "@/components/ui/combobox";
 import { Button } from "@/components/ui/button";
-import { Field, FieldLabel } from "@/components/ui/field";
+import { Combobox } from "@/components/ui/combobox";
+import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { CustomerAutocomplete } from "@/features/orders/components/customer-autocomplete";
+import { PaymentMethodAutocomplete } from "@/features/orders/components/payment-method-autocomplete";
+import { ProductAutocomplete } from "@/features/orders/components/product-autocomplete";
+import { ServiceAutocomplete } from "@/features/orders/components/service-autocomplete";
+import { StoreAutocomplete } from "@/features/orders/components/store-autocomplete";
 
 export type OrderFormState = {
 	customer_name: string;
@@ -22,287 +32,247 @@ export type OrderFormState = {
 	service_qty: string;
 };
 
-type NamedOption = { id: number; name: string };
-
 type OrderFormProps = {
-	form: OrderFormState;
-	setForm: Dispatch<SetStateAction<OrderFormState>>;
+	control: Control<OrderFormState>;
+	handleSubmit: UseFormHandleSubmit<OrderFormState>;
+	onSubmit: SubmitHandler<OrderFormState>;
 	isSubmitting: boolean;
-	customers: NamedOption[];
-	customersLoading?: boolean;
-	stores: NamedOption[];
-	storesLoading?: boolean;
-	paymentMethods: NamedOption[];
-	paymentMethodsLoading?: boolean;
-	products: NamedOption[];
-	productsLoading?: boolean;
-	services: NamedOption[];
-	servicesLoading?: boolean;
-	onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 };
 
 export function OrderForm({
-	form,
-	setForm,
-	isSubmitting,
-	customers,
-	customersLoading,
-	stores,
-	storesLoading,
-	paymentMethods,
-	paymentMethodsLoading,
-	products,
-	productsLoading,
-	services,
-	servicesLoading,
+	control,
+	handleSubmit,
 	onSubmit,
+	isSubmitting,
 }: OrderFormProps) {
 	return (
-		<form className="grid gap-4 p-4 md:grid-cols-2" onSubmit={onSubmit}>
-			<Field>
-				<FieldLabel htmlFor="order-customer-name">Customer Name</FieldLabel>
-				<Input
-					id="order-customer-name"
-					placeholder="e.g. John Doe"
-					value={form.customer_name}
-					onChange={(event) =>
-						setForm((prev) => ({ ...prev, customer_name: event.target.value }))
-					}
-					disabled={isSubmitting}
-					required
-					className="h-10"
-				/>
-			</Field>
-
-			<PhoneNumberField
-				id="order-customer-phone"
-				label="Customer Phone"
-				value={form.customer_phone}
-				placeholder="e.g. +628123456789"
-				onValueChange={(nextValue) =>
-					setForm((prev) => ({ ...prev, customer_phone: nextValue }))
-				}
-				disabled={isSubmitting}
-				required
+		<form
+			className="grid gap-4 p-4 md:grid-cols-2"
+			onSubmit={handleSubmit(onSubmit)}
+		>
+			<Controller
+				name="customer_name"
+				control={control}
+				render={({ field, fieldState }) => (
+					<Field data-invalid={fieldState.invalid}>
+						<FieldLabel htmlFor="order-customer-name">Customer Name</FieldLabel>
+						<Input
+							{...field}
+							id="order-customer-name"
+							placeholder="e.g. John Doe"
+							aria-invalid={fieldState.invalid}
+							disabled={isSubmitting}
+							required
+							className="h-10"
+						/>
+						<FieldError errors={[fieldState.error]} />
+					</Field>
+				)}
 			/>
 
-			<Field>
-				<FieldLabel htmlFor="order-customer">Customer Reference</FieldLabel>
-				<Combobox
-					id="order-customer"
-					required
-					triggerClassName="h-10 w-full text-sm"
-					options={customers.map((customer) => ({
-						value: String(customer.id),
-						label: customer.name,
-					}))}
-					value={form.customer_id}
-					onValueChange={(value) =>
-						setForm((prev) => ({ ...prev, customer_id: value }))
-					}
-					loading={customersLoading}
-					placeholder="Select customer"
-					searchPlaceholder="Search customer..."
-					emptyText="No customer found"
-					disabled={isSubmitting}
-				/>
-			</Field>
+			<Controller
+				name="customer_phone"
+				control={control}
+				render={({ field, fieldState }) => (
+					<PhoneNumberField
+						id="order-customer-phone"
+						label="Customer Phone"
+						value={field.value}
+						placeholder="e.g. +628123456789"
+						onValueChange={field.onChange}
+						disabled={isSubmitting}
+						required
+						error={fieldState.error}
+					/>
+				)}
+			/>
 
-			<Field>
-				<FieldLabel htmlFor="order-store">Store</FieldLabel>
-				<Combobox
-					id="order-store"
-					required
-					triggerClassName="h-10 w-full text-sm"
-					options={stores.map((store) => ({
-						value: String(store.id),
-						label: store.name,
-					}))}
-					value={form.store_id}
-					onValueChange={(value) =>
-						setForm((prev) => ({ ...prev, store_id: value }))
-					}
-					loading={storesLoading}
-					placeholder="Select store"
-					searchPlaceholder="Search store..."
-					emptyText="No store found"
-					disabled={isSubmitting}
-				/>
-			</Field>
+			<Controller
+				name="customer_id"
+				control={control}
+				render={({ field, fieldState }) => (
+					<CustomerAutocomplete
+						value={field.value}
+						onValueChange={field.onChange}
+						disabled={isSubmitting}
+						required
+						error={fieldState.error}
+					/>
+				)}
+			/>
 
-			<Field>
-				<FieldLabel htmlFor="order-payment-method">Payment Method</FieldLabel>
-				<Combobox
-					id="order-payment-method"
-					triggerClassName="h-10 w-full text-sm"
-					options={[
-						{ value: "none", label: "No payment method" },
-						...paymentMethods.map((paymentMethod) => ({
-							value: String(paymentMethod.id),
-							label: paymentMethod.name,
-						})),
-					]}
-					value={form.payment_method_id || "none"}
-					onValueChange={(value) =>
-						setForm((prev) => ({
-							...prev,
-							payment_method_id: !value || value === "none" ? "" : value,
-						}))
-					}
-					loading={paymentMethodsLoading}
-					placeholder="No payment method"
-					searchPlaceholder="Search payment method..."
-					emptyText="No payment method found"
-					disabled={isSubmitting}
-				/>
-			</Field>
+			<Controller
+				name="store_id"
+				control={control}
+				render={({ field, fieldState }) => (
+					<StoreAutocomplete
+						value={field.value}
+						onValueChange={field.onChange}
+						disabled={isSubmitting}
+						required
+						error={fieldState.error}
+					/>
+				)}
+			/>
 
-			<Field>
-				<FieldLabel htmlFor="order-payment-status">Payment Status</FieldLabel>
-				<Combobox
-					id="order-payment-status"
-					required
-					triggerClassName="h-10 w-full text-sm"
-					options={[
-						{ value: "unpaid", label: "unpaid" },
-						{ value: "partial", label: "partial" },
-						{ value: "paid", label: "paid" },
-					]}
-					value={form.payment_status}
-					onValueChange={(value) =>
-						setForm((prev) => ({
-							...prev,
-							payment_status: (value ??
-								"unpaid") as OrderFormState["payment_status"],
-						}))
-					}
-					placeholder="Select payment status"
-					searchPlaceholder="Search payment status..."
-					emptyText="No status found"
-					disabled={isSubmitting}
-				/>
-			</Field>
+			<Controller
+				name="payment_method_id"
+				control={control}
+				render={({ field, fieldState }) => (
+					<PaymentMethodAutocomplete
+						value={field.value}
+						onValueChange={field.onChange}
+						disabled={isSubmitting}
+						error={fieldState.error}
+					/>
+				)}
+			/>
 
-			<Field>
-				<FieldLabel htmlFor="order-product">Product (optional)</FieldLabel>
-				<Combobox
-					id="order-product"
-					triggerClassName="h-10 w-full text-sm"
-					options={[
-						{ value: "none", label: "No product" },
-						...products.map((product) => ({
-							value: String(product.id),
-							label: product.name,
-						})),
-					]}
-					value={form.product_id || "none"}
-					onValueChange={(value) =>
-						setForm((prev) => ({
-							...prev,
-							product_id: !value || value === "none" ? "" : value,
-						}))
-					}
-					loading={productsLoading}
-					placeholder="No product"
-					searchPlaceholder="Search product..."
-					emptyText="No product found"
-					disabled={isSubmitting}
-				/>
-			</Field>
+			<Controller
+				name="payment_status"
+				control={control}
+				render={({ field, fieldState }) => (
+					<Field data-invalid={fieldState.invalid}>
+						<FieldLabel htmlFor="order-payment-status">
+							Payment Status
+						</FieldLabel>
+						<Combobox
+							id="order-payment-status"
+							required
+							triggerClassName="h-10 w-full text-sm"
+							options={[
+								{ value: "unpaid", label: "unpaid" },
+								{ value: "partial", label: "partial" },
+								{ value: "paid", label: "paid" },
+							]}
+							value={field.value}
+							onValueChange={(value) =>
+								field.onChange(
+									(value ?? "unpaid") as OrderFormState["payment_status"],
+								)
+							}
+							placeholder="Select payment status"
+							searchPlaceholder="Search payment status..."
+							emptyText="No status found"
+							disabled={isSubmitting}
+						/>
+						<FieldError errors={[fieldState.error]} />
+					</Field>
+				)}
+			/>
 
-			<Field>
-				<FieldLabel htmlFor="order-product-qty">Product Qty</FieldLabel>
-				<Input
-					id="order-product-qty"
-					type="number"
-					placeholder="e.g. 1"
-					min={1}
-					value={form.product_qty}
-					onChange={(event) =>
-						setForm((prev) => ({ ...prev, product_qty: event.target.value }))
-					}
-					disabled={isSubmitting}
-					className="h-10"
-				/>
-			</Field>
+			<Controller
+				name="product_id"
+				control={control}
+				render={({ field, fieldState }) => (
+					<ProductAutocomplete
+						value={field.value}
+						onValueChange={field.onChange}
+						disabled={isSubmitting}
+						error={fieldState.error}
+					/>
+				)}
+			/>
 
-			<Field>
-				<FieldLabel htmlFor="order-service">Service (optional)</FieldLabel>
-				<Combobox
-					id="order-service"
-					triggerClassName="h-10 w-full text-sm"
-					options={[
-						{ value: "none", label: "No service" },
-						...services.map((service) => ({
-							value: String(service.id),
-							label: service.name,
-						})),
-					]}
-					value={form.service_id || "none"}
-					onValueChange={(value) =>
-						setForm((prev) => ({
-							...prev,
-							service_id: !value || value === "none" ? "" : value,
-						}))
-					}
-					loading={servicesLoading}
-					placeholder="No service"
-					searchPlaceholder="Search service..."
-					emptyText="No service found"
-					disabled={isSubmitting}
-				/>
-			</Field>
+			<Controller
+				name="product_qty"
+				control={control}
+				render={({ field, fieldState }) => (
+					<Field data-invalid={fieldState.invalid}>
+						<FieldLabel htmlFor="order-product-qty">Product Qty</FieldLabel>
+						<Input
+							{...field}
+							id="order-product-qty"
+							type="number"
+							placeholder="e.g. 1"
+							min={1}
+							aria-invalid={fieldState.invalid}
+							disabled={isSubmitting}
+							className="h-10"
+						/>
+						<FieldError errors={[fieldState.error]} />
+					</Field>
+				)}
+			/>
 
-			<Field>
-				<FieldLabel htmlFor="order-service-qty">Service Qty</FieldLabel>
-				<Input
-					id="order-service-qty"
-					type="number"
-					placeholder="e.g. 1"
-					min={1}
-					value={form.service_qty}
-					onChange={(event) =>
-						setForm((prev) => ({ ...prev, service_qty: event.target.value }))
-					}
-					disabled={isSubmitting}
-					className="h-10"
-				/>
-			</Field>
+			<Controller
+				name="service_id"
+				control={control}
+				render={({ field, fieldState }) => (
+					<ServiceAutocomplete
+						value={field.value}
+						onValueChange={field.onChange}
+						disabled={isSubmitting}
+						error={fieldState.error}
+					/>
+				)}
+			/>
 
-			<Field>
-				<FieldLabel htmlFor="order-discount">Discount</FieldLabel>
-				<CurrencyInput
-					id="order-discount"
-					placeholder="Rp0"
-					value={form.discount}
-					onValueChange={(value) =>
-						setForm((prev) => ({ ...prev, discount: value }))
-					}
-					disabled={isSubmitting}
-				/>
-			</Field>
+			<Controller
+				name="service_qty"
+				control={control}
+				render={({ field, fieldState }) => (
+					<Field data-invalid={fieldState.invalid}>
+						<FieldLabel htmlFor="order-service-qty">Service Qty</FieldLabel>
+						<Input
+							{...field}
+							id="order-service-qty"
+							type="number"
+							placeholder="e.g. 1"
+							min={1}
+							aria-invalid={fieldState.invalid}
+							disabled={isSubmitting}
+							className="h-10"
+						/>
+						<FieldError errors={[fieldState.error]} />
+					</Field>
+				)}
+			/>
 
-			<Field className="md:col-span-2">
-				<FieldLabel htmlFor="order-notes">Notes</FieldLabel>
-				<Input
-					id="order-notes"
-					placeholder="e.g. Customer prefers express service"
-					value={form.notes}
-					onChange={(event) =>
-						setForm((prev) => ({ ...prev, notes: event.target.value }))
-					}
-					disabled={isSubmitting}
-					className="h-10"
-				/>
-			</Field>
+			<Controller
+				name="discount"
+				control={control}
+				render={({ field, fieldState }) => (
+					<Field data-invalid={fieldState.invalid}>
+						<FieldLabel htmlFor="order-discount">Discount</FieldLabel>
+						<CurrencyInput
+							id="order-discount"
+							placeholder="Rp0"
+							value={field.value}
+							onValueChange={field.onChange}
+							disabled={isSubmitting}
+						/>
+						<FieldError errors={[fieldState.error]} />
+					</Field>
+				)}
+			/>
+
+			<Controller
+				name="notes"
+				control={control}
+				render={({ field, fieldState }) => (
+					<Field data-invalid={fieldState.invalid} className="md:col-span-2">
+						<FieldLabel htmlFor="order-notes">Notes</FieldLabel>
+						<Input
+							{...field}
+							id="order-notes"
+							placeholder="e.g. Customer prefers express service"
+							aria-invalid={fieldState.invalid}
+							disabled={isSubmitting}
+							className="h-10"
+						/>
+						<FieldError errors={[fieldState.error]} />
+					</Field>
+				)}
+			/>
 
 			<div className="md:col-span-2 md:justify-end">
 				<Button
 					type="submit"
 					loading={isSubmitting}
 					loadingText="Creating order..."
+					icon={<Plus className="size-4" weight="duotone" />}
 				>
-					<Plus className="size-4" weight="duotone" />
 					Create Order
 				</Button>
 			</div>

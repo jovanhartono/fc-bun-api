@@ -1,80 +1,135 @@
-import { Plus } from "@phosphor-icons/react";
-import type { Dispatch, FormEvent, SetStateAction } from "react";
+import { POSTCategorySchema } from "@fresclean/api/schema";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { PlusIcon } from "@phosphor-icons/react";
+import { Controller, useForm } from "react-hook-form";
+import type { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Field, FieldLabel } from "@/components/ui/field";
+import {
+	Field,
+	FieldContent,
+	FieldDescription,
+	FieldError,
+	FieldGroup,
+	FieldLabel,
+	FieldTitle,
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 
-export type CategoryFormState = {
-  name: string;
-  description: string;
-  is_active: boolean;
+export type CategoryFormState = z.infer<typeof POSTCategorySchema>;
+
+const defaultForm: CategoryFormState = {
+	name: "",
+	description: "",
+	is_active: true,
 };
 
 type CategoryFormProps = {
-  form: CategoryFormState;
-  setForm: Dispatch<SetStateAction<CategoryFormState>>;
-  isSubmitting: boolean;
-  isEditing: boolean;
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
-  onReset: () => void;
+	defaultValues?: CategoryFormState;
+	handleOnSubmit: (values: CategoryFormState) => Promise<void> | void;
+	isEditing: boolean;
+	onReset: () => void;
 };
 
 export function CategoryForm({
-  form,
-  setForm,
-  isSubmitting,
-  isEditing,
-  onSubmit,
-  onReset,
+	defaultValues,
+	handleOnSubmit,
+	isEditing,
+	onReset,
 }: CategoryFormProps) {
-  return (
-    <form className="grid gap-4 p-4 md:grid-cols-2" onSubmit={onSubmit}>
-      <Field>
-        <FieldLabel htmlFor="category-name">Name</FieldLabel>
-        <input
-          className="h-10 w-full min-w-0 rounded-none border border-input bg-transparent px-3 py-2 text-sm transition-colors outline-none file:inline-flex file:h-8 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-1 aria-invalid:ring-destructive/20 dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40"
-          id="category-name"
-          placeholder="e.g. Laundry"
-          value={form.name}
-          onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-          disabled={isSubmitting}
-          required
-        />
-      </Field>
+	const form = useForm({
+		resolver: zodResolver(POSTCategorySchema),
+		defaultValues: defaultValues ?? defaultForm,
+	});
+	const isSubmitting = form.formState.isSubmitting;
 
-      <Field className="md:col-span-2">
-        <FieldLabel htmlFor="category-description">Description</FieldLabel>
-        <input
-          className="h-10 w-full min-w-0 rounded-none border border-input bg-transparent px-3 py-2 text-sm transition-colors outline-none file:inline-flex file:h-8 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-1 aria-invalid:ring-destructive/20 dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40"
-          id="category-description"
-          placeholder="e.g. Core laundry services"
-          value={form.description}
-          onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
-          disabled={isSubmitting}
-        />
-      </Field>
+	return (
+		<form onSubmit={form.handleSubmit(handleOnSubmit)}>
+			<FieldGroup>
+				<Controller
+					name="name"
+					control={form.control}
+					render={({ field, fieldState }) => (
+						<Field data-invalid={fieldState.invalid}>
+							<FieldLabel htmlFor="category-name">Name</FieldLabel>
+							<Input
+								{...field}
+								id="category-name"
+								placeholder="e.g. Laundry"
+								aria-invalid={fieldState.invalid}
+								disabled={isSubmitting}
+								className="h-10"
+							/>
+							{fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+						</Field>
+					)}
+				/>
 
-      <Field className="flex-row items-center justify-between md:col-span-2">
-        <FieldLabel htmlFor="category-active">Active</FieldLabel>
-        <Switch
-          id="category-active"
-          checked={form.is_active}
-          onCheckedChange={(checked) => setForm((prev) => ({ ...prev, is_active: !!checked }))}
-          disabled={isSubmitting}
-        />
-      </Field>
+				<Controller
+					name="description"
+					control={form.control}
+					render={({ field, fieldState }) => (
+						<Field data-invalid={fieldState.invalid} className="md:col-span-2">
+							<FieldLabel htmlFor="category-description">
+								Description
+							</FieldLabel>
+							<Input
+								{...field}
+								id="category-description"
+								placeholder="e.g. Core laundry services"
+								aria-invalid={fieldState.invalid}
+								value={field.value ?? ""}
+								disabled={isSubmitting}
+								className="h-10"
+							/>
+							<FieldError errors={[fieldState.error]} />
+						</Field>
+					)}
+				/>
 
-      <div className="flex flex-wrap gap-2 md:col-span-2 md:justify-end">
-        {isEditing ? (
-          <Button type="button" variant="outline" onClick={onReset} disabled={isSubmitting}>
-            Cancel edit
-          </Button>
-        ) : null}
-        <Button type="submit" disabled={isSubmitting}>
-          <Plus className="size-4" weight="duotone" />
-          {isEditing ? "Update Category" : "Create Category"}
-        </Button>
-      </div>
-    </form>
-  );
+				<Controller
+					name="is_active"
+					control={form.control}
+					render={({ field }) => (
+						<FieldLabel htmlFor="category-active">
+							<Field orientation="horizontal">
+								<FieldContent>
+									<FieldTitle>Category Status</FieldTitle>
+									<FieldDescription>
+										Active category will be shown in the app.
+									</FieldDescription>
+								</FieldContent>
+								<Switch
+									id="category-active"
+									checked={field.value}
+									onCheckedChange={(checked) => field.onChange(!!checked)}
+									disabled={isSubmitting}
+								/>
+							</Field>
+						</FieldLabel>
+					)}
+				/>
+
+				<div className="flex flex-wrap gap-2 md:col-span-2 md:justify-end">
+					{isEditing ? (
+						<Button
+							type="button"
+							variant="outline"
+							onClick={onReset}
+							disabled={isSubmitting}
+						>
+							Cancel edit
+						</Button>
+					) : null}
+					<Button
+						type="submit"
+						loading={isSubmitting}
+						icon={<PlusIcon className="size-4" weight="duotone" />}
+					>
+						{isEditing ? "Update Category" : "Create Category"}
+					</Button>
+				</div>
+			</FieldGroup>
+		</form>
+	);
 }

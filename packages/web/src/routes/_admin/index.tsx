@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { AppShell } from "@/components/app-shell";
 import { Badge } from "@/components/ui/badge";
 import {
 	Card,
@@ -10,10 +9,8 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { fetchDashboardCounts, queryKeys } from "@/lib/api";
-import { requireAuth } from "@/lib/auth";
 
-export const Route = createFileRoute("/")({
-	beforeLoad: requireAuth,
+export const Route = createFileRoute("/_admin/")({
 	component: DashboardPage,
 });
 
@@ -35,10 +32,7 @@ function DashboardPage() {
 	});
 
 	return (
-		<AppShell
-			title="Dashboard"
-			description="React + TanStack migration baseline with shared API contracts."
-		>
+		<>
 			<div className="mb-4 flex items-center justify-between">
 				<p className="text-sm text-muted-foreground">
 					Overview count from live admin endpoints.
@@ -65,6 +59,6 @@ function DashboardPage() {
 					</Card>
 				))}
 			</div>
-		</AppShell>
+		</>
 	);
 }

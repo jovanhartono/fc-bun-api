@@ -1,5 +1,5 @@
-import { CircleNotch } from "@phosphor-icons/react";
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
+import { CircleNotch } from "@phosphor-icons/react";
 import { cva, type VariantProps } from "class-variance-authority";
 import type * as React from "react";
 import { useWebHaptics } from "web-haptics/react";
@@ -45,6 +45,8 @@ function Button({
 	className,
 	variant = "default",
 	size = "default",
+	icon,
+	iconLocation = "left",
 	loading = false,
 	loadingText,
 	spinner,
@@ -56,6 +58,8 @@ function Button({
 	...props
 }: ButtonPrimitive.Props &
 	VariantProps<typeof buttonVariants> & {
+		icon?: React.ReactNode;
+		iconLocation?: "left" | "right";
 		loading?: boolean;
 		loadingText?: string;
 		spinner?: React.ReactNode;
@@ -64,6 +68,12 @@ function Button({
 	}) {
 	const { trigger } = useWebHaptics();
 	const isDisabled = disabled || loading;
+	const resolvedIcon = !loading ? icon : null;
+	const dataIcon = resolvedIcon
+		? iconLocation === "right"
+			? "inline-end"
+			: "inline-start"
+		: undefined;
 
 	const handleClick: NonNullable<ButtonPrimitive.Props["onClick"]> = (
 		event,
@@ -82,6 +92,7 @@ function Button({
 	return (
 		<ButtonPrimitive
 			data-slot="button"
+			data-icon={dataIcon}
 			aria-busy={loading || undefined}
 			disabled={isDisabled}
 			className={cn(buttonVariants({ variant, size, className }))}
@@ -94,7 +105,11 @@ function Button({
 					{loadingText ?? children}
 				</>
 			) : (
-				children
+				<>
+					{resolvedIcon && iconLocation === "left" ? resolvedIcon : null}
+					{children}
+					{resolvedIcon && iconLocation === "right" ? resolvedIcon : null}
+				</>
 			)}
 		</ButtonPrimitive>
 	);

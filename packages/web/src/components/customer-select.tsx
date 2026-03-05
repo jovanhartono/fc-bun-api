@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { Label } from "@/components/ui/label";
 import { Combobox } from "@/components/ui/combobox";
+import { Label } from "@/components/ui/label";
 import { fetchCustomers, queryKeys } from "@/lib/api";
 
 type CustomerSelectProps = {

@@ -1,15 +1,15 @@
 import { Plus } from "@phosphor-icons/react";
 import {
-	Controller,
 	type Control,
+	Controller,
 	type SubmitHandler,
 	type UseFormHandleSubmit,
 } from "react-hook-form";
 import { PhoneNumberField } from "@/components/form/phone-number-field";
-import { Combobox } from "@/components/ui/combobox";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { StoreAutocomplete } from "@/features/orders/components/store-autocomplete";
 
 export type CustomerFormState = {
 	name: string;
@@ -25,8 +25,6 @@ type CustomerFormProps = {
 	onSubmit: SubmitHandler<CustomerFormState>;
 	isSubmitting: boolean;
 	isEditing: boolean;
-	stores: Array<{ id: number; name: string }>;
-	storesLoading?: boolean;
 	onReset: () => void;
 };
 
@@ -36,8 +34,6 @@ export function CustomerForm({
 	onSubmit,
 	isSubmitting,
 	isEditing,
-	stores,
-	storesLoading,
 	onReset,
 }: CustomerFormProps) {
 	return (
@@ -125,28 +121,15 @@ export function CustomerForm({
 				name="origin_store_id"
 				control={control}
 				render={({ field, fieldState }) => (
-					<Field data-invalid={fieldState.invalid}>
-						<FieldLabel htmlFor="customer-origin-store">
-							Origin Store
-						</FieldLabel>
-						<Combobox
-							id="customer-origin-store"
-							required={!isEditing}
-							triggerClassName="h-10 w-full text-sm"
-							options={stores.map((store) => ({
-								value: String(store.id),
-								label: store.name,
-							}))}
-							value={field.value}
-							onValueChange={(nextValue) => field.onChange(nextValue)}
-							loading={storesLoading}
-							placeholder="Select store"
-							searchPlaceholder="Search store..."
-							emptyText="No store found"
-							disabled={isSubmitting || isEditing}
-						/>
-						<FieldError errors={[fieldState.error]} />
-					</Field>
+					<StoreAutocomplete
+						id="customer-origin-store"
+						label="Origin Store"
+						required={!isEditing}
+						value={field.value}
+						onValueChange={field.onChange}
+						disabled={isSubmitting || isEditing}
+						error={fieldState.error}
+					/>
 				)}
 			/>
 
