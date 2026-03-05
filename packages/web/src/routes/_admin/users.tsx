@@ -1,6 +1,6 @@
 import { POSTUserSchema } from "@fresclean/api/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { PencilSimpleLine, Plus } from "@phosphor-icons/react";
+import { PencilSimpleLineIcon, PlusIcon } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -49,7 +49,7 @@ function UsersPage() {
 	const [isSheetOpen, setSheetOpen] = useState(false);
 
 	const form = useForm<UserFormState>({
-		resolver: zodResolver(POSTUserSchema, undefined, { raw: true }) as any,
+		resolver: zodResolver(POSTUserSchema),
 		defaultValues: defaultForm,
 	});
 
@@ -136,7 +136,7 @@ function UsersPage() {
 						variant="outline"
 						size="sm"
 						onClick={() => handleEdit(row.original)}
-						icon={<PencilSimpleLine className="size-4" weight="duotone" />}
+						icon={<PencilSimpleLineIcon className="size-4" weight="duotone" />}
 					>
 						Edit
 					</Button>
@@ -205,7 +205,7 @@ function UsersPage() {
 							<SheetTrigger
 								render={
 									<Button
-										icon={<Plus className="size-4" weight="duotone" />}
+										icon={<PlusIcon className="size-4" weight="duotone" />}
 										onClick={() => {
 											setEditingUser(null);
 											form.reset(defaultForm);

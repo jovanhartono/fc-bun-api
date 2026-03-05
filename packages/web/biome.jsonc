@@ -1,6 +1,9 @@
 {
 	"$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
 	"root": false,
+	"files": {
+		"includes": ["**", "!**/*.css", "!**/*.gen.ts"]
+	},
 	"extends": ["ultracite/biome/react"],
 	"linter": {
 		"rules": {

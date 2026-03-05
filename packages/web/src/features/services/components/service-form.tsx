@@ -5,7 +5,7 @@ import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 import { CurrencyInput } from "@/components/form/currency-input";
 import { Button } from "@/components/ui/button";
-  import {
+import {
 	Field,
 	FieldError,
 	FieldGroup,
@@ -35,12 +35,12 @@ const defaultForm: ServiceFormState = {
 	is_active: true,
 };
 
-type ServiceFormProps = {
+interface ServiceFormProps {
 	defaultValues?: ServiceFormState;
 	handleOnSubmit: (values: ServiceFormState) => Promise<void> | void;
 	isEditing: boolean;
 	onReset: () => void;
-};
+}
 
 export function ServiceForm({
 	defaultValues,
@@ -58,33 +58,33 @@ export function ServiceForm({
 		<form onSubmit={form.handleSubmit(handleOnSubmit)}>
 			<FieldGroup>
 				<Controller
-					name="category_id"
 					control={form.control}
+					name="category_id"
 					render={({ field, fieldState }) => (
 						<CategoryAutocomplete
-							value={field.value ? String(field.value) : ""}
-							onValueChange={(value) => field.onChange(Number(value))}
-							required
 							disabled={isSubmitting}
 							error={fieldState.error}
+							onValueChange={(value) => field.onChange(Number(value))}
+							required
+							value={field.value ? String(field.value) : ""}
 						/>
 					)}
 				/>
 
 				<Controller
-					name="code"
 					control={form.control}
+					name="code"
 					render={({ field, fieldState }) => (
 						<Field data-invalid={fieldState.invalid}>
 							<FieldLabel htmlFor="service-code">Code</FieldLabel>
 							<Input
 								{...field}
+								aria-invalid={fieldState.invalid}
+								className="h-10"
+								disabled={isSubmitting}
 								id="service-code"
 								placeholder="e.g. SVC-001"
-								aria-invalid={fieldState.invalid}
-								disabled={isSubmitting}
 								required
-								className="h-10"
 							/>
 							<FieldError errors={[fieldState.error]} />
 						</Field>
@@ -92,19 +92,19 @@ export function ServiceForm({
 				/>
 
 				<Controller
-					name="name"
 					control={form.control}
+					name="name"
 					render={({ field, fieldState }) => (
 						<Field data-invalid={fieldState.invalid}>
 							<FieldLabel htmlFor="service-name">Name</FieldLabel>
 							<Input
 								{...field}
+								aria-invalid={fieldState.invalid}
+								className="h-10"
+								disabled={isSubmitting}
 								id="service-name"
 								placeholder="e.g. Dry Clean Premium"
-								aria-invalid={fieldState.invalid}
-								disabled={isSubmitting}
 								required
-								className="h-10"
 							/>
 							<FieldError errors={[fieldState.error]} />
 						</Field>
@@ -112,19 +112,19 @@ export function ServiceForm({
 				/>
 
 				<Controller
-					name="description"
 					control={form.control}
+					name="description"
 					render={({ field, fieldState }) => (
-						<Field data-invalid={fieldState.invalid} className="md:col-span-2">
+						<Field className="md:col-span-2" data-invalid={fieldState.invalid}>
 							<FieldLabel htmlFor="service-description">Description</FieldLabel>
 							<Input
 								{...field}
+								aria-invalid={fieldState.invalid}
+								className="h-10"
+								disabled={isSubmitting}
 								id="service-description"
 								placeholder="e.g. 24-hour turnaround"
-								aria-invalid={fieldState.invalid}
 								value={field.value ?? ""}
-								disabled={isSubmitting}
-								className="h-10"
 							/>
 							<FieldError errors={[fieldState.error]} />
 						</Field>
@@ -132,18 +132,18 @@ export function ServiceForm({
 				/>
 
 				<Controller
-					name="cogs"
 					control={form.control}
+					name="cogs"
 					render={({ field, fieldState }) => (
 						<Field data-invalid={fieldState.invalid}>
 							<FieldLabel htmlFor="service-cogs">COGS</FieldLabel>
 							<CurrencyInput
-								id="service-cogs"
-								placeholder="Rp0"
-								value={field.value}
-								onValueChange={field.onChange}
 								disabled={isSubmitting}
+								id="service-cogs"
+								onValueChange={field.onChange}
+								placeholder="Rp0"
 								required
+								value={field.value}
 							/>
 							<FieldError errors={[fieldState.error]} />
 						</Field>
@@ -151,18 +151,18 @@ export function ServiceForm({
 				/>
 
 				<Controller
-					name="price"
 					control={form.control}
+					name="price"
 					render={({ field, fieldState }) => (
 						<Field data-invalid={fieldState.invalid}>
 							<FieldLabel htmlFor="service-price">Price</FieldLabel>
 							<CurrencyInput
-								id="service-price"
-								placeholder="Rp0"
-								value={field.value}
-								onValueChange={field.onChange}
 								disabled={isSubmitting}
+								id="service-price"
+								onValueChange={field.onChange}
+								placeholder="Rp0"
 								required
+								value={field.value}
 							/>
 							<FieldError errors={[fieldState.error]} />
 						</Field>
@@ -170,16 +170,16 @@ export function ServiceForm({
 				/>
 
 				<Controller
-					name="is_active"
 					control={form.control}
+					name="is_active"
 					render={({ field }) => (
 						<Field className="flex-row items-center justify-between md:col-span-2">
 							<FieldLabel htmlFor="service-active">Active</FieldLabel>
 							<Switch
-								id="service-active"
 								checked={field.value}
-								onCheckedChange={(checked) => field.onChange(!!checked)}
 								disabled={isSubmitting}
+								id="service-active"
+								onCheckedChange={(checked) => field.onChange(!!checked)}
 							/>
 						</Field>
 					)}
@@ -188,18 +188,18 @@ export function ServiceForm({
 				<div className="flex flex-wrap gap-2 md:col-span-2 md:justify-end">
 					{isEditing ? (
 						<Button
+							disabled={isSubmitting}
+							onClick={onReset}
 							type="button"
 							variant="outline"
-							onClick={onReset}
-							disabled={isSubmitting}
 						>
 							Cancel edit
 						</Button>
 					) : null}
 					<Button
-						type="submit"
-						loading={isSubmitting}
 						icon={<PlusIcon className="size-4" weight="duotone" />}
+						loading={isSubmitting}
+						type="submit"
 					>
 						{isEditing ? "Update Service" : "Create Service"}
 					</Button>
