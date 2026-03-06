@@ -24,6 +24,7 @@ export type UserFormState = {
 	confirm_password: string;
 	role: "admin" | "cashier" | "worker";
 	is_active: boolean;
+	store_ids: number[];
 };
 
 type UserFormProps = {
@@ -32,6 +33,7 @@ type UserFormProps = {
 	onSubmit: SubmitHandler<UserFormState>;
 	isSubmitting: boolean;
 	isEditing: boolean;
+	stores: Array<{ id: number; code: string; name: string }>;
 	onReset: () => void;
 };
 
@@ -41,6 +43,7 @@ export function UserForm({
 	onSubmit,
 	isSubmitting,
 	isEditing,
+	stores,
 	onReset,
 }: UserFormProps) {
 	return (
@@ -177,6 +180,40 @@ export function UserForm({
 							onCheckedChange={(checked) => field.onChange(!!checked)}
 							disabled={isSubmitting}
 						/>
+					</Field>
+				)}
+			/>
+
+			<Controller
+				name="store_ids"
+				control={control}
+				render={({ field }) => (
+					<Field className="md:col-span-2">
+						<FieldLabel>Assigned Stores</FieldLabel>
+						<div className="grid gap-2 rounded-none border p-3 md:grid-cols-2">
+							{stores.map((store) => (
+								<label
+									key={store.id}
+									className="flex items-center gap-2 text-sm"
+								>
+									<input
+										type="checkbox"
+										checked={field.value.includes(store.id)}
+										onChange={(event) => {
+											if (event.target.checked) {
+												field.onChange([...field.value, store.id]);
+												return;
+											}
+											field.onChange(
+												field.value.filter((value) => value !== store.id),
+											);
+										}}
+										disabled={isSubmitting}
+									/>
+									<span>{`${store.code} - ${store.name}`}</span>
+								</label>
+							))}
+						</div>
 					</Field>
 				)}
 			/>

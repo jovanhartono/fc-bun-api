@@ -7,20 +7,25 @@ import { ordersTable } from "@/db/schema";
 import { failure, success } from "@/utils/http";
 import { zodValidator } from "@/utils/zod-validator-wrapper";
 
-const GETPublicTrackOrderQuerySchema = z.object({
+const POSTPublicTrackOrderSchema = z.object({
   code: z.string().trim().min(1).max(32),
+  phone_number: z.string().trim().min(6).max(20),
 });
+
+function normalizePhoneNumber(value: string) {
+  return value.replace(/\D/g, "");
+}
 
 function maskPhoneNumber(phone: string) {
   const suffix = phone.slice(-4);
   return `******${suffix}`;
 }
 
-const app = new Hono().get(
+const app = new Hono().post(
   "/track",
-  zodValidator("query", GETPublicTrackOrderQuerySchema),
+  zodValidator("json", POSTPublicTrackOrderSchema),
   async (c) => {
-    const { code } = c.req.valid("query");
+    const { code, phone_number } = c.req.valid("json");
 
     const order = await db.query.ordersTable.findFirst({
       where: eq(ordersTable.code, code),
@@ -45,60 +50,29 @@ const app = new Hono().get(
             phone_number: true,
           },
         },
-        paymentMethod: {
-          columns: {
-            id: true,
-            code: true,
-            name: true,
-          },
-        },
-        products: {
-          columns: {
-            id: true,
-            order_id: true,
-            product_id: true,
-            price: true,
-            qty: true,
-            discount: true,
-            subtotal: true,
-            notes: true,
-          },
-          with: {
-            product: {
-              columns: {
-                id: true,
-                name: true,
-                sku: true,
-                uom: true,
-              },
-            },
-          },
-        },
         services: {
           columns: {
             id: true,
-            order_id: true,
-            service_id: true,
-            handler_id: true,
-            price: true,
-            qty: true,
-            discount: true,
-            subtotal: true,
-            notes: true,
+            item_code: true,
+            shoe_brand: true,
+            shoe_size: true,
+            status: true,
           },
           with: {
-            images: {
-              columns: {
-                id: true,
-                image_url: true,
-                created_at: true,
-              },
-            },
             service: {
               columns: {
                 id: true,
                 code: true,
                 name: true,
+              },
+            },
+            statusLogs: {
+              columns: {
+                id: true,
+                from_status: true,
+                to_status: true,
+                note: true,
+                created_at: true,
               },
             },
           },
@@ -117,6 +91,16 @@ const app = new Hono().get(
 
     if (!order) {
       return c.json(failure("Order not found"), StatusCodes.NOT_FOUND);
+    }
+
+    const incomingPhone = normalizePhoneNumber(phone_number);
+    const customerPhone = normalizePhoneNumber(order.customer.phone_number);
+
+    if (incomingPhone !== customerPhone) {
+      return c.json(
+        failure("Order code or phone number is invalid"),
+        StatusCodes.UNAUTHORIZED
+      );
     }
 
     return c.json(

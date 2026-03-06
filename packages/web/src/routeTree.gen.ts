@@ -9,9 +9,11 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from "./routes/__root";
+import { Route as TrackRouteImport } from "./routes/track";
 import { Route as AdminRouteRouteImport } from "./routes/_admin/route";
 import { Route as AdminIndexRouteImport } from "./routes/_admin/index";
 import { Route as AuthLoginRouteImport } from "./routes/auth/login";
+import { Route as AdminWorkerRouteImport } from "./routes/_admin/worker";
 import { Route as AdminUsersRouteImport } from "./routes/_admin/users";
 import { Route as AdminStoresRouteImport } from "./routes/_admin/stores";
 import { Route as AdminServicesRouteImport } from "./routes/_admin/services";
@@ -20,7 +22,14 @@ import { Route as AdminPaymentMethodsRouteImport } from "./routes/_admin/payment
 import { Route as AdminOrdersRouteImport } from "./routes/_admin/orders";
 import { Route as AdminCustomersRouteImport } from "./routes/_admin/customers";
 import { Route as AdminCategoriesRouteImport } from "./routes/_admin/categories";
+import { Route as AdminCampaignsRouteImport } from "./routes/_admin/campaigns";
+import { Route as AdminOrdersOrderIdRouteImport } from "./routes/_admin/orders.$orderId";
 
+const TrackRoute = TrackRouteImport.update({
+  id: "/track",
+  path: "/track",
+  getParentRoute: () => rootRouteImport,
+} as any);
 const AdminRouteRoute = AdminRouteRouteImport.update({
   id: "/_admin",
   getParentRoute: () => rootRouteImport,
@@ -34,6 +43,11 @@ const AuthLoginRoute = AuthLoginRouteImport.update({
   id: "/auth/login",
   path: "/auth/login",
   getParentRoute: () => rootRouteImport,
+} as any);
+const AdminWorkerRoute = AdminWorkerRouteImport.update({
+  id: "/worker",
+  path: "/worker",
+  getParentRoute: () => AdminRouteRoute,
 } as any);
 const AdminUsersRoute = AdminUsersRouteImport.update({
   id: "/users",
@@ -75,49 +89,73 @@ const AdminCategoriesRoute = AdminCategoriesRouteImport.update({
   path: "/categories",
   getParentRoute: () => AdminRouteRoute,
 } as any);
+const AdminCampaignsRoute = AdminCampaignsRouteImport.update({
+  id: "/campaigns",
+  path: "/campaigns",
+  getParentRoute: () => AdminRouteRoute,
+} as any);
+const AdminOrdersOrderIdRoute = AdminOrdersOrderIdRouteImport.update({
+  id: "/$orderId",
+  path: "/$orderId",
+  getParentRoute: () => AdminOrdersRoute,
+} as any);
 
 export interface FileRoutesByFullPath {
   "/": typeof AdminIndexRoute;
+  "/track": typeof TrackRoute;
+  "/campaigns": typeof AdminCampaignsRoute;
   "/categories": typeof AdminCategoriesRoute;
   "/customers": typeof AdminCustomersRoute;
-  "/orders": typeof AdminOrdersRoute;
+  "/orders": typeof AdminOrdersRouteWithChildren;
   "/payment-methods": typeof AdminPaymentMethodsRoute;
   "/products": typeof AdminProductsRoute;
   "/services": typeof AdminServicesRoute;
   "/stores": typeof AdminStoresRoute;
   "/users": typeof AdminUsersRoute;
+  "/worker": typeof AdminWorkerRoute;
   "/auth/login": typeof AuthLoginRoute;
+  "/orders/$orderId": typeof AdminOrdersOrderIdRoute;
 }
 export interface FileRoutesByTo {
+  "/track": typeof TrackRoute;
+  "/campaigns": typeof AdminCampaignsRoute;
   "/categories": typeof AdminCategoriesRoute;
   "/customers": typeof AdminCustomersRoute;
-  "/orders": typeof AdminOrdersRoute;
+  "/orders": typeof AdminOrdersRouteWithChildren;
   "/payment-methods": typeof AdminPaymentMethodsRoute;
   "/products": typeof AdminProductsRoute;
   "/services": typeof AdminServicesRoute;
   "/stores": typeof AdminStoresRoute;
   "/users": typeof AdminUsersRoute;
+  "/worker": typeof AdminWorkerRoute;
   "/auth/login": typeof AuthLoginRoute;
   "/": typeof AdminIndexRoute;
+  "/orders/$orderId": typeof AdminOrdersOrderIdRoute;
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport;
   "/_admin": typeof AdminRouteRouteWithChildren;
+  "/track": typeof TrackRoute;
+  "/_admin/campaigns": typeof AdminCampaignsRoute;
   "/_admin/categories": typeof AdminCategoriesRoute;
   "/_admin/customers": typeof AdminCustomersRoute;
-  "/_admin/orders": typeof AdminOrdersRoute;
+  "/_admin/orders": typeof AdminOrdersRouteWithChildren;
   "/_admin/payment-methods": typeof AdminPaymentMethodsRoute;
   "/_admin/products": typeof AdminProductsRoute;
   "/_admin/services": typeof AdminServicesRoute;
   "/_admin/stores": typeof AdminStoresRoute;
   "/_admin/users": typeof AdminUsersRoute;
+  "/_admin/worker": typeof AdminWorkerRoute;
   "/auth/login": typeof AuthLoginRoute;
   "/_admin/": typeof AdminIndexRoute;
+  "/_admin/orders/$orderId": typeof AdminOrdersOrderIdRoute;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
   fullPaths:
     | "/"
+    | "/track"
+    | "/campaigns"
     | "/categories"
     | "/customers"
     | "/orders"
@@ -126,9 +164,13 @@ export interface FileRouteTypes {
     | "/services"
     | "/stores"
     | "/users"
-    | "/auth/login";
+    | "/worker"
+    | "/auth/login"
+    | "/orders/$orderId";
   fileRoutesByTo: FileRoutesByTo;
   to:
+    | "/track"
+    | "/campaigns"
     | "/categories"
     | "/customers"
     | "/orders"
@@ -137,11 +179,15 @@ export interface FileRouteTypes {
     | "/services"
     | "/stores"
     | "/users"
+    | "/worker"
     | "/auth/login"
-    | "/";
+    | "/"
+    | "/orders/$orderId";
   id:
     | "__root__"
     | "/_admin"
+    | "/track"
+    | "/_admin/campaigns"
     | "/_admin/categories"
     | "/_admin/customers"
     | "/_admin/orders"
@@ -150,17 +196,27 @@ export interface FileRouteTypes {
     | "/_admin/services"
     | "/_admin/stores"
     | "/_admin/users"
+    | "/_admin/worker"
     | "/auth/login"
-    | "/_admin/";
+    | "/_admin/"
+    | "/_admin/orders/$orderId";
   fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
   AdminRouteRoute: typeof AdminRouteRouteWithChildren;
+  TrackRoute: typeof TrackRoute;
   AuthLoginRoute: typeof AuthLoginRoute;
 }
 
 declare module "@tanstack/react-router" {
   interface FileRoutesByPath {
+    "/track": {
+      id: "/track";
+      path: "/track";
+      fullPath: "/track";
+      preLoaderRoute: typeof TrackRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     "/_admin": {
       id: "/_admin";
       path: "";
@@ -181,6 +237,13 @@ declare module "@tanstack/react-router" {
       fullPath: "/auth/login";
       preLoaderRoute: typeof AuthLoginRouteImport;
       parentRoute: typeof rootRouteImport;
+    };
+    "/_admin/worker": {
+      id: "/_admin/worker";
+      path: "/worker";
+      fullPath: "/worker";
+      preLoaderRoute: typeof AdminWorkerRouteImport;
+      parentRoute: typeof AdminRouteRoute;
     };
     "/_admin/users": {
       id: "/_admin/users";
@@ -238,30 +301,60 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AdminCategoriesRouteImport;
       parentRoute: typeof AdminRouteRoute;
     };
+    "/_admin/campaigns": {
+      id: "/_admin/campaigns";
+      path: "/campaigns";
+      fullPath: "/campaigns";
+      preLoaderRoute: typeof AdminCampaignsRouteImport;
+      parentRoute: typeof AdminRouteRoute;
+    };
+    "/_admin/orders/$orderId": {
+      id: "/_admin/orders/$orderId";
+      path: "/$orderId";
+      fullPath: "/orders/$orderId";
+      preLoaderRoute: typeof AdminOrdersOrderIdRouteImport;
+      parentRoute: typeof AdminOrdersRoute;
+    };
   }
 }
 
+interface AdminOrdersRouteChildren {
+  AdminOrdersOrderIdRoute: typeof AdminOrdersOrderIdRoute;
+}
+
+const AdminOrdersRouteChildren: AdminOrdersRouteChildren = {
+  AdminOrdersOrderIdRoute: AdminOrdersOrderIdRoute,
+};
+
+const AdminOrdersRouteWithChildren = AdminOrdersRoute._addFileChildren(
+  AdminOrdersRouteChildren,
+);
+
 interface AdminRouteRouteChildren {
+  AdminCampaignsRoute: typeof AdminCampaignsRoute;
   AdminCategoriesRoute: typeof AdminCategoriesRoute;
   AdminCustomersRoute: typeof AdminCustomersRoute;
-  AdminOrdersRoute: typeof AdminOrdersRoute;
+  AdminOrdersRoute: typeof AdminOrdersRouteWithChildren;
   AdminPaymentMethodsRoute: typeof AdminPaymentMethodsRoute;
   AdminProductsRoute: typeof AdminProductsRoute;
   AdminServicesRoute: typeof AdminServicesRoute;
   AdminStoresRoute: typeof AdminStoresRoute;
   AdminUsersRoute: typeof AdminUsersRoute;
+  AdminWorkerRoute: typeof AdminWorkerRoute;
   AdminIndexRoute: typeof AdminIndexRoute;
 }
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
+  AdminCampaignsRoute: AdminCampaignsRoute,
   AdminCategoriesRoute: AdminCategoriesRoute,
   AdminCustomersRoute: AdminCustomersRoute,
-  AdminOrdersRoute: AdminOrdersRoute,
+  AdminOrdersRoute: AdminOrdersRouteWithChildren,
   AdminPaymentMethodsRoute: AdminPaymentMethodsRoute,
   AdminProductsRoute: AdminProductsRoute,
   AdminServicesRoute: AdminServicesRoute,
   AdminStoresRoute: AdminStoresRoute,
   AdminUsersRoute: AdminUsersRoute,
+  AdminWorkerRoute: AdminWorkerRoute,
   AdminIndexRoute: AdminIndexRoute,
 };
 
@@ -271,6 +364,7 @@ const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   AdminRouteRoute: AdminRouteRouteWithChildren,
+  TrackRoute: TrackRoute,
   AuthLoginRoute: AuthLoginRoute,
 };
 export const routeTree = rootRouteImport

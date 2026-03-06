@@ -113,6 +113,13 @@
       "when": 1772731348167,
       "tag": "0017_windy_ultimatum",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1772782197466,
+      "tag": "0018_shocking_clint_barton",
+      "breakpoints": true
     }
   ]
 }

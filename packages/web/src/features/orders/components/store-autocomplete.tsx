@@ -6,6 +6,7 @@ import { fetchStores, queryKeys } from "@/lib/api";
 type StoreAutocompleteProps = {
 	value: string;
 	onValueChange: (value: string) => void;
+	allowedStoreIds?: number[];
 	disabled?: boolean;
 	required?: boolean;
 	label?: string;
@@ -16,6 +17,7 @@ type StoreAutocompleteProps = {
 export function StoreAutocomplete({
 	value,
 	onValueChange,
+	allowedStoreIds,
 	disabled,
 	required,
 	label = "Store",
@@ -26,6 +28,9 @@ export function StoreAutocomplete({
 		queryKey: queryKeys.stores,
 		queryFn: fetchStores,
 	});
+	const filteredStores = allowedStoreIds
+		? stores.filter((store) => allowedStoreIds.includes(store.id))
+		: stores;
 
 	return (
 		<Field data-invalid={!!error}>
@@ -36,7 +41,7 @@ export function StoreAutocomplete({
 				id={id}
 				required={required}
 				triggerClassName="h-10 w-full text-sm"
-				options={stores.map((store) => ({
+				options={filteredStores.map((store) => ({
 					value: String(store.id),
 					label: store.name,
 				}))}

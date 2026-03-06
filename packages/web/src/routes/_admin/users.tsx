@@ -6,6 +6,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useCallback, useMemo, useState } from "react";
 import { type SubmitHandler, useForm } from "react-hook-form";
+import { z } from "zod";
 import { DataTable } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,14 +25,20 @@ import {
 } from "@/features/users/components/user-form";
 import {
 	createUser,
+	fetchStores,
 	fetchUsers,
 	queryKeys,
 	type User,
 	updateUser,
+	updateUserStores,
 } from "@/lib/api";
 
 export const Route = createFileRoute("/_admin/users")({
 	component: UsersPage,
+});
+
+const userFormSchema = POSTUserSchema.extend({
+	store_ids: z.array(z.number().int()),
 });
 
 const defaultForm: UserFormState = {
@@ -41,6 +48,7 @@ const defaultForm: UserFormState = {
 	confirm_password: "",
 	role: "cashier",
 	is_active: true,
+	store_ids: [],
 };
 
 function UsersPage() {
@@ -49,13 +57,17 @@ function UsersPage() {
 	const [isSheetOpen, setSheetOpen] = useState(false);
 
 	const form = useForm<UserFormState>({
-		resolver: zodResolver(POSTUserSchema),
+		resolver: zodResolver(userFormSchema),
 		defaultValues: defaultForm,
 	});
 
 	const { data: users = [], isPending } = useQuery({
 		queryKey: queryKeys.users,
 		queryFn: fetchUsers,
+	});
+	const storesQuery = useQuery({
+		queryKey: queryKeys.stores,
+		queryFn: fetchStores,
 	});
 	const userCount = users.length;
 
@@ -68,11 +80,6 @@ function UsersPage() {
 	const createMutation = useMutation({
 		mutationKey: ["create-user"],
 		mutationFn: createUser,
-		onSuccess: async () => {
-			await queryClient.invalidateQueries({ queryKey: queryKeys.users });
-			await queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
-			resetForm();
-		},
 	});
 
 	const updateMutation = useMutation({
@@ -84,10 +91,6 @@ function UsersPage() {
 			id: number;
 			payload: Parameters<typeof updateUser>[1];
 		}) => updateUser(id, payload),
-		onSuccess: async () => {
-			await queryClient.invalidateQueries({ queryKey: queryKeys.users });
-			resetForm();
-		},
 	});
 
 	const isSubmitting = createMutation.isPending || updateMutation.isPending;
@@ -102,6 +105,7 @@ function UsersPage() {
 				confirm_password: "placeholder1",
 				role: user.role,
 				is_active: user.is_active,
+				store_ids: user.userStores.map((item) => item.store_id),
 			});
 			setSheetOpen(true);
 		},
@@ -127,6 +131,11 @@ function UsersPage() {
 						{row.original.is_active ? "Active" : "Inactive"}
 					</Badge>
 				),
+			},
+			{
+				id: "stores",
+				header: "Stores",
+				cell: ({ row }) => row.original.userStores.length,
 			},
 			{
 				id: "actions",
@@ -158,6 +167,11 @@ function UsersPage() {
 				id: editingUser.id,
 				payload,
 			});
+			await updateUserStores(editingUser.id, {
+				store_ids: values.store_ids,
+			});
+			await queryClient.invalidateQueries({ queryKey: queryKeys.users });
+			resetForm();
 			return;
 		}
 
@@ -170,7 +184,16 @@ function UsersPage() {
 			is_active: values.is_active,
 		};
 
-		await createMutation.mutateAsync(payload);
+		const createdUser = await createMutation.mutateAsync(payload);
+		const createdUserId = (createdUser as { data?: { id?: number } }).data?.id;
+		if (createdUserId && values.store_ids.length > 0) {
+			await updateUserStores(createdUserId, {
+				store_ids: values.store_ids,
+			});
+		}
+		await queryClient.invalidateQueries({ queryKey: queryKeys.users });
+		await queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
+		resetForm();
 	};
 
 	return (
@@ -191,6 +214,7 @@ function UsersPage() {
 						onSubmit={handleSubmit}
 						isSubmitting={isSubmitting}
 						isEditing={!!editingUser}
+						stores={storesQuery.data ?? []}
 						onReset={resetForm}
 					/>
 				</SheetContent>

@@ -17,6 +17,10 @@ const pageMeta: Record<string, { title: string; description?: string }> = {
 		title: "Categories",
 		description: "Insert and edit category master data.",
 	},
+	"/campaigns": {
+		title: "Campaigns",
+		description: "Create and manage discount campaigns per store.",
+	},
 	"/customers": {
 		title: "Customers",
 		description: "Insert and edit customer master data.",
@@ -45,6 +49,11 @@ const pageMeta: Record<string, { title: string; description?: string }> = {
 	"/users": {
 		title: "Users",
 		description: "Insert and edit users with role management.",
+	},
+	"/worker": {
+		title: "Worker Ops",
+		description:
+			"Lookup item tags, claim work, update status, and upload photos.",
 	},
 };
 

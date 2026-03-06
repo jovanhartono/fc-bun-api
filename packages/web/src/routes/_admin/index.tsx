@@ -22,6 +22,7 @@ const cards = [
 	{ key: "services", label: "Services" },
 	{ key: "products", label: "Products" },
 	{ key: "paymentMethods", label: "Payment Methods" },
+	{ key: "campaigns", label: "Campaigns" },
 	{ key: "orders", label: "Orders" },
 ] as const;
 

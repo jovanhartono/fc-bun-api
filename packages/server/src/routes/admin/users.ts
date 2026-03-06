@@ -4,9 +4,10 @@ import { Hono } from "hono";
 import { StatusCodes } from "http-status-codes";
 import { z } from "zod";
 import { db } from "@/db";
-import { userRoleEnum, usersTable } from "@/db/schema";
-import { findUserById } from "@/modules/users/user.repository";
+import { userRoleEnum, userStoresTable, usersTable } from "@/db/schema";
+import { ForbiddenException } from "@/errors";
 import { idParamSchema } from "@/schema/param";
+import type { JWTPayload } from "@/types";
 import { notFoundOrFirst } from "@/utils/helper";
 import { failure, success } from "@/utils/http";
 import { buildPaginationMeta, normalizePagination } from "@/utils/pagination";
@@ -14,6 +15,9 @@ import { zodValidator } from "@/utils/zod-validator-wrapper";
 
 const POSTUserSchema = createInsertSchema(usersTable);
 const PUTUserSchema = createUpdateSchema(usersTable);
+const PUTUserStoresSchema = z.object({
+  store_ids: z.array(z.coerce.number().int().positive()),
+});
 const GETUsersQuerySchema = z
   .object({
     page: z.coerce.number().int().min(1).optional(),
@@ -83,6 +87,13 @@ const app = new Hono()
         columns: {
           password: false,
         },
+        with: {
+          userStores: {
+            columns: {
+              store_id: true,
+            },
+          },
+        },
         orderBy: [asc(usersTable.id)],
         where: whereClause,
         limit: pagination.pageSize,
@@ -98,7 +109,16 @@ const app = new Hono()
   .get("/:id", idParamSchema, async (c) => {
     const { id } = c.req.valid("param");
 
-    const user = await findUserById(id);
+    const user = await db.query.usersTable.findFirst({
+      where: eq(usersTable.id, id),
+      with: {
+        userStores: {
+          columns: {
+            store_id: true,
+          },
+        },
+      },
+    });
 
     if (!user) {
       return c.json(failure("User not found", StatusCodes.NOT_FOUND));
@@ -128,6 +148,50 @@ const app = new Hono()
 
       const { password: _userPassword, ...safeUser } = user;
       return c.json(success(safeUser, `Update user ${safeUser.name} success`));
+    }
+  )
+  .put(
+    "/:id/stores",
+    idParamSchema,
+    zodValidator("json", PUTUserStoresSchema),
+    async (c) => {
+      const actor = c.get("jwtPayload") as JWTPayload;
+      if (actor.role !== "admin") {
+        throw new ForbiddenException("Only admin can update user stores");
+      }
+
+      const { id } = c.req.valid("param");
+      const { store_ids } = c.req.valid("json");
+
+      const targetUser = await db.query.usersTable.findFirst({
+        where: eq(usersTable.id, id),
+        columns: { id: true },
+      });
+
+      if (!targetUser) {
+        return c.json(failure("User not found", StatusCodes.NOT_FOUND));
+      }
+
+      await db.transaction(async (tx) => {
+        await tx.delete(userStoresTable).where(eq(userStoresTable.user_id, id));
+
+        const uniqueStoreIds = [...new Set(store_ids)];
+        if (uniqueStoreIds.length > 0) {
+          await tx.insert(userStoresTable).values(
+            uniqueStoreIds.map((storeId) => ({
+              user_id: id,
+              store_id: storeId,
+            }))
+          );
+        }
+      });
+
+      return c.json(
+        success(
+          { id, store_ids: [...new Set(store_ids)] },
+          "User stores updated"
+        )
+      );
     }
   );
 

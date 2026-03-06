@@ -170,10 +170,9 @@ export const POSTProductSchema = z.object({
 
 export const POSTOrderSchema = z
   .object({
-    customer_name: varcharSchema("Customer Name").optional(),
-    customer_phone: phoneSchema.optional(),
     customer_id: z.number("Customer is required"),
     store_id: z.number("Store ID is required"),
+    campaign_id: z.number().int().positive().optional(),
     products: z
       .array(
         z.object(
@@ -193,7 +192,8 @@ export const POSTOrderSchema = z
             id: z.number("Service is required"),
             qty: z.int().positive("Quantity must be positive"),
             notes: z.string().optional(),
-            //TODO: add discount later
+            shoe_brand: varcharSchema("Shoe Brand"),
+            shoe_size: varcharSchema("Shoe Size"),
           },
           "Service is required"
         )
@@ -217,5 +217,20 @@ export const POSTOrderSchema = z
     {
       error: "Product or Service is required",
       path: ["products_ids", "services_ids"],
+    }
+  )
+  .refine(
+    (val) => !(Number(val.discount) > 0 && val.campaign_id !== undefined),
+    {
+      error: "Campaign discount cannot be combined with manual discount",
+      path: ["campaign_id"],
+    }
+  )
+  .refine(
+    (val) =>
+      val.payment_status !== "paid" || val.payment_method_id !== undefined,
+    {
+      error: "Payment method is required for paid orders",
+      path: ["payment_method_id"],
     }
   );

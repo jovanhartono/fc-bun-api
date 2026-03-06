@@ -15,7 +15,7 @@ const router = app
   .route("/public", publicRoutes);
 
 // error handling
-app.onError((err, c) => {
+router.onError((err, c) => {
   if (err instanceof HTTPException) {
     return c.json(failure(err.message, err.cause), err.status);
   }
@@ -51,6 +51,6 @@ app.onError((err, c) => {
 
 export type AppType = typeof router;
 export default {
-  fetch: app.fetch,
+  fetch: router.fetch,
   port: "8000",
 };

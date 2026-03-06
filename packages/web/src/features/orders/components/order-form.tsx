@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { CampaignAutocomplete } from "@/features/orders/components/campaign-autocomplete";
 import { CustomerAutocomplete } from "@/features/orders/components/customer-autocomplete";
 import { PaymentMethodAutocomplete } from "@/features/orders/components/payment-method-autocomplete";
 import { ProductAutocomplete } from "@/features/orders/components/product-autocomplete";
@@ -24,8 +25,9 @@ import type { CreateOrderPayload } from "@/lib/api";
 export type OrderFormState = {
 	customer_id: string;
 	store_id: string;
+	campaign_id: string;
 	payment_method_id: string;
-	payment_status: "paid" | "partial" | "unpaid";
+	payment_status: "paid" | "unpaid";
 	discount: string;
 	notes: string;
 	products: Array<{
@@ -35,24 +37,28 @@ export type OrderFormState = {
 	services: Array<{
 		id: string;
 		qty: string;
+		shoe_brand: string;
+		shoe_size: string;
 	}>;
 };
 
 const defaultForm: OrderFormState = {
 	customer_id: "",
 	store_id: "",
+	campaign_id: "",
 	payment_method_id: "",
 	payment_status: "unpaid",
 	discount: "0",
 	notes: "",
 	products: [{ id: "", qty: "1" }],
-	services: [{ id: "", qty: "1" }],
+	services: [{ id: "", qty: "1", shoe_brand: "", shoe_size: "" }],
 };
 
 function toOrderPayload(values: OrderFormState): CreateOrderPayload {
 	return {
 		customer_id: Number(values.customer_id),
 		store_id: Number(values.store_id),
+		campaign_id: values.campaign_id ? Number(values.campaign_id) : undefined,
 		products: values.products
 			.filter((product) => !!product.id)
 			.map((product) => ({
@@ -65,6 +71,8 @@ function toOrderPayload(values: OrderFormState): CreateOrderPayload {
 			.map((service) => ({
 				id: Number(service.id),
 				qty: Number(service.qty),
+				shoe_brand: service.shoe_brand,
+				shoe_size: service.shoe_size,
 				notes: undefined,
 			})),
 		discount: values.discount ?? "0",
@@ -83,6 +91,7 @@ const orderFormResolverSchema = z
 		store_id: z.string().trim().min(1, "Store ID is required"),
 		payment_method_id: z.string(),
 		discount: z.string(),
+		campaign_id: z.string(),
 		notes: z.string(),
 		products: z.array(
 			z.object({
@@ -95,6 +104,8 @@ const orderFormResolverSchema = z
 			z.object({
 				id: z.string(),
 				qty: z.string(),
+				shoe_brand: z.string(),
+				shoe_size: z.string(),
 				notes: z.string().optional(),
 			}),
 		),
@@ -126,9 +137,14 @@ type OrderFormProps = {
 	defaultValues?: OrderFormState;
 	handleOnSubmit: (values: CreateOrderPayload) => Promise<void> | void;
 	isSubmitting?: boolean;
+	allowedStoreIds?: number[];
 };
 
-export function OrderForm({ defaultValues, handleOnSubmit }: OrderFormProps) {
+export function OrderForm({
+	defaultValues,
+	handleOnSubmit,
+	allowedStoreIds,
+}: OrderFormProps) {
 	const form = useForm({
 		resolver: zodResolver(orderFormResolverSchema),
 		defaultValues: defaultValues ?? defaultForm,
@@ -150,7 +166,7 @@ export function OrderForm({ defaultValues, handleOnSubmit }: OrderFormProps) {
 				await handleOnSubmit(toOrderPayload(values));
 			})}
 		>
-			<FieldGroup>
+			<FieldGroup className="md:grid md:grid-cols-2 md:gap-x-4">
 				<Controller
 					name="customer_id"
 					control={form.control}
@@ -172,8 +188,23 @@ export function OrderForm({ defaultValues, handleOnSubmit }: OrderFormProps) {
 						<StoreAutocomplete
 							value={field.value}
 							onValueChange={field.onChange}
+							allowedStoreIds={allowedStoreIds}
 							disabled={isSubmitting}
 							required
+							error={fieldState.error}
+						/>
+					)}
+				/>
+
+				<Controller
+					name="campaign_id"
+					control={form.control}
+					render={({ field, fieldState }) => (
+						<CampaignAutocomplete
+							value={field.value}
+							storeId={form.watch("store_id")}
+							onValueChange={field.onChange}
+							disabled={isSubmitting}
 							error={fieldState.error}
 						/>
 					)}
@@ -206,7 +237,6 @@ export function OrderForm({ defaultValues, handleOnSubmit }: OrderFormProps) {
 								triggerClassName="h-10 w-full text-sm"
 								options={[
 									{ value: "unpaid", label: "unpaid" },
-									{ value: "partial", label: "partial" },
 									{ value: "paid", label: "paid" },
 								]}
 								value={field.value}
@@ -225,7 +255,7 @@ export function OrderForm({ defaultValues, handleOnSubmit }: OrderFormProps) {
 					)}
 				/>
 
-				<div className="grid gap-3">
+				<div className="grid gap-3 md:col-span-2">
 					<div className="flex items-center justify-between">
 						<FieldLabel>Products</FieldLabel>
 						<Button
@@ -303,7 +333,7 @@ export function OrderForm({ defaultValues, handleOnSubmit }: OrderFormProps) {
 					))}
 				</div>
 
-				<div className="grid gap-3">
+				<div className="grid gap-3 md:col-span-2">
 					<div className="flex items-center justify-between">
 						<FieldLabel>Services</FieldLabel>
 						<Button
@@ -315,12 +345,18 @@ export function OrderForm({ defaultValues, handleOnSubmit }: OrderFormProps) {
 								serviceFields.append({
 									id: "",
 									qty: "1",
+									shoe_brand: "",
+									shoe_size: "",
 								})
 							}
 						>
 							Add Service
 						</Button>
 					</div>
+					<p className="text-xs text-muted-foreground">
+						Dropoff photo is required before processing starts. You can upload
+						it after order creation from order detail or worker screen.
+					</p>
 					<FieldError
 						errors={[form.formState.errors.services as { message?: string }]}
 					/>
@@ -338,6 +374,48 @@ export function OrderForm({ defaultValues, handleOnSubmit }: OrderFormProps) {
 										disabled={isSubmitting}
 										error={fieldState.error}
 									/>
+								)}
+							/>
+
+							<Controller
+								name={`services.${index}.shoe_brand`}
+								control={form.control}
+								render={({ field, fieldState }) => (
+									<Field data-invalid={fieldState.invalid}>
+										<FieldLabel htmlFor={`order-service-brand-${index}`}>
+											Shoe Brand
+										</FieldLabel>
+										<Input
+											{...field}
+											id={`order-service-brand-${index}`}
+											placeholder="e.g. Nike"
+											aria-invalid={fieldState.invalid}
+											disabled={isSubmitting}
+											className="h-10 w-full text-sm md:h-10"
+										/>
+										<FieldError errors={[fieldState.error]} />
+									</Field>
+								)}
+							/>
+
+							<Controller
+								name={`services.${index}.shoe_size`}
+								control={form.control}
+								render={({ field, fieldState }) => (
+									<Field data-invalid={fieldState.invalid}>
+										<FieldLabel htmlFor={`order-service-size-${index}`}>
+											Shoe Size
+										</FieldLabel>
+										<Input
+											{...field}
+											id={`order-service-size-${index}`}
+											placeholder="e.g. 42"
+											aria-invalid={fieldState.invalid}
+											disabled={isSubmitting}
+											className="h-10 w-full text-sm md:h-10"
+										/>
+										<FieldError errors={[fieldState.error]} />
+									</Field>
 								)}
 							/>
 
@@ -417,7 +495,7 @@ export function OrderForm({ defaultValues, handleOnSubmit }: OrderFormProps) {
 					)}
 				/>
 
-				<div className="md:col-span-2 md:justify-end">
+				<div className="sticky bottom-0 z-10 -mx-2 flex border-t bg-background/95 px-2 pt-3 backdrop-blur md:col-span-2 md:justify-end">
 					<Button
 						type="submit"
 						loading={isSubmitting}

@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import campaignsRoutes from "@/routes/admin/campaigns";
 import categoriesRoutes from "@/routes/admin/categories";
 import customerRoutes from "@/routes/admin/customer";
 import orderServiceImagesRoutes from "@/routes/admin/order-service-images";
@@ -16,6 +17,7 @@ const app = new Hono()
   .route("/services", servicesRoutes)
   .route("/products", productsRoutes)
   .route("/categories", categoriesRoutes)
+  .route("/campaigns", campaignsRoutes)
   .route("/payment-methods", paymentMethodsRoutes)
   .route("/orders", ordersRoutes)
   .route("/order-service-images", orderServiceImagesRoutes);

@@ -17,7 +17,7 @@ export interface OrderListItem {
   id: number;
   code: string;
   status: "created" | "processing" | "completed" | "cancelled";
-  payment_status: "paid" | "partial" | "unpaid";
+  payment_status: "paid" | "unpaid";
   discount: string;
   total: string | null;
   notes: string | null;
