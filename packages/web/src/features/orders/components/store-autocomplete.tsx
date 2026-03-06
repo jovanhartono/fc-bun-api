@@ -29,7 +29,9 @@ export function StoreAutocomplete({
 
 	return (
 		<Field data-invalid={!!error}>
-			<FieldLabel htmlFor={id}>{label}</FieldLabel>
+			<FieldLabel htmlFor={id} asterisk={required}>
+				{label}
+			</FieldLabel>
 			<Combobox
 				id={id}
 				required={required}

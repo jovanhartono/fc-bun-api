@@ -60,7 +60,12 @@ export type LoginPayload = {
 	password: string;
 };
 
-export type CreateCustomerPayload = z.infer<typeof POSTCustomerSchema>;
+export type CreateCustomerPayload = Omit<
+	z.infer<typeof POSTCustomerSchema>,
+	"origin_store_id"
+> & {
+	origin_store_id?: number;
+};
 export type UpdateCustomerPayload = z.infer<typeof PUTCustomerSchema>;
 export type CreateUserPayload = z.infer<typeof POSTUserSchema>;
 export type UpdateUserPayload = z.infer<typeof PUTUserSchema>;
@@ -146,7 +151,9 @@ export async function fetchOrders() {
 
 export async function createCustomer(payload: CreateCustomerPayload) {
 	return parseResponse(
-		rpcWithAuth().api.admin.customers.$post({ json: payload }),
+		rpcWithAuth().api.admin.customers.$post({
+			json: payload as z.infer<typeof POSTCustomerSchema>,
+		}),
 	);
 }
 

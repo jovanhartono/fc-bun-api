@@ -25,14 +25,16 @@ export function CustomerAutocomplete({
 
 	return (
 		<Field data-invalid={!!error}>
-			<FieldLabel htmlFor="order-customer">Customer Reference</FieldLabel>
+			<FieldLabel htmlFor="order-customer" asterisk={required}>
+				Customer Reference
+			</FieldLabel>
 			<Combobox
 				id="order-customer"
 				required={required}
 				triggerClassName="h-10 w-full text-sm"
 				options={customers.map((customer) => ({
 					value: String(customer.id),
-					label: customer.name,
+					label: `${customer.name} ${customer.phone_number}`,
 				}))}
 				value={value}
 				onValueChange={onValueChange}

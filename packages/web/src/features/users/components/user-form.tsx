@@ -53,14 +53,15 @@ export function UserForm({
 				control={control}
 				render={({ field, fieldState }) => (
 					<Field data-invalid={fieldState.invalid}>
-						<FieldLabel htmlFor="user-username">Username</FieldLabel>
+						<FieldLabel htmlFor="user-username" asterisk>
+							Username
+						</FieldLabel>
 						<Input
 							{...field}
 							id="user-username"
 							placeholder="e.g. cashier01"
 							aria-invalid={fieldState.invalid}
 							disabled={isSubmitting || isEditing}
-							required
 							className="h-10"
 						/>
 						<FieldError errors={[fieldState.error]} />
@@ -73,14 +74,15 @@ export function UserForm({
 				control={control}
 				render={({ field, fieldState }) => (
 					<Field data-invalid={fieldState.invalid}>
-						<FieldLabel htmlFor="user-name">Name</FieldLabel>
+						<FieldLabel htmlFor="user-name" asterisk>
+							Name
+						</FieldLabel>
 						<Input
 							{...field}
 							id="user-name"
 							placeholder="e.g. Budi Santoso"
 							aria-invalid={fieldState.invalid}
 							disabled={isSubmitting}
-							required
 							className="h-10"
 						/>
 						<FieldError errors={[fieldState.error]} />
@@ -95,7 +97,9 @@ export function UserForm({
 						control={control}
 						render={({ field, fieldState }) => (
 							<Field data-invalid={fieldState.invalid}>
-								<FieldLabel htmlFor="user-password">Password</FieldLabel>
+								<FieldLabel htmlFor="user-password" asterisk>
+									Password
+								</FieldLabel>
 								<Input
 									{...field}
 									id="user-password"
@@ -103,7 +107,6 @@ export function UserForm({
 									placeholder="Enter password"
 									aria-invalid={fieldState.invalid}
 									disabled={isSubmitting}
-									required
 									className="h-10"
 								/>
 								<FieldError errors={[fieldState.error]} />
@@ -116,7 +119,7 @@ export function UserForm({
 						control={control}
 						render={({ field, fieldState }) => (
 							<Field data-invalid={fieldState.invalid}>
-								<FieldLabel htmlFor="user-confirm-password">
+								<FieldLabel htmlFor="user-confirm-password" asterisk>
 									Confirm Password
 								</FieldLabel>
 								<Input
@@ -126,7 +129,6 @@ export function UserForm({
 									placeholder="Confirm password"
 									aria-invalid={fieldState.invalid}
 									disabled={isSubmitting}
-									required
 									className="h-10"
 								/>
 								<FieldError errors={[fieldState.error]} />
