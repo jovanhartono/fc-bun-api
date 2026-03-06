@@ -23,7 +23,7 @@ import {
 	updateCustomer,
 } from "@/lib/api";
 import { normalizePhoneNumber } from "@/lib/phone-number";
-import { useGlobalSheet } from "@/stores/sheet-store";
+import { useSheet } from "@/stores/sheet-store";
 
 export const Route = createFileRoute("/_admin/customers")({
 	component: CustomersPage,
@@ -51,7 +51,7 @@ type CustomerSheetContentProps = {
 
 function CustomerSheetContent({ editingCustomer }: CustomerSheetContentProps) {
 	const queryClient = useQueryClient();
-	const { closeSheet } = useGlobalSheet();
+	const { closeSheet } = useSheet();
 
 	const form = useForm<CustomerFormState>({
 		resolver: zodResolver(customerFormResolverSchema),
@@ -138,7 +138,7 @@ function CustomerSheetContent({ editingCustomer }: CustomerSheetContentProps) {
 }
 
 function CustomersPage() {
-	const { openSheet } = useGlobalSheet();
+	const { openSheet } = useSheet();
 
 	const { data: customers = [], isPending } = useQuery({
 		queryKey: queryKeys.customers,

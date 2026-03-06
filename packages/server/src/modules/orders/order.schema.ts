@@ -2,7 +2,6 @@ import { z } from "zod";
 import { orderPaymentStatusEnum, orderStatusEnum } from "@/db/schema";
 import { normalizePagination } from "@/utils/pagination";
 
-export const DEFAULT_PAGE = 1;
 export const DEFAULT_PAGE_SIZE = 25;
 export const MAX_PAGE_SIZE = 100;
 
@@ -10,14 +9,6 @@ const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
 
 export const GETOrdersQuerySchema = z
   .object({
-    page: z.coerce.number().int().min(1).default(DEFAULT_PAGE).optional(),
-    page_size: z.coerce
-      .number()
-      .int()
-      .min(1)
-      .max(MAX_PAGE_SIZE)
-      .default(DEFAULT_PAGE_SIZE)
-      .optional(),
     limit: z.coerce.number().int().min(1).max(MAX_PAGE_SIZE).optional(),
     offset: z.coerce.number().int().min(0).optional(),
 
@@ -56,8 +47,7 @@ export type GetOrdersQuery = z.infer<typeof GETOrdersQuerySchema>;
 type ParsedOrdersQuery = NonNullable<GetOrdersQuery>;
 
 export interface NormalizedOrderListQuery {
-  page: number;
-  pageSize: number;
+  limit: number;
   offset: number;
   search?: string;
   status?: ParsedOrdersQuery["status"];
@@ -76,14 +66,12 @@ export function normalizeOrderListQuery(
   query?: GetOrdersQuery
 ): NormalizedOrderListQuery {
   const pagination = normalizePagination(query, {
-    defaultPage: DEFAULT_PAGE,
     defaultPageSize: DEFAULT_PAGE_SIZE,
     maxPageSize: MAX_PAGE_SIZE,
   });
 
   return {
-    page: pagination.page,
-    pageSize: pagination.pageSize,
+    limit: pagination.limit,
     offset: pagination.offset,
     search: query?.search,
     status: query?.status,

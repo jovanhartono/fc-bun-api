@@ -19,7 +19,7 @@ import {
 	updateService,
 } from "@/lib/api";
 import { formatIDRCurrency } from "@/shared/utils";
-import { useGlobalSheet } from "@/stores/sheet-store";
+import { useSheet } from "@/stores/sheet-store";
 
 export const Route = createFileRoute("/_admin/services")({
 	component: ServicesPage,
@@ -27,7 +27,7 @@ export const Route = createFileRoute("/_admin/services")({
 
 function ServicesPage() {
 	const queryClient = useQueryClient();
-	const { openSheet, closeSheet } = useGlobalSheet();
+	const { openSheet, closeSheet } = useSheet();
 
 	const { data: services = [], isPending } = useQuery({
 		queryKey: queryKeys.services,

@@ -55,6 +55,7 @@ function OrderDetailPage() {
 
 	const { orderId } = Route.useParams();
 	const id = Number(orderId);
+	const isValidOrderId = Number.isInteger(id) && id > 0;
 	const queryClient = useQueryClient();
 
 	const [noteByServiceId, setNoteByServiceId] = useState<
@@ -83,6 +84,7 @@ function OrderDetailPage() {
 	const detailQuery = useQuery({
 		queryKey: queryKeys.orderDetail(id),
 		queryFn: () => fetchOrderDetail(id),
+		enabled: isValidOrderId,
 	});
 
 	const paymentMethodsQuery = useQuery({
@@ -206,8 +208,22 @@ function OrderDetailPage() {
 		},
 	});
 
+	if (!isValidOrderId) {
+		return <p>Invalid order ID.</p>;
+	}
+
 	if (detailQuery.isPending) {
 		return <p>Loading order...</p>;
+	}
+
+	if (detailQuery.isError) {
+		return (
+			<p>
+				{detailQuery.error instanceof Error
+					? detailQuery.error.message
+					: "Failed to load order."}
+			</p>
+		);
 	}
 
 	if (!detailQuery.data) {
@@ -215,8 +231,12 @@ function OrderDetailPage() {
 	}
 
 	const detail = detailQuery.data;
+	const paymentMethods = Array.isArray(paymentMethodsQuery.data)
+		? paymentMethodsQuery.data
+		: [];
+	const orderServices = Array.isArray(detail.services) ? detail.services : [];
 
-	const refundableServices = detail.services.filter(
+	const refundableServices = orderServices.filter(
 		(service) =>
 			!["picked_up", "refunded", "cancelled"].includes(service.status),
 	);
@@ -241,8 +261,8 @@ function OrderDetailPage() {
 					<CardContent className="grid gap-2 text-sm">
 						<p>{`Status: ${detail.status}`}</p>
 						<p>{`Payment: ${detail.payment_status}`}</p>
-						<p>{`Customer: ${detail.customer.name}`}</p>
-						<p>{`Store: ${detail.store.name}`}</p>
+						<p>{`Customer: ${detail.customer?.name ?? "-"}`}</p>
+						<p>{`Store: ${detail.store?.name ?? "-"}`}</p>
 						<p>{`Total: ${detail.total}`}</p>
 						<p>{`Discount: ${detail.discount}`}</p>
 						<p>{`Refunded: ${detail.refunded_amount}`}</p>
@@ -265,7 +285,7 @@ function OrderDetailPage() {
 									<SelectValue placeholder="Select payment method" />
 								</SelectTrigger>
 								<SelectContent>
-									{paymentMethodsQuery.data?.map((method) => (
+									{paymentMethods.map((method) => (
 										<SelectItem key={method.id} value={String(method.id)}>
 											{method.name}
 										</SelectItem>
@@ -325,10 +345,11 @@ function OrderDetailPage() {
 												checked={selected}
 												onChange={(event) => {
 													if (event.target.checked) {
-														setRefundServiceIds((prev) => [
-															...prev,
-															service.id,
-														]);
+														setRefundServiceIds((prev) =>
+															prev.includes(service.id)
+																? prev
+																: [...prev, service.id],
+														);
 														return;
 													}
 													setRefundServiceIds((prev) =>
@@ -420,7 +441,7 @@ function OrderDetailPage() {
 			</div>
 
 			<div className="grid gap-4 lg:col-span-8">
-				{detail.services.map((service) => {
+				{orderServices.map((service) => {
 					const selectedStatusValue =
 						statusByServiceId[service.id] ?? service.status;
 					const selectedPhotoType =

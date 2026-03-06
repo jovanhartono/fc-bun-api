@@ -30,6 +30,10 @@ const pageMeta: Record<string, { title: string; description?: string }> = {
 		description:
 			"Insert orders. Edit is not available from current backend API.",
 	},
+	"/orders/new": {
+		title: "Create Order",
+		description: "Create a new order from products and services.",
+	},
 	"/payment-methods": {
 		title: "Payment Methods",
 		description: "Insert and edit payment method master data.",

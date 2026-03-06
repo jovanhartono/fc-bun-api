@@ -18,7 +18,7 @@ import {
 	queryKeys,
 	updateCategory,
 } from "@/lib/api";
-import { useGlobalSheet, useSheet } from "@/stores/sheet-store";
+import { useSheet } from "@/stores/sheet-store";
 
 export const Route = createFileRoute("/_admin/categories")({
 	component: CategoriesPage,
@@ -107,7 +107,7 @@ const columns: ColumnDef<Category>[] = [
 
 function CategoriesPage() {
 	const queryClient = useQueryClient();
-	const { openSheet, closeSheet } = useGlobalSheet();
+	const { openSheet, closeSheet } = useSheet();
 
 	const { data = [], isPending } = useQuery({
 		queryKey: queryKeys.categories,

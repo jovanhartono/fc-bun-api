@@ -185,7 +185,7 @@ export async function findOrders(
       },
       where: whereClause,
       orderBy: [orderBy, asc(ordersTable.id)],
-      limit: filters.pageSize,
+      limit: filters.limit,
       offset: filters.offset,
     }),
     db.$count(ordersTable, whereClause),

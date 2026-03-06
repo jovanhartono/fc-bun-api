@@ -1,7 +1,7 @@
 interface Metadata {
   total?: number;
-  page?: number;
-  pageSize?: number;
+  limit?: number;
+  offset?: number;
 }
 
 interface SuccessResponse<T, M extends object = Metadata> {

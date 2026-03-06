@@ -11,7 +11,6 @@ import {
   insertOrderServices,
   type OrderTx,
   reserveNextOrderNumber,
-  updateOrderTotal,
 } from "@/modules/orders/order.repository";
 import {
   type GetOrdersQuery,
@@ -285,6 +284,7 @@ export async function createOrder(
       .update(ordersTable)
       .set({
         campaign_id,
+        total: grossTotal.toString(),
         discount: discountAmount.toString(),
         discount_source: discountSource,
         paid_amount:
@@ -292,8 +292,6 @@ export async function createOrder(
         paid_at: orderPayload.payment_status === "paid" ? new Date() : null,
       })
       .where(eq(ordersTable.id, orderId));
-
-    await updateOrderTotal(tx, orderId, grossTotal);
 
     return {
       code,

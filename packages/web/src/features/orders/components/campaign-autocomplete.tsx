@@ -22,7 +22,12 @@ export function CampaignAutocomplete({
 	disabled,
 	error,
 }: CampaignAutocompleteProps) {
-	const parsedStoreId = storeId ? Number(storeId) : undefined;
+	const numericStoreId = storeId ? Number(storeId) : undefined;
+	const parsedStoreId =
+		numericStoreId !== undefined && Number.isFinite(numericStoreId)
+			? numericStoreId
+			: undefined;
+	const isCampaignQueryEnabled = parsedStoreId !== undefined;
 	const campaignQuery = useQuery({
 		queryKey: queryKeys.campaigns({
 			store_id: parsedStoreId,
@@ -33,7 +38,7 @@ export function CampaignAutocomplete({
 				store_id: parsedStoreId,
 				is_active: true,
 			}),
-		enabled: parsedStoreId !== undefined,
+		enabled: isCampaignQueryEnabled,
 	});
 
 	const campaigns = campaignQuery.data ?? [];
@@ -49,7 +54,7 @@ export function CampaignAutocomplete({
 
 		return true;
 	});
-	const isPending = campaignQuery.isPending;
+	const isLoadingCampaigns = isCampaignQueryEnabled && campaignQuery.isFetching;
 
 	return (
 		<Field data-invalid={!!error}>
@@ -68,7 +73,7 @@ export function CampaignAutocomplete({
 				onValueChange={(nextValue) =>
 					onValueChange(!nextValue || nextValue === "none" ? "" : nextValue)
 				}
-				loading={isPending}
+				loading={isLoadingCampaigns}
 				placeholder={
 					parsedStoreId ? "No campaign" : "Select store first to load campaigns"
 				}

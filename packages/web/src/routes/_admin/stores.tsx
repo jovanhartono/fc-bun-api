@@ -18,7 +18,7 @@ import {
 	type Store,
 	updateStore,
 } from "@/lib/api";
-import { useGlobalSheet } from "@/stores/sheet-store";
+import { useSheet } from "@/stores/sheet-store";
 
 export const Route = createFileRoute("/_admin/stores")({
 	component: StoresPage,
@@ -26,7 +26,7 @@ export const Route = createFileRoute("/_admin/stores")({
 
 function StoresPage() {
 	const queryClient = useQueryClient();
-	const { openSheet, closeSheet } = useGlobalSheet();
+	const { openSheet, closeSheet } = useSheet();
 
 	const { data: stores = [], isPending } = useQuery({
 		queryKey: queryKeys.stores,

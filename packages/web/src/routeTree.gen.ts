@@ -19,10 +19,11 @@ import { Route as AdminStoresRouteImport } from "./routes/_admin/stores";
 import { Route as AdminServicesRouteImport } from "./routes/_admin/services";
 import { Route as AdminProductsRouteImport } from "./routes/_admin/products";
 import { Route as AdminPaymentMethodsRouteImport } from "./routes/_admin/payment-methods";
-import { Route as AdminOrdersRouteImport } from "./routes/_admin/orders";
 import { Route as AdminCustomersRouteImport } from "./routes/_admin/customers";
 import { Route as AdminCategoriesRouteImport } from "./routes/_admin/categories";
 import { Route as AdminCampaignsRouteImport } from "./routes/_admin/campaigns";
+import { Route as AdminOrdersIndexRouteImport } from "./routes/_admin/orders.index";
+import { Route as AdminOrdersNewRouteImport } from "./routes/_admin/orders.new";
 import { Route as AdminOrdersOrderIdRouteImport } from "./routes/_admin/orders.$orderId";
 
 const TrackRoute = TrackRouteImport.update({
@@ -74,11 +75,6 @@ const AdminPaymentMethodsRoute = AdminPaymentMethodsRouteImport.update({
   path: "/payment-methods",
   getParentRoute: () => AdminRouteRoute,
 } as any);
-const AdminOrdersRoute = AdminOrdersRouteImport.update({
-  id: "/orders",
-  path: "/orders",
-  getParentRoute: () => AdminRouteRoute,
-} as any);
 const AdminCustomersRoute = AdminCustomersRouteImport.update({
   id: "/customers",
   path: "/customers",
@@ -94,10 +90,20 @@ const AdminCampaignsRoute = AdminCampaignsRouteImport.update({
   path: "/campaigns",
   getParentRoute: () => AdminRouteRoute,
 } as any);
+const AdminOrdersIndexRoute = AdminOrdersIndexRouteImport.update({
+  id: "/orders/",
+  path: "/orders/",
+  getParentRoute: () => AdminRouteRoute,
+} as any);
+const AdminOrdersNewRoute = AdminOrdersNewRouteImport.update({
+  id: "/orders/new",
+  path: "/orders/new",
+  getParentRoute: () => AdminRouteRoute,
+} as any);
 const AdminOrdersOrderIdRoute = AdminOrdersOrderIdRouteImport.update({
-  id: "/$orderId",
-  path: "/$orderId",
-  getParentRoute: () => AdminOrdersRoute,
+  id: "/orders/$orderId",
+  path: "/orders/$orderId",
+  getParentRoute: () => AdminRouteRoute,
 } as any);
 
 export interface FileRoutesByFullPath {
@@ -106,7 +112,6 @@ export interface FileRoutesByFullPath {
   "/campaigns": typeof AdminCampaignsRoute;
   "/categories": typeof AdminCategoriesRoute;
   "/customers": typeof AdminCustomersRoute;
-  "/orders": typeof AdminOrdersRouteWithChildren;
   "/payment-methods": typeof AdminPaymentMethodsRoute;
   "/products": typeof AdminProductsRoute;
   "/services": typeof AdminServicesRoute;
@@ -115,13 +120,14 @@ export interface FileRoutesByFullPath {
   "/worker": typeof AdminWorkerRoute;
   "/auth/login": typeof AuthLoginRoute;
   "/orders/$orderId": typeof AdminOrdersOrderIdRoute;
+  "/orders/new": typeof AdminOrdersNewRoute;
+  "/orders/": typeof AdminOrdersIndexRoute;
 }
 export interface FileRoutesByTo {
   "/track": typeof TrackRoute;
   "/campaigns": typeof AdminCampaignsRoute;
   "/categories": typeof AdminCategoriesRoute;
   "/customers": typeof AdminCustomersRoute;
-  "/orders": typeof AdminOrdersRouteWithChildren;
   "/payment-methods": typeof AdminPaymentMethodsRoute;
   "/products": typeof AdminProductsRoute;
   "/services": typeof AdminServicesRoute;
@@ -131,6 +137,8 @@ export interface FileRoutesByTo {
   "/auth/login": typeof AuthLoginRoute;
   "/": typeof AdminIndexRoute;
   "/orders/$orderId": typeof AdminOrdersOrderIdRoute;
+  "/orders/new": typeof AdminOrdersNewRoute;
+  "/orders": typeof AdminOrdersIndexRoute;
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport;
@@ -139,7 +147,6 @@ export interface FileRoutesById {
   "/_admin/campaigns": typeof AdminCampaignsRoute;
   "/_admin/categories": typeof AdminCategoriesRoute;
   "/_admin/customers": typeof AdminCustomersRoute;
-  "/_admin/orders": typeof AdminOrdersRouteWithChildren;
   "/_admin/payment-methods": typeof AdminPaymentMethodsRoute;
   "/_admin/products": typeof AdminProductsRoute;
   "/_admin/services": typeof AdminServicesRoute;
@@ -149,6 +156,8 @@ export interface FileRoutesById {
   "/auth/login": typeof AuthLoginRoute;
   "/_admin/": typeof AdminIndexRoute;
   "/_admin/orders/$orderId": typeof AdminOrdersOrderIdRoute;
+  "/_admin/orders/new": typeof AdminOrdersNewRoute;
+  "/_admin/orders/": typeof AdminOrdersIndexRoute;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
@@ -158,7 +167,6 @@ export interface FileRouteTypes {
     | "/campaigns"
     | "/categories"
     | "/customers"
-    | "/orders"
     | "/payment-methods"
     | "/products"
     | "/services"
@@ -166,14 +174,15 @@ export interface FileRouteTypes {
     | "/users"
     | "/worker"
     | "/auth/login"
-    | "/orders/$orderId";
+    | "/orders/$orderId"
+    | "/orders/new"
+    | "/orders/";
   fileRoutesByTo: FileRoutesByTo;
   to:
     | "/track"
     | "/campaigns"
     | "/categories"
     | "/customers"
-    | "/orders"
     | "/payment-methods"
     | "/products"
     | "/services"
@@ -182,7 +191,9 @@ export interface FileRouteTypes {
     | "/worker"
     | "/auth/login"
     | "/"
-    | "/orders/$orderId";
+    | "/orders/$orderId"
+    | "/orders/new"
+    | "/orders";
   id:
     | "__root__"
     | "/_admin"
@@ -190,7 +201,6 @@ export interface FileRouteTypes {
     | "/_admin/campaigns"
     | "/_admin/categories"
     | "/_admin/customers"
-    | "/_admin/orders"
     | "/_admin/payment-methods"
     | "/_admin/products"
     | "/_admin/services"
@@ -199,7 +209,9 @@ export interface FileRouteTypes {
     | "/_admin/worker"
     | "/auth/login"
     | "/_admin/"
-    | "/_admin/orders/$orderId";
+    | "/_admin/orders/$orderId"
+    | "/_admin/orders/new"
+    | "/_admin/orders/";
   fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
@@ -280,13 +292,6 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AdminPaymentMethodsRouteImport;
       parentRoute: typeof AdminRouteRoute;
     };
-    "/_admin/orders": {
-      id: "/_admin/orders";
-      path: "/orders";
-      fullPath: "/orders";
-      preLoaderRoute: typeof AdminOrdersRouteImport;
-      parentRoute: typeof AdminRouteRoute;
-    };
     "/_admin/customers": {
       id: "/_admin/customers";
       path: "/customers";
@@ -308,33 +313,34 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AdminCampaignsRouteImport;
       parentRoute: typeof AdminRouteRoute;
     };
+    "/_admin/orders/": {
+      id: "/_admin/orders/";
+      path: "/orders";
+      fullPath: "/orders/";
+      preLoaderRoute: typeof AdminOrdersIndexRouteImport;
+      parentRoute: typeof AdminRouteRoute;
+    };
+    "/_admin/orders/new": {
+      id: "/_admin/orders/new";
+      path: "/orders/new";
+      fullPath: "/orders/new";
+      preLoaderRoute: typeof AdminOrdersNewRouteImport;
+      parentRoute: typeof AdminRouteRoute;
+    };
     "/_admin/orders/$orderId": {
       id: "/_admin/orders/$orderId";
-      path: "/$orderId";
+      path: "/orders/$orderId";
       fullPath: "/orders/$orderId";
       preLoaderRoute: typeof AdminOrdersOrderIdRouteImport;
-      parentRoute: typeof AdminOrdersRoute;
+      parentRoute: typeof AdminRouteRoute;
     };
   }
 }
-
-interface AdminOrdersRouteChildren {
-  AdminOrdersOrderIdRoute: typeof AdminOrdersOrderIdRoute;
-}
-
-const AdminOrdersRouteChildren: AdminOrdersRouteChildren = {
-  AdminOrdersOrderIdRoute: AdminOrdersOrderIdRoute,
-};
-
-const AdminOrdersRouteWithChildren = AdminOrdersRoute._addFileChildren(
-  AdminOrdersRouteChildren,
-);
 
 interface AdminRouteRouteChildren {
   AdminCampaignsRoute: typeof AdminCampaignsRoute;
   AdminCategoriesRoute: typeof AdminCategoriesRoute;
   AdminCustomersRoute: typeof AdminCustomersRoute;
-  AdminOrdersRoute: typeof AdminOrdersRouteWithChildren;
   AdminPaymentMethodsRoute: typeof AdminPaymentMethodsRoute;
   AdminProductsRoute: typeof AdminProductsRoute;
   AdminServicesRoute: typeof AdminServicesRoute;
@@ -342,13 +348,15 @@ interface AdminRouteRouteChildren {
   AdminUsersRoute: typeof AdminUsersRoute;
   AdminWorkerRoute: typeof AdminWorkerRoute;
   AdminIndexRoute: typeof AdminIndexRoute;
+  AdminOrdersOrderIdRoute: typeof AdminOrdersOrderIdRoute;
+  AdminOrdersNewRoute: typeof AdminOrdersNewRoute;
+  AdminOrdersIndexRoute: typeof AdminOrdersIndexRoute;
 }
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminCampaignsRoute: AdminCampaignsRoute,
   AdminCategoriesRoute: AdminCategoriesRoute,
   AdminCustomersRoute: AdminCustomersRoute,
-  AdminOrdersRoute: AdminOrdersRouteWithChildren,
   AdminPaymentMethodsRoute: AdminPaymentMethodsRoute,
   AdminProductsRoute: AdminProductsRoute,
   AdminServicesRoute: AdminServicesRoute,
@@ -356,6 +364,9 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminUsersRoute: AdminUsersRoute,
   AdminWorkerRoute: AdminWorkerRoute,
   AdminIndexRoute: AdminIndexRoute,
+  AdminOrdersOrderIdRoute: AdminOrdersOrderIdRoute,
+  AdminOrdersNewRoute: AdminOrdersNewRoute,
+  AdminOrdersIndexRoute: AdminOrdersIndexRoute,
 };
 
 const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(

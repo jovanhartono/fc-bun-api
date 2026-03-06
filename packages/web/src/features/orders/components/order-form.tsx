@@ -48,7 +48,7 @@ const defaultForm: OrderFormState = {
 	campaign_id: "",
 	payment_method_id: "",
 	payment_status: "unpaid",
-	discount: "0",
+	discount: "",
 	notes: "",
 	products: [{ id: "", qty: "1" }],
 	services: [{ id: "", qty: "1", shoe_brand: "", shoe_size: "" }],
@@ -75,7 +75,7 @@ function toOrderPayload(values: OrderFormState): CreateOrderPayload {
 				shoe_size: service.shoe_size,
 				notes: undefined,
 			})),
-		discount: values.discount ?? "0",
+		discount: values.discount || "0",
 		payment_method_id: values.payment_method_id
 			? Number(values.payment_method_id)
 			: undefined,
@@ -90,7 +90,12 @@ const orderFormResolverSchema = z
 		customer_id: z.string().trim().min(1, "Customer is required"),
 		store_id: z.string().trim().min(1, "Store ID is required"),
 		payment_method_id: z.string(),
-		discount: z.string(),
+		discount: z
+			.string()
+			.refine(
+				(value) => value.trim() === "" || Number(value) > 0,
+				"Discount must be positive",
+			),
 		campaign_id: z.string(),
 		notes: z.string(),
 		products: z.array(
@@ -468,7 +473,7 @@ export function OrderForm({
 							<CurrencyInput
 								id="order-discount"
 								placeholder="Rp0"
-								value={field.value ?? "0"}
+								value={field.value ?? ""}
 								onValueChange={field.onChange}
 								disabled={isSubmitting}
 							/>

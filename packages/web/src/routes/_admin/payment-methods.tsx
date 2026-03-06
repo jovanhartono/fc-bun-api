@@ -18,7 +18,7 @@ import {
 	queryKeys,
 	updatePaymentMethod,
 } from "@/lib/api";
-import { useGlobalSheet } from "@/stores/sheet-store";
+import { useSheet } from "@/stores/sheet-store";
 
 export const Route = createFileRoute("/_admin/payment-methods")({
 	component: PaymentMethodsPage,
@@ -26,7 +26,7 @@ export const Route = createFileRoute("/_admin/payment-methods")({
 
 function PaymentMethodsPage() {
 	const queryClient = useQueryClient();
-	const { openSheet, closeSheet } = useGlobalSheet();
+	const { openSheet, closeSheet } = useSheet();
 
 	const { data: paymentMethods = [], isPending } = useQuery({
 		queryKey: queryKeys.paymentMethods,

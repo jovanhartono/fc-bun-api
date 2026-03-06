@@ -1,9 +1,8 @@
 import { Plus } from "@phosphor-icons/react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
 import { DataTable } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,81 +14,21 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { OrderForm } from "@/features/orders/components/order-form";
 import {
-	type CreateOrderPayload,
-	createOrder,
 	fetchCurrentUserDetail,
-	fetchOrderDetail,
 	fetchOrders,
 	fetchStores,
 	type Order,
 	queryKeys,
 } from "@/lib/api";
 import { getCurrentUser } from "@/stores/auth-store";
-import { useGlobalSheet } from "@/stores/sheet-store";
 
-export const Route = createFileRoute("/_admin/orders")({
+export const Route = createFileRoute("/_admin/orders/")({
 	component: OrdersPage,
 });
 
-type CreateOrderSheetContentProps = {
-	allowedStoreIds?: number[];
-};
-
-function CreateOrderSheetContent({
-	allowedStoreIds,
-}: CreateOrderSheetContentProps) {
-	const navigate = useNavigate();
-	const queryClient = useQueryClient();
-	const { closeSheet } = useGlobalSheet();
-
-	const createMutation = useMutation({
-		mutationKey: ["create-order"],
-		mutationFn: createOrder,
-	});
-
-	const handleOnSubmit = async (payload: CreateOrderPayload) => {
-		const created = await createMutation.mutateAsync(payload);
-		const orderId = (created as { data?: { id?: number } }).data?.id;
-		await queryClient.invalidateQueries({ queryKey: ["orders"] });
-		await queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
-
-		if (!orderId) {
-			closeSheet();
-			toast.success("Order created");
-			return;
-		}
-
-		const detail = await fetchOrderDetail(orderId);
-		const itemCodes = detail.services
-			.map((item) => item.item_code)
-			.filter(Boolean) as string[];
-		const preview = itemCodes.slice(0, 3).join(", ");
-		const suffix = itemCodes.length > 3 ? ` +${itemCodes.length - 3} more` : "";
-
-		closeSheet();
-		toast.success("Order created", {
-			description:
-				itemCodes.length > 0 ? `Item tags: ${preview}${suffix}` : undefined,
-		});
-		void navigate({
-			to: "/orders/$orderId",
-			params: { orderId: String(orderId) },
-		});
-	};
-
-	return (
-		<OrderForm
-			handleOnSubmit={handleOnSubmit}
-			allowedStoreIds={allowedStoreIds}
-			isSubmitting={createMutation.isPending}
-		/>
-	);
-}
-
 function OrdersPage() {
-	const { openSheet } = useGlobalSheet();
+	const navigate = useNavigate();
 	const currentUser = getCurrentUser();
 
 	const [storeId, setStoreId] = useState<string>(
@@ -148,15 +87,15 @@ function OrdersPage() {
 	const columns = useMemo<ColumnDef<Order>[]>(
 		() => [
 			{
-				accessorKey: "id",
-				header: "Order ID",
+				accessorKey: "code",
+				header: "Order Code",
 				cell: ({ row }) => (
 					<Link
 						to="/orders/$orderId"
 						params={{ orderId: String(row.original.id) }}
 						className="underline"
 					>
-						{row.original.id}
+						{row.original.code}
 					</Link>
 				),
 			},
@@ -175,22 +114,19 @@ function OrdersPage() {
 					</Badge>
 				),
 			},
-			{ accessorKey: "store_code", header: "Store" },
+			{
+				id: "store",
+				header: "Store",
+				cell: ({ row }) =>
+					`${row.original.store_code} - ${row.original.store_name}`,
+			},
 		],
 		[],
 	);
 
 	const handleAddOrder = () => {
-		openSheet({
-			title: "Create Order",
-			description: "Create a new order from products/services.",
-			content: (
-				<CreateOrderSheetContent
-					allowedStoreIds={
-						currentUser?.role === "admin" ? undefined : userStoreIds
-					}
-				/>
-			),
+		void navigate({
+			to: "/orders/new",
 		});
 	};
 
