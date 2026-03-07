@@ -7,33 +7,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { trackPublicOrder } from "@/lib/api";
+import {
+	formatOrderServiceStatus,
+	formatOrderStatus,
+	formatPaymentStatus,
+	getOrderServiceStatusBadgeVariant,
+	getOrderStatusBadgeVariant,
+	getPaymentStatusBadgeVariant,
+} from "@/lib/status";
 
 export const Route = createFileRoute("/track")({
 	component: TrackOrderPage,
 });
-
-function prettyStatus(status: string) {
-	switch (status) {
-		case "received":
-			return "Received";
-		case "queued":
-			return "Queued";
-		case "processing":
-			return "In Progress";
-		case "quality_check":
-			return "Quality Check";
-		case "ready_for_pickup":
-			return "Ready for Pickup";
-		case "picked_up":
-			return "Picked Up";
-		case "refunded":
-			return "Refunded";
-		case "cancelled":
-			return "Cancelled";
-		default:
-			return status;
-	}
-}
 
 function TrackOrderPage() {
 	const [code, setCode] = useState("");
@@ -104,11 +89,17 @@ function TrackOrderPage() {
 					</CardHeader>
 					<CardContent className="grid gap-3">
 						<div className="flex flex-wrap gap-2">
-							<Badge variant="outline">
-								{prettyStatus(trackMutation.data.status)}
+							<Badge
+								variant={getOrderStatusBadgeVariant(trackMutation.data.status)}
+							>
+								{formatOrderStatus(trackMutation.data.status)}
 							</Badge>
-							<Badge variant="outline">
-								{trackMutation.data.payment_status}
+							<Badge
+								variant={getPaymentStatusBadgeVariant(
+									trackMutation.data.payment_status,
+								)}
+							>
+								{formatPaymentStatus(trackMutation.data.payment_status)}
 							</Badge>
 						</div>
 						<p>{`Customer: ${trackMutation.data.customer.name}`}</p>
@@ -122,7 +113,11 @@ function TrackOrderPage() {
 								<div key={item.id} className="rounded-none border p-3 text-sm">
 									<div className="flex flex-wrap items-center justify-between gap-2">
 										<p className="font-medium">{`${item.item_code ?? `#${item.id}`} - ${item.service?.name ?? "Service"}`}</p>
-										<Badge variant="outline">{prettyStatus(item.status)}</Badge>
+										<Badge
+											variant={getOrderServiceStatusBadgeVariant(item.status)}
+										>
+											{formatOrderServiceStatus(item.status)}
+										</Badge>
 									</div>
 									<p>{`Brand/Size: ${item.shoe_brand ?? "-"} / ${item.shoe_size ?? "-"}`}</p>
 									<div className="mt-2 grid gap-1 border-t pt-2">
@@ -138,7 +133,7 @@ function TrackOrderPage() {
 														key={log.id}
 														className="text-xs text-muted-foreground"
 													>
-														{`${prettyStatus(log.to_status)} at ${new Date(log.created_at).toLocaleString()}`}
+														{`${formatOrderServiceStatus(log.to_status)} at ${new Date(log.created_at).toLocaleString()}`}
 													</p>
 												))
 										) : (

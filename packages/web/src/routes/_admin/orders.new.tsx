@@ -1,19 +1,25 @@
 import { ArrowLeft, ShoppingCart } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { OrderForm } from "@/features/orders/components/order-form";
-import {
-	type CreateOrderPayload,
-	createOrder,
-	fetchCurrentUserDetail,
-	fetchOrderDetail,
-	queryKeys,
-} from "@/lib/api";
+import { handleCreatedOrderSuccess } from "@/features/orders/lib/create-order-workflow";
+import { type CreateOrderPayload, createOrder } from "@/lib/api";
+import { currentUserDetailQueryOptions } from "@/lib/query-options";
 import { getCurrentUser } from "@/stores/auth-store";
 
 export const Route = createFileRoute("/_admin/orders/new")({
+	loader: async ({ context }) => {
+		const currentUser = getCurrentUser();
+
+		if (!currentUser) {
+			return;
+		}
+
+		await context.queryClient.ensureQueryData(
+			currentUserDetailQueryOptions(currentUser.id),
+		);
+	},
 	component: CreateOrderPage,
 });
 
@@ -23,10 +29,7 @@ function CreateOrderPage() {
 	const currentUser = getCurrentUser();
 
 	const currentUserDetailQuery = useQuery({
-		queryKey: currentUser
-			? queryKeys.userDetail(currentUser.id)
-			: ["user-detail", -1],
-		queryFn: fetchCurrentUserDetail,
+		...currentUserDetailQueryOptions(currentUser?.id ?? -1),
 		enabled: !!currentUser,
 	});
 
@@ -42,30 +45,19 @@ function CreateOrderPage() {
 
 	const handleOnSubmit = async (payload: CreateOrderPayload) => {
 		const created = await createMutation.mutateAsync(payload);
-		const orderId = (created as { data?: { id?: number } }).data?.id;
-		await queryClient.invalidateQueries({ queryKey: ["orders"] });
-		await queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
 
-		if (!orderId) {
-			toast.success("Order created");
-			void navigate({ to: "/orders" });
-			return;
-		}
-
-		const detail = await fetchOrderDetail(orderId);
-		const itemCodes = detail.services
-			.map((item) => item.item_code)
-			.filter(Boolean) as string[];
-		const preview = itemCodes.slice(0, 3).join(", ");
-		const suffix = itemCodes.length > 3 ? ` +${itemCodes.length - 3} more` : "";
-
-		toast.success("Order created", {
-			description:
-				itemCodes.length > 0 ? `Item tags: ${preview}${suffix}` : undefined,
-		});
-		void navigate({
-			to: "/orders/$orderId",
-			params: { orderId: String(orderId) },
+		await handleCreatedOrderSuccess({
+			created,
+			queryClient,
+			onFallbackNavigate: () => {
+				void navigate({ to: "/orders", search: { page: 1 } });
+			},
+			onOrderDetailNavigate: (orderId) => {
+				void navigate({
+					to: "/orders/$orderId",
+					params: { orderId: String(orderId) },
+				});
+			},
 		});
 	};
 
@@ -77,7 +69,7 @@ function CreateOrderPage() {
 					variant="outline"
 					icon={<ArrowLeft className="size-4" weight="duotone" />}
 					onClick={() => {
-						void navigate({ to: "/orders" });
+						void navigate({ to: "/orders", search: { page: 1 } });
 					}}
 				>
 					Back to Orders

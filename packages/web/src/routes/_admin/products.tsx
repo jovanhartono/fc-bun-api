@@ -13,15 +13,17 @@ import {
 } from "@/features/products/components/product-form";
 import {
 	createProduct,
-	fetchProducts,
 	type Product,
 	queryKeys,
 	updateProduct,
 } from "@/lib/api";
+import { productsQueryOptions } from "@/lib/query-options";
 import { formatIDRCurrency } from "@/shared/utils";
 import { useSheet } from "@/stores/sheet-store";
 
 export const Route = createFileRoute("/_admin/products")({
+	loader: ({ context }) =>
+		context.queryClient.ensureQueryData(productsQueryOptions()),
 	component: ProductsPage,
 });
 
@@ -29,10 +31,7 @@ function ProductsPage() {
 	const queryClient = useQueryClient();
 	const { openSheet, closeSheet } = useSheet();
 
-	const { data: products = [], isPending } = useQuery({
-		queryKey: queryKeys.products,
-		queryFn: fetchProducts,
-	});
+	const { data: products = [], isPending } = useQuery(productsQueryOptions());
 	const productCount = products.length;
 
 	const createMutation = useMutation({

@@ -7,6 +7,7 @@ import {
   updateCustomerController,
 } from "@/modules/customers/customer.controller";
 import {
+  GETCustomersQuerySchema,
   POSTCustomerSchema,
   PUTCustomerSchema,
 } from "@/modules/customers/customer.schema";
@@ -16,10 +17,11 @@ import { failure, success } from "@/utils/http";
 import { zodValidator } from "@/utils/zod-validator-wrapper";
 
 const app = new Hono()
-  .get("/", async (c) => {
-    const customers = await getCustomersController();
+  .get("/", zodValidator("query", GETCustomersQuerySchema), async (c) => {
+    const query = c.req.valid("query");
+    const { items, meta } = await getCustomersController(query);
 
-    return c.json(success(customers));
+    return c.json(success(items, undefined, meta));
   })
   .post("/", zodValidator("json", POSTCustomerSchema), async (c) => {
     const { id: user_id } = c.get("jwtPayload") as JWTPayload;

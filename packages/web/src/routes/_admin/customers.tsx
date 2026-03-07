@@ -2,12 +2,13 @@ import { POSTCustomerSchema } from "@fresclean/api/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PencilSimpleLine, Plus } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useCallback, useMemo } from "react";
 import { type SubmitHandler, useForm } from "react-hook-form";
 import { z } from "zod";
 import { DataTable } from "@/components/data-table";
+import { TablePagination } from "@/components/table-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,14 +19,29 @@ import {
 import {
 	type Customer,
 	createCustomer,
-	fetchCustomers,
 	queryKeys,
 	updateCustomer,
 } from "@/lib/api";
 import { normalizePhoneNumber } from "@/lib/phone-number";
+import { customersPageQueryOptions } from "@/lib/query-options";
 import { useSheet } from "@/stores/sheet-store";
 
+const PAGE_SIZE = 25;
+
+const customersSearchSchema = z.object({
+	page: z.coerce.number().int().positive().catch(1),
+});
+
 export const Route = createFileRoute("/_admin/customers")({
+	validateSearch: (search) => customersSearchSchema.parse(search),
+	loaderDeps: ({ search }) => search,
+	loader: ({ context, deps }) =>
+		context.queryClient.ensureQueryData(
+			customersPageQueryOptions({
+				limit: PAGE_SIZE,
+				offset: (deps.page - 1) * PAGE_SIZE,
+			}),
+		),
 	component: CustomersPage,
 });
 
@@ -70,7 +86,7 @@ function CustomerSheetContent({ editingCustomer }: CustomerSheetContentProps) {
 		mutationKey: ["create-customer"],
 		mutationFn: createCustomer,
 		onSuccess: async () => {
-			await queryClient.invalidateQueries({ queryKey: queryKeys.customers });
+			await queryClient.invalidateQueries({ queryKey: ["customers"] });
 			await queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
 			closeSheet();
 		},
@@ -86,7 +102,7 @@ function CustomerSheetContent({ editingCustomer }: CustomerSheetContentProps) {
 			payload: Parameters<typeof updateCustomer>[1];
 		}) => updateCustomer(id, payload),
 		onSuccess: async () => {
-			await queryClient.invalidateQueries({ queryKey: queryKeys.customers });
+			await queryClient.invalidateQueries({ queryKey: ["customers"] });
 			closeSheet();
 		},
 	});
@@ -138,13 +154,18 @@ function CustomerSheetContent({ editingCustomer }: CustomerSheetContentProps) {
 }
 
 function CustomersPage() {
+	const navigate = useNavigate({ from: Route.fullPath });
+	const search = Route.useSearch();
 	const { openSheet } = useSheet();
 
-	const { data: customers = [], isPending } = useQuery({
-		queryKey: queryKeys.customers,
-		queryFn: fetchCustomers,
-	});
-	const customerCount = customers.length;
+	const customersQuery = useQuery(
+		customersPageQueryOptions({
+			limit: PAGE_SIZE,
+			offset: (search.page - 1) * PAGE_SIZE,
+		}),
+	);
+	const customers = customersQuery.data?.items ?? [];
+	const customerCount = customersQuery.data?.meta.total ?? 0;
 
 	const handleOpenEditSheet = useCallback(
 		(customer: Customer) => {
@@ -210,7 +231,7 @@ function CustomersPage() {
 					<CardTitle>Customer List</CardTitle>
 					<div className="flex items-center gap-2">
 						<Badge
-							variant={isPending ? "secondary" : "outline"}
+							variant={customersQuery.isPending ? "secondary" : "outline"}
 						>{`${customerCount} items`}</Badge>
 						<Button
 							onClick={handleOpenCreateSheet}
@@ -221,7 +242,25 @@ function CustomersPage() {
 					</div>
 				</CardHeader>
 				<CardContent>
-					<DataTable columns={columns} data={customers} isLoading={isPending} />
+					<div className="grid gap-4">
+						<DataTable
+							columns={columns}
+							data={customers}
+							isLoading={customersQuery.isPending}
+						/>
+						<TablePagination
+							meta={customersQuery.data?.meta}
+							isLoading={customersQuery.isPending}
+							onPageChange={(page) => {
+								void navigate({
+									search: (prev) => ({
+										...prev,
+										page,
+									}),
+								});
+							}}
+						/>
+					</div>
 				</CardContent>
 			</Card>
 		</div>

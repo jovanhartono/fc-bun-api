@@ -1,6 +1,15 @@
 import { z } from "zod";
 import { phoneSchema, textSchema, varcharSchema } from "@/schema/common";
 
+export const GETCustomersQuerySchema = z
+  .object({
+    limit: z.coerce.number().int().min(1).max(100).optional(),
+    offset: z.coerce.number().int().min(0).optional(),
+  })
+  .optional();
+
+export type GetCustomersQuery = z.infer<typeof GETCustomersQuerySchema>;
+
 const customerSchema = z.object({
   name: varcharSchema("Name"),
   phone_number: phoneSchema,

@@ -13,15 +13,17 @@ import {
 } from "@/features/services/components/service-form";
 import {
 	createService,
-	fetchServices,
 	queryKeys,
 	type Service,
 	updateService,
 } from "@/lib/api";
+import { servicesQueryOptions } from "@/lib/query-options";
 import { formatIDRCurrency } from "@/shared/utils";
 import { useSheet } from "@/stores/sheet-store";
 
 export const Route = createFileRoute("/_admin/services")({
+	loader: ({ context }) =>
+		context.queryClient.ensureQueryData(servicesQueryOptions()),
 	component: ServicesPage,
 });
 
@@ -29,10 +31,7 @@ function ServicesPage() {
 	const queryClient = useQueryClient();
 	const { openSheet, closeSheet } = useSheet();
 
-	const { data: services = [], isPending } = useQuery({
-		queryKey: queryKeys.services,
-		queryFn: fetchServices,
-	});
+	const { data: services = [], isPending } = useQuery(servicesQueryOptions());
 	const serviceCount = services.length;
 
 	const createMutation = useMutation({

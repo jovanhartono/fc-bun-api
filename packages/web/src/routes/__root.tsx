@@ -1,10 +1,15 @@
-import { createRootRoute, Outlet } from "@tanstack/react-router";
+import type { QueryClient } from "@tanstack/react-query";
+import { createRootRouteWithContext, Outlet } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { GlobalSheet } from "@/components/ui/global-sheet";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
-export const Route = createRootRoute({
+export interface RouterContext {
+	queryClient: QueryClient;
+}
+
+export const Route = createRootRouteWithContext<RouterContext>()({
 	component: RootComponent,
 	notFoundComponent: NotFoundPage,
 });

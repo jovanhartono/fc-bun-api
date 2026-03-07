@@ -11,16 +11,13 @@ import {
 	StoreForm,
 	type StoreFormState,
 } from "@/features/stores/components/store-form";
-import {
-	createStore,
-	fetchStores,
-	queryKeys,
-	type Store,
-	updateStore,
-} from "@/lib/api";
+import { createStore, queryKeys, type Store, updateStore } from "@/lib/api";
+import { storesQueryOptions } from "@/lib/query-options";
 import { useSheet } from "@/stores/sheet-store";
 
 export const Route = createFileRoute("/_admin/stores")({
+	loader: ({ context }) =>
+		context.queryClient.ensureQueryData(storesQueryOptions()),
 	component: StoresPage,
 });
 
@@ -28,10 +25,7 @@ function StoresPage() {
 	const queryClient = useQueryClient();
 	const { openSheet, closeSheet } = useSheet();
 
-	const { data: stores = [], isPending } = useQuery({
-		queryKey: queryKeys.stores,
-		queryFn: fetchStores,
-	});
+	const { data: stores = [], isPending } = useQuery(storesQueryOptions());
 	const storeCount = stores.length;
 
 	const createMutation = useMutation({

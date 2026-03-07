@@ -2,8 +2,10 @@ import { Plus } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
+import { z } from "zod";
 import { DataTable } from "@/components/data-table";
+import { TablePagination } from "@/components/table-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,36 +16,66 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import type { Order } from "@/lib/api";
 import {
-	fetchCurrentUserDetail,
-	fetchOrders,
-	fetchStores,
-	type Order,
-	queryKeys,
-} from "@/lib/api";
+	currentUserDetailQueryOptions,
+	ordersPageQueryOptions,
+	storesQueryOptions,
+} from "@/lib/query-options";
+import {
+	formatPaymentStatus,
+	getPaymentStatusBadgeVariant,
+} from "@/lib/status";
 import { getCurrentUser } from "@/stores/auth-store";
 
+const ordersSearchSchema = z.object({
+	page: z.coerce.number().int().positive().catch(1),
+	storeId: z.coerce.number().int().positive().optional(),
+});
+
+const PAGE_SIZE = 25;
+
 export const Route = createFileRoute("/_admin/orders/")({
+	validateSearch: (search) => ordersSearchSchema.parse(search),
+	loaderDeps: ({ search }) => search,
+	loader: async ({ context, deps }) => {
+		const currentUser = getCurrentUser();
+		await context.queryClient.ensureQueryData(storesQueryOptions());
+
+		if (currentUser) {
+			await context.queryClient.ensureQueryData(
+				currentUserDetailQueryOptions(currentUser.id),
+			);
+		}
+
+		if (currentUser?.role === "admin" || deps.storeId !== undefined) {
+			await context.queryClient.ensureQueryData(
+				ordersPageQueryOptions(
+					deps.storeId !== undefined
+						? {
+								limit: PAGE_SIZE,
+								offset: (deps.page - 1) * PAGE_SIZE,
+								store_id: deps.storeId,
+							}
+						: {
+								limit: PAGE_SIZE,
+								offset: (deps.page - 1) * PAGE_SIZE,
+							},
+				),
+			);
+		}
+	},
 	component: OrdersPage,
 });
 
 function OrdersPage() {
-	const navigate = useNavigate();
+	const navigate = useNavigate({ from: Route.fullPath });
 	const currentUser = getCurrentUser();
+	const search = Route.useSearch();
 
-	const [storeId, setStoreId] = useState<string>(
-		currentUser?.role === "admin" ? "all" : "",
-	);
-
-	const storesQuery = useQuery({
-		queryKey: queryKeys.stores,
-		queryFn: fetchStores,
-	});
+	const storesQuery = useQuery(storesQueryOptions());
 	const currentUserDetailQuery = useQuery({
-		queryKey: currentUser
-			? queryKeys.userDetail(currentUser.id)
-			: ["user-detail", -1],
-		queryFn: fetchCurrentUserDetail,
+		...currentUserDetailQueryOptions(currentUser?.id ?? -1),
 		enabled: !!currentUser,
 	});
 
@@ -51,7 +83,7 @@ function OrdersPage() {
 		currentUserDetailQuery.data?.userStores?.map((item) => item.store_id) ?? [];
 
 	useEffect(() => {
-		if (!currentUser || storeId) {
+		if (!currentUser || search.storeId !== undefined) {
 			return;
 		}
 
@@ -60,29 +92,42 @@ function OrdersPage() {
 		}
 
 		if (userStoreIds.length > 0) {
-			setStoreId(String(userStoreIds[0]));
+			void navigate({
+				search: (prev) => ({
+					...prev,
+					page: prev.page ?? 1,
+					storeId: userStoreIds[0],
+				}),
+				replace: true,
+			});
 		}
-	}, [currentUser, storeId, userStoreIds]);
+	}, [currentUser, navigate, search.storeId, userStoreIds]);
 
-	const parsedStoreId =
-		storeId && storeId !== "all" ? Number(storeId) : undefined;
+	const parsedStoreId = search.storeId;
 	const orderQuery =
 		currentUser?.role === "admin"
 			? parsedStoreId
-				? { store_id: parsedStoreId }
-				: undefined
+				? {
+						limit: PAGE_SIZE,
+						offset: (search.page - 1) * PAGE_SIZE,
+						store_id: parsedStoreId,
+					}
+				: { limit: PAGE_SIZE, offset: (search.page - 1) * PAGE_SIZE }
 			: parsedStoreId
-				? { store_id: parsedStoreId }
+				? {
+						limit: PAGE_SIZE,
+						offset: (search.page - 1) * PAGE_SIZE,
+						store_id: parsedStoreId,
+					}
 				: undefined;
 
 	const ordersQuery = useQuery({
-		queryKey: queryKeys.orders(orderQuery),
-		queryFn: () => fetchOrders(orderQuery),
+		...ordersPageQueryOptions(orderQuery),
 		enabled: currentUser?.role === "admin" ? true : parsedStoreId !== undefined,
 	});
 
-	const orders = ordersQuery.data ?? [];
-	const orderCount = orders.length;
+	const orders = ordersQuery.data?.items ?? [];
+	const orderCount = ordersQuery.data?.meta.total ?? 0;
 
 	const columns = useMemo<ColumnDef<Order>[]>(
 		() => [
@@ -106,11 +151,9 @@ function OrdersPage() {
 				header: "Payment",
 				cell: ({ row }) => (
 					<Badge
-						variant={
-							row.original.payment_status === "paid" ? "secondary" : "outline"
-						}
+						variant={getPaymentStatusBadgeVariant(row.original.payment_status)}
 					>
-						{row.original.payment_status}
+						{formatPaymentStatus(row.original.payment_status)}
 					</Badge>
 				),
 			},
@@ -146,8 +189,21 @@ function OrdersPage() {
 					</div>
 					<div className="flex flex-wrap items-center gap-2">
 						<Select
-							value={storeId}
-							onValueChange={(value) => setStoreId(value ?? "")}
+							value={
+								currentUser?.role === "admin"
+									? (search.storeId?.toString() ?? "all")
+									: (search.storeId?.toString() ?? "")
+							}
+							onValueChange={(value) => {
+								void navigate({
+									search: (prev) => ({
+										...prev,
+										page: 1,
+										storeId:
+											value && value !== "all" ? Number(value) : undefined,
+									}),
+								});
+							}}
 						>
 							<SelectTrigger className="h-10 min-w-48">
 								<SelectValue placeholder="Filter by store" />
@@ -176,11 +232,25 @@ function OrdersPage() {
 					</div>
 				</CardHeader>
 				<CardContent>
-					<DataTable
-						columns={columns}
-						data={orders}
-						isLoading={ordersQuery.isPending || storesQuery.isPending}
-					/>
+					<div className="grid gap-4">
+						<DataTable
+							columns={columns}
+							data={orders}
+							isLoading={ordersQuery.isPending || storesQuery.isPending}
+						/>
+						<TablePagination
+							meta={ordersQuery.data?.meta}
+							isLoading={ordersQuery.isPending}
+							onPageChange={(page) => {
+								void navigate({
+									search: (prev) => ({
+										...prev,
+										page,
+									}),
+								});
+							}}
+						/>
+					</div>
 				</CardContent>
 			</Card>
 		</div>

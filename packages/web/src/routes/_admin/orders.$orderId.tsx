@@ -18,8 +18,6 @@ import { Textarea } from "@/components/ui/textarea";
 import {
 	claimOrderService,
 	createOrderRefund,
-	fetchOrderDetail,
-	fetchPaymentMethods,
 	presignOrderServicePhoto,
 	queryKeys,
 	type SaveOrderServicePhotoPayload,
@@ -29,9 +27,34 @@ import {
 	updateOrderServiceStatus,
 	uploadFileToPresignedUrl,
 } from "@/lib/api";
+import {
+	orderDetailQueryOptions,
+	paymentMethodsQueryOptions,
+} from "@/lib/query-options";
+import {
+	formatOrderServiceStatus,
+	formatOrderStatus,
+	formatPaymentStatus,
+	getOrderServiceStatusBadgeVariant,
+	getOrderStatusBadgeVariant,
+	getPaymentStatusBadgeVariant,
+} from "@/lib/status";
+import { formatIDRCurrency } from "@/shared/utils";
 import { getCurrentUser } from "@/stores/auth-store";
 
 export const Route = createFileRoute("/_admin/orders/$orderId")({
+	loader: async ({ context, params }) => {
+		const id = Number(params.orderId);
+
+		if (!Number.isInteger(id) || id <= 0) {
+			return;
+		}
+
+		await Promise.all([
+			context.queryClient.ensureQueryData(orderDetailQueryOptions(id)),
+			context.queryClient.ensureQueryData(paymentMethodsQueryOptions()),
+		]);
+	},
 	component: OrderDetailPage,
 });
 
@@ -82,15 +105,11 @@ function OrderDetailPage() {
 	const [refundNote, setRefundNote] = useState("");
 
 	const detailQuery = useQuery({
-		queryKey: queryKeys.orderDetail(id),
-		queryFn: () => fetchOrderDetail(id),
+		...orderDetailQueryOptions(id),
 		enabled: isValidOrderId,
 	});
 
-	const paymentMethodsQuery = useQuery({
-		queryKey: queryKeys.paymentMethods,
-		queryFn: fetchPaymentMethods,
-	});
+	const paymentMethodsQuery = useQuery(paymentMethodsQueryOptions());
 
 	const refreshOrderData = async () => {
 		await queryClient.invalidateQueries({
@@ -259,13 +278,21 @@ function OrderDetailPage() {
 						<CardTitle>{`Order ${detail.code}`}</CardTitle>
 					</CardHeader>
 					<CardContent className="grid gap-2 text-sm">
-						<p>{`Status: ${detail.status}`}</p>
-						<p>{`Payment: ${detail.payment_status}`}</p>
+						<div className="flex flex-wrap gap-2">
+							<Badge variant={getOrderStatusBadgeVariant(detail.status)}>
+								{formatOrderStatus(detail.status)}
+							</Badge>
+							<Badge
+								variant={getPaymentStatusBadgeVariant(detail.payment_status)}
+							>
+								{formatPaymentStatus(detail.payment_status)}
+							</Badge>
+						</div>
 						<p>{`Customer: ${detail.customer?.name ?? "-"}`}</p>
 						<p>{`Store: ${detail.store?.name ?? "-"}`}</p>
-						<p>{`Total: ${detail.total}`}</p>
-						<p>{`Discount: ${detail.discount}`}</p>
-						<p>{`Refunded: ${detail.refunded_amount}`}</p>
+						<p>{`Total: ${formatIDRCurrency(String(detail.total ?? 0))}`}</p>
+						<p>{`Discount: ${formatIDRCurrency(String(detail.discount ?? 0))}`}</p>
+						<p>{`Refunded: ${formatIDRCurrency(String(detail.refunded_amount ?? 0))}`}</p>
 					</CardContent>
 				</Card>
 
@@ -454,7 +481,11 @@ function OrderDetailPage() {
 								<CardTitle className="text-base">
 									{service.item_code ?? `Service #${service.id}`}
 								</CardTitle>
-								<Badge variant="outline">{service.status}</Badge>
+								<Badge
+									variant={getOrderServiceStatusBadgeVariant(service.status)}
+								>
+									{formatOrderServiceStatus(service.status)}
+								</Badge>
 							</CardHeader>
 							<CardContent className="grid gap-3 text-sm">
 								<p>{`Service: ${service.service?.name ?? "Service"}`}</p>

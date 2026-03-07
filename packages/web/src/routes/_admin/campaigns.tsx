@@ -1,9 +1,22 @@
 import { PencilSimpleLine, Plus, Trash } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useState } from "react";
+import { z } from "zod";
 import { DataTable } from "@/components/data-table";
+import { TablePagination } from "@/components/table-pagination";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,15 +36,42 @@ import {
 	type CampaignPayload,
 	createCampaign,
 	deleteCampaign,
-	fetchCampaigns,
-	fetchStores,
 	queryKeys,
 	updateCampaign,
 } from "@/lib/api";
+import {
+	campaignsPageQueryOptions,
+	storesQueryOptions,
+} from "@/lib/query-options";
+import { formatIDRCurrency } from "@/shared/utils";
 import { getCurrentUser } from "@/stores/auth-store";
 import { useSheet } from "@/stores/sheet-store";
 
+const campaignsSearchSchema = z.object({
+	page: z.coerce.number().int().positive().catch(1),
+	status: z.enum(["all", "active", "inactive"]).catch("all"),
+});
+
+const PAGE_SIZE = 25;
+
 export const Route = createFileRoute("/_admin/campaigns")({
+	validateSearch: (search) => campaignsSearchSchema.parse(search),
+	loaderDeps: ({ search }) => search,
+	loader: ({ context, deps }) =>
+		Promise.all([
+			context.queryClient.ensureQueryData(
+				campaignsPageQueryOptions(
+					deps.status === "all"
+						? { limit: PAGE_SIZE, offset: (deps.page - 1) * PAGE_SIZE }
+						: {
+								is_active: deps.status === "active",
+								limit: PAGE_SIZE,
+								offset: (deps.page - 1) * PAGE_SIZE,
+							},
+				),
+			),
+			context.queryClient.ensureQueryData(storesQueryOptions()),
+		]),
 	component: CampaignsPage,
 });
 
@@ -58,32 +98,91 @@ function toDateTimeLocal(value: Date | string | null | undefined) {
 	return adjusted.toISOString().slice(0, 16);
 }
 
+function formatCampaignDiscount(campaign: Campaign) {
+	if (campaign.discount_type === "percentage") {
+		return `${campaign.discount_value}%`;
+	}
+
+	return formatIDRCurrency(String(campaign.discount_value));
+}
+
+function DeleteCampaignButton({
+	campaign,
+	disabled,
+	isPending,
+	onConfirm,
+}: {
+	campaign: Campaign;
+	disabled: boolean;
+	isPending: boolean;
+	onConfirm: (campaignId: number) => Promise<void>;
+}) {
+	const [open, setOpen] = useState(false);
+
+	return (
+		<AlertDialog open={open} onOpenChange={setOpen}>
+			<AlertDialogTrigger
+				render={
+					<Button
+						variant="outline"
+						size="sm"
+						disabled={disabled || isPending}
+						icon={<Trash className="size-4" weight="duotone" />}
+					/>
+				}
+			>
+				Delete
+			</AlertDialogTrigger>
+			<AlertDialogContent>
+				<AlertDialogHeader>
+					<AlertDialogTitle>Delete campaign?</AlertDialogTitle>
+					<AlertDialogDescription>
+						{`This will permanently remove ${campaign.code} (${campaign.name}). This action cannot be undone.`}
+					</AlertDialogDescription>
+				</AlertDialogHeader>
+				<AlertDialogFooter>
+					<AlertDialogCancel>Cancel</AlertDialogCancel>
+					<AlertDialogAction
+						disabled={isPending}
+						onClick={async () => {
+							await onConfirm(campaign.id);
+							setOpen(false);
+						}}
+					>
+						Delete campaign
+					</AlertDialogAction>
+				</AlertDialogFooter>
+			</AlertDialogContent>
+		</AlertDialog>
+	);
+}
+
 function CampaignsPage() {
 	const user = getCurrentUser();
+	const navigate = useNavigate({ from: Route.fullPath });
+	const search = Route.useSearch();
 	const isAdmin = user?.role === "admin";
 	const queryClient = useQueryClient();
 	const { openSheet, closeSheet } = useSheet();
-	const [statusFilter, setStatusFilter] = useState<
-		"all" | "active" | "inactive"
-	>("all");
 
 	const campaignQueryFilters =
-		statusFilter === "all"
-			? undefined
-			: { is_active: statusFilter === "active" };
+		search.status === "all"
+			? { limit: PAGE_SIZE, offset: (search.page - 1) * PAGE_SIZE }
+			: {
+					is_active: search.status === "active",
+					limit: PAGE_SIZE,
+					offset: (search.page - 1) * PAGE_SIZE,
+				};
 
-	const campaignsQuery = useQuery({
-		queryKey: queryKeys.campaigns(campaignQueryFilters),
-		queryFn: () => fetchCampaigns(campaignQueryFilters),
-	});
+	const campaignsQuery = useQuery(
+		campaignsPageQueryOptions(campaignQueryFilters),
+	);
 
-	const storesQuery = useQuery({
-		queryKey: queryKeys.stores,
-		queryFn: fetchStores,
-	});
+	const storesQuery = useQuery(storesQueryOptions());
 
 	const stores = storesQuery.data ?? [];
-	const campaigns = campaignsQuery.data ?? [];
+	const campaigns = campaignsQuery.data?.items ?? [];
+	const campaignsMeta = campaignsQuery.data?.meta;
 
 	const createMutation = useMutation({
 		mutationKey: ["create-campaign"],
@@ -177,8 +276,21 @@ function CampaignsPage() {
 		{
 			id: "discount",
 			header: "Discount",
+			cell: ({ row }) => formatCampaignDiscount(row.original),
+		},
+		{
+			accessorKey: "min_order_total",
+			header: "Min Order",
 			cell: ({ row }) =>
-				`${row.original.discount_type} ${row.original.discount_value}`,
+				formatIDRCurrency(String(row.original.min_order_total)),
+		},
+		{
+			accessorKey: "max_discount",
+			header: "Max Discount",
+			cell: ({ row }) =>
+				row.original.max_discount
+					? formatIDRCurrency(String(row.original.max_discount))
+					: "-",
 		},
 		{
 			id: "stores",
@@ -216,17 +328,14 @@ function CampaignsPage() {
 					>
 						Edit
 					</Button>
-					<Button
-						variant="outline"
-						size="sm"
-						disabled={!isAdmin || deleteMutation.isPending}
-						onClick={async () => {
-							await deleteMutation.mutateAsync(row.original.id);
+					<DeleteCampaignButton
+						campaign={row.original}
+						disabled={!isAdmin}
+						isPending={deleteMutation.isPending}
+						onConfirm={async (campaignId) => {
+							await deleteMutation.mutateAsync(campaignId);
 						}}
-						icon={<Trash className="size-4" weight="duotone" />}
-					>
-						Delete
-					</Button>
+					/>
 				</div>
 			),
 		},
@@ -239,10 +348,19 @@ function CampaignsPage() {
 					<CardTitle>Campaign List</CardTitle>
 					<div className="flex items-center gap-2">
 						<Select
-							value={statusFilter}
-							onValueChange={(value) =>
-								setStatusFilter((value ?? "all") as typeof statusFilter)
-							}
+							value={search.status}
+							onValueChange={(value) => {
+								void navigate({
+									search: (prev) => ({
+										...prev,
+										page: 1,
+										status:
+											(value as z.infer<
+												typeof campaignsSearchSchema
+											>["status"]) ?? "all",
+									}),
+								});
+							}}
 						>
 							<SelectTrigger className="h-10 min-w-40">
 								<SelectValue placeholder="Filter status" />
@@ -254,7 +372,7 @@ function CampaignsPage() {
 							</SelectContent>
 						</Select>
 						<Badge variant={campaignsQuery.isPending ? "secondary" : "outline"}>
-							{`${campaigns.length} items`}
+							{`${campaignsMeta?.total ?? 0} items`}
 						</Badge>
 						<Button
 							onClick={handleOpenCreateSheet}
@@ -266,11 +384,25 @@ function CampaignsPage() {
 					</div>
 				</CardHeader>
 				<CardContent>
-					<DataTable
-						columns={columns}
-						data={campaigns}
-						isLoading={campaignsQuery.isPending || storesQuery.isPending}
-					/>
+					<div className="grid gap-4">
+						<DataTable
+							columns={columns}
+							data={campaigns}
+							isLoading={campaignsQuery.isPending || storesQuery.isPending}
+						/>
+						<TablePagination
+							meta={campaignsMeta}
+							isLoading={campaignsQuery.isPending}
+							onPageChange={(page) => {
+								void navigate({
+									search: (prev) => ({
+										...prev,
+										page,
+									}),
+								});
+							}}
+						/>
+					</div>
 				</CardContent>
 			</Card>
 		</div>

@@ -1,14 +1,29 @@
 import type { InferInsertModel } from "drizzle-orm";
 import type { customersTable } from "@/db/schema";
 import {
+  countCustomers,
   createCustomer,
   findCustomerById,
   listCustomers,
   updateCustomer,
 } from "@/modules/customers/customer.repository";
+import type { GetCustomersQuery } from "@/modules/customers/customer.schema";
+import { buildPaginationMeta, normalizePagination } from "@/utils/pagination";
 
-export function getCustomers() {
-  return listCustomers();
+export async function getCustomers(query?: GetCustomersQuery) {
+  const pagination = normalizePagination(query, { maxPageSize: 100 });
+  const [items, total] = await Promise.all([
+    listCustomers({
+      limit: pagination.limit,
+      offset: pagination.offset,
+    }),
+    countCustomers(),
+  ]);
+
+  return {
+    items,
+    meta: buildPaginationMeta(total, pagination),
+  };
 }
 
 export function getCustomerById(id: number) {
@@ -20,7 +35,10 @@ export async function createCustomerService({
   payload,
 }: {
   actorId: number;
-  payload: InferInsertModel<typeof customersTable>;
+  payload: Omit<
+    InferInsertModel<typeof customersTable>,
+    "created_by" | "updated_by"
+  >;
 }) {
   const [customer] = await createCustomer({
     ...payload,

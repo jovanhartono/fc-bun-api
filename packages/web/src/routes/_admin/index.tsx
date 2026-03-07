@@ -8,9 +8,11 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
-import { fetchDashboardCounts, queryKeys } from "@/lib/api";
+import { dashboardQueryOptions } from "@/lib/query-options";
 
 export const Route = createFileRoute("/_admin/")({
+	loader: ({ context }) =>
+		context.queryClient.ensureQueryData(dashboardQueryOptions()),
 	component: DashboardPage,
 });
 
@@ -27,10 +29,7 @@ const cards = [
 ] as const;
 
 function DashboardPage() {
-	const { data, isPending, isFetching } = useQuery({
-		queryKey: queryKeys.dashboard,
-		queryFn: fetchDashboardCounts,
-	});
+	const { data, isPending, isFetching } = useQuery(dashboardQueryOptions());
 
 	return (
 		<>

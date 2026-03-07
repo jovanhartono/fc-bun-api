@@ -19,7 +19,7 @@ export function CustomerAutocomplete({
 	error,
 }: CustomerAutocompleteProps) {
 	const { data: customers = [], isPending } = useQuery({
-		queryKey: queryKeys.customers,
+		queryKey: queryKeys.customers(),
 		queryFn: fetchCustomers,
 	});
 

@@ -14,13 +14,15 @@ import {
 import {
 	type Category,
 	createCategory,
-	fetchCategories,
 	queryKeys,
 	updateCategory,
 } from "@/lib/api";
+import { categoriesQueryOptions } from "@/lib/query-options";
 import { useSheet } from "@/stores/sheet-store";
 
 export const Route = createFileRoute("/_admin/categories")({
+	loader: ({ context }) =>
+		context.queryClient.ensureQueryData(categoriesQueryOptions()),
 	component: CategoriesPage,
 });
 
@@ -109,10 +111,7 @@ function CategoriesPage() {
 	const queryClient = useQueryClient();
 	const { openSheet, closeSheet } = useSheet();
 
-	const { data = [], isPending } = useQuery({
-		queryKey: queryKeys.categories,
-		queryFn: fetchCategories,
-	});
+	const { data = [], isPending } = useQuery(categoriesQueryOptions());
 	const categoryCount = data.length;
 
 	const createMutation = useMutation({

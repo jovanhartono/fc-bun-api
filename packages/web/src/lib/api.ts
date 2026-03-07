@@ -21,6 +21,17 @@ export interface ApiSuccess<T> {
 	data: T;
 }
 
+export interface PaginationMeta {
+	total: number;
+	limit: number;
+	offset: number;
+}
+
+export interface PaginatedData<T> {
+	items: T[];
+	meta: PaginationMeta;
+}
+
 async function parseSuccessData<T>(
 	request: Parameters<typeof parseResponse>[0],
 ): Promise<T> {
@@ -66,7 +77,10 @@ export type Product = InferResponseType<typeof productsRoute>["data"][number];
 export type PaymentMethod = InferResponseType<
 	typeof paymentMethodsRoute
 >["data"][number];
-export type Order = InferResponseType<typeof ordersRoute>["data"][number];
+export type Order = Extract<
+	InferResponseType<typeof ordersRoute>,
+	{ success: true }
+>["data"][number];
 export type OrderDetail = Extract<
 	InferResponseType<typeof orderDetailRoute>,
 	{ success: true }
@@ -125,12 +139,29 @@ export type TrackPublicOrderPayload = {
 };
 
 export type FetchOrdersQuery = {
+	limit?: number;
+	offset?: number;
 	store_id?: number;
 	status?: "created" | "processing" | "completed" | "cancelled";
 	payment_status?: "paid" | "unpaid";
 };
 
+export type FetchCustomersQuery = {
+	limit?: number;
+	offset?: number;
+};
+
+export type FetchUsersQuery = {
+	limit?: number;
+	offset?: number;
+	search?: string;
+	is_active?: boolean;
+	role?: "admin" | "cashier" | "worker";
+};
+
 export type FetchCampaignsQuery = {
+	limit?: number;
+	offset?: number;
 	store_id?: number;
 	is_active?: boolean;
 };
@@ -202,8 +233,9 @@ export type UpdateUserStoresPayload = {
 };
 
 export const queryKeys = {
-	customers: ["customers"] as const,
-	users: ["users"] as const,
+	customers: (query?: FetchCustomersQuery) =>
+		["customers", query ?? {}] as const,
+	users: (query?: FetchUsersQuery) => ["users", query ?? {}] as const,
 	userDetail: (id: number) => ["user-detail", id] as const,
 	stores: ["stores"] as const,
 	categories: ["categories"] as const,
@@ -235,9 +267,68 @@ export async function fetchCustomers() {
 	return response.data;
 }
 
+export async function fetchCustomersPage(
+	query?: FetchCustomersQuery,
+): Promise<PaginatedData<Customer>> {
+	const response = await parseResponse(
+		rpcWithAuth().api.admin.customers.$get({
+			query:
+				query && Object.keys(query).length > 0
+					? {
+							...(query.limit !== undefined
+								? { limit: String(query.limit) }
+								: {}),
+							...(query.offset !== undefined
+								? { offset: String(query.offset) }
+								: {}),
+						}
+					: undefined,
+		}),
+	);
+
+	return {
+		items: response.data,
+		meta: (response.meta ?? {
+			limit: query?.limit ?? response.data.length,
+			offset: query?.offset ?? 0,
+			total: response.data.length,
+		}) as PaginationMeta,
+	};
+}
+
 export async function fetchUsers() {
 	const response = await parseResponse(rpcWithAuth().api.admin.users.$get());
 	return response.data;
+}
+
+export async function fetchUsersPage(
+	query?: FetchUsersQuery,
+): Promise<PaginatedData<User>> {
+	const response = await parseResponse(
+		rpcWithAuth().api.admin.users.$get({
+			query:
+				query && Object.keys(query).length > 0
+					? {
+							...(query.limit !== undefined
+								? { limit: String(query.limit) }
+								: {}),
+							...(query.offset !== undefined
+								? { offset: String(query.offset) }
+								: {}),
+							...(query.search ? { search: query.search } : {}),
+							...(query.is_active !== undefined
+								? { is_active: String(query.is_active) }
+								: {}),
+							...(query.role ? { role: query.role } : {}),
+						}
+					: undefined,
+		}),
+	);
+
+	return {
+		items: response.data,
+		meta: response.meta as PaginationMeta,
+	};
 }
 
 export async function fetchUserById(id: number) {
@@ -305,6 +396,38 @@ export async function fetchOrders(query?: FetchOrdersQuery) {
 	return response.data;
 }
 
+export async function fetchOrdersPage(
+	query?: FetchOrdersQuery,
+): Promise<PaginatedData<Order>> {
+	const response = await parseResponse(
+		rpcWithAuth().api.admin.orders.$get({
+			query:
+				query && Object.keys(query).length > 0
+					? {
+							...(query.limit !== undefined
+								? { limit: String(query.limit) }
+								: {}),
+							...(query.offset !== undefined
+								? { offset: String(query.offset) }
+								: {}),
+							...(query.store_id !== undefined
+								? { store_id: String(query.store_id) }
+								: {}),
+							...(query.status ? { status: query.status } : {}),
+							...(query.payment_status
+								? { payment_status: query.payment_status }
+								: {}),
+						}
+					: undefined,
+		}),
+	);
+
+	return {
+		items: response.data,
+		meta: response.meta as PaginationMeta,
+	};
+}
+
 export async function fetchCampaigns(query?: FetchCampaignsQuery) {
 	const response = await parseResponse(
 		rpcWithAuth().api.admin.campaigns.$get({
@@ -322,6 +445,37 @@ export async function fetchCampaigns(query?: FetchCampaignsQuery) {
 		}),
 	);
 	return response.data;
+}
+
+export async function fetchCampaignsPage(
+	query?: FetchCampaignsQuery,
+): Promise<PaginatedData<Campaign>> {
+	const response = await parseResponse(
+		rpcWithAuth().api.admin.campaigns.$get({
+			query:
+				query && Object.keys(query).length > 0
+					? {
+							...(query.limit !== undefined
+								? { limit: String(query.limit) }
+								: {}),
+							...(query.offset !== undefined
+								? { offset: String(query.offset) }
+								: {}),
+							...(query.store_id !== undefined
+								? { store_id: String(query.store_id) }
+								: {}),
+							...(query.is_active !== undefined
+								? { is_active: String(query.is_active) }
+								: {}),
+						}
+					: undefined,
+		}),
+	);
+
+	return {
+		items: response.data,
+		meta: response.meta as PaginationMeta,
+	};
 }
 
 export async function fetchCampaignById(id: number) {

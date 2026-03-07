@@ -28,11 +28,16 @@ const pageMeta: Record<string, { title: string; description?: string }> = {
 	"/orders": {
 		title: "Orders",
 		description:
-			"Insert orders. Edit is not available from current backend API.",
+			"Review historical orders, payment status, and order detail records.",
 	},
 	"/orders/new": {
 		title: "Create Order",
 		description: "Create a new order from products and services.",
+	},
+	"/transactions": {
+		title: "Transactions",
+		description:
+			"Run the POS workspace with catalog tabs, cart, customer selection, and payment setup.",
 	},
 	"/payment-methods": {
 		title: "Payment Methods",

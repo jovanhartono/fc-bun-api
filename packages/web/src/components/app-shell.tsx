@@ -47,6 +47,7 @@ type NavItem = {
 	label: string;
 	icon: ComponentType<{ className?: string; weight?: "duotone" }>;
 	roles: Role[];
+	search?: Record<string, number>;
 };
 
 const mainNavigation: NavItem[] = [
@@ -61,18 +62,33 @@ const mainNavigation: NavItem[] = [
 
 const masterDataNavigation: NavItem[] = [
 	{
+		to: "/orders",
+		label: "Orders",
+		icon: ShoppingCart,
+		roles: ["admin", "cashier"],
+		search: { page: 1 },
+	},
+	{
 		to: "/campaigns",
 		label: "Campaigns",
 		icon: CreditCard,
 		roles: ["admin", "cashier"],
+		search: { page: 1 },
 	},
 	{
 		to: "/customers",
 		label: "Customers",
 		icon: IdentificationCard,
 		roles: ["admin", "cashier"],
+		search: { page: 1 },
 	},
-	{ to: "/users", label: "Users", icon: UserGear, roles: ["admin"] },
+	{
+		to: "/users",
+		label: "Users",
+		icon: UserGear,
+		roles: ["admin"],
+		search: { page: 1 },
+	},
 	{ to: "/stores", label: "Stores", icon: Storefront, roles: ["admin"] },
 	{ to: "/categories", label: "Categories", icon: List, roles: ["admin"] },
 	{ to: "/services", label: "Services", icon: Scissors, roles: ["admin"] },
@@ -87,8 +103,8 @@ const masterDataNavigation: NavItem[] = [
 
 const transactionNavigation: NavItem[] = [
 	{
-		to: "/orders",
-		label: "Orders",
+		to: "/transactions",
+		label: "Transactions",
 		icon: ShoppingCart,
 		roles: ["admin", "cashier"],
 	},
@@ -111,6 +127,7 @@ function SidebarNavLinks({ items }: { items: readonly NavItem[] }) {
 							render={
 								<Link
 									to={item.to}
+									search={item.search}
 									className={cn("text-foreground")}
 									activeProps={{
 										"data-active": "true",

@@ -1,5 +1,6 @@
 import type { InferInsertModel } from "drizzle-orm";
 import type { customersTable } from "@/db/schema";
+import type { GetCustomersQuery } from "@/modules/customers/customer.schema";
 import {
   createCustomerService,
   getCustomerById,
@@ -7,8 +8,8 @@ import {
   updateCustomerService,
 } from "@/modules/customers/customer.service";
 
-export function getCustomersController() {
-  return getCustomers();
+export function getCustomersController(query?: GetCustomersQuery) {
+  return getCustomers(query);
 }
 
 export function getCustomerByIdController(id: number) {
@@ -20,7 +21,10 @@ export function createCustomerController({
   payload,
 }: {
   actorId: number;
-  payload: InferInsertModel<typeof customersTable>;
+  payload: Omit<
+    InferInsertModel<typeof customersTable>,
+    "created_by" | "updated_by"
+  >;
 }) {
   return createCustomerService({ actorId, payload });
 }

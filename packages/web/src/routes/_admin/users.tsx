@@ -2,12 +2,13 @@ import { POSTUserSchema } from "@fresclean/api/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PencilSimpleLineIcon, PlusIcon } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useCallback, useMemo, useState } from "react";
 import { type SubmitHandler, useForm } from "react-hook-form";
 import { z } from "zod";
 import { DataTable } from "@/components/data-table";
+import { TablePagination } from "@/components/table-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,15 +26,32 @@ import {
 } from "@/features/users/components/user-form";
 import {
 	createUser,
-	fetchStores,
-	fetchUsers,
 	queryKeys,
 	type User,
 	updateUser,
 	updateUserStores,
 } from "@/lib/api";
+import { storesQueryOptions, usersPageQueryOptions } from "@/lib/query-options";
+
+const PAGE_SIZE = 25;
+
+const usersSearchSchema = z.object({
+	page: z.coerce.number().int().positive().catch(1),
+});
 
 export const Route = createFileRoute("/_admin/users")({
+	validateSearch: (search) => usersSearchSchema.parse(search),
+	loaderDeps: ({ search }) => search,
+	loader: ({ context, deps }) =>
+		Promise.all([
+			context.queryClient.ensureQueryData(
+				usersPageQueryOptions({
+					limit: PAGE_SIZE,
+					offset: (deps.page - 1) * PAGE_SIZE,
+				}),
+			),
+			context.queryClient.ensureQueryData(storesQueryOptions()),
+		]),
 	component: UsersPage,
 });
 
@@ -52,6 +70,8 @@ const defaultForm: UserFormState = {
 };
 
 function UsersPage() {
+	const navigate = useNavigate({ from: Route.fullPath });
+	const search = Route.useSearch();
 	const queryClient = useQueryClient();
 	const [editingUser, setEditingUser] = useState<User | null>(null);
 	const [isSheetOpen, setSheetOpen] = useState(false);
@@ -61,15 +81,19 @@ function UsersPage() {
 		defaultValues: defaultForm,
 	});
 
-	const { data: users = [], isPending } = useQuery({
-		queryKey: queryKeys.users,
-		queryFn: fetchUsers,
-	});
-	const storesQuery = useQuery({
-		queryKey: queryKeys.stores,
-		queryFn: fetchStores,
-	});
-	const userCount = users.length;
+	const usersQuery = useQuery(
+		usersPageQueryOptions({
+			limit: PAGE_SIZE,
+			offset: (search.page - 1) * PAGE_SIZE,
+		}),
+	);
+	const users = usersQuery.data?.items ?? [];
+	const storesQuery = useQuery(storesQueryOptions());
+	const storeMap = useMemo(
+		() => new Map((storesQuery.data ?? []).map((store) => [store.id, store])),
+		[storesQuery.data],
+	);
+	const userCount = usersQuery.data?.meta.total ?? 0;
 
 	const resetForm = useCallback(() => {
 		form.reset(defaultForm);
@@ -135,7 +159,15 @@ function UsersPage() {
 			{
 				id: "stores",
 				header: "Stores",
-				cell: ({ row }) => row.original.userStores.length,
+				cell: ({ row }) =>
+					row.original.userStores.length > 0
+						? row.original.userStores
+								.map(
+									(item) =>
+										storeMap.get(item.store_id)?.code ?? String(item.store_id),
+								)
+								.join(", ")
+						: "-",
 			},
 			{
 				id: "actions",
@@ -152,7 +184,7 @@ function UsersPage() {
 				),
 			},
 		],
-		[handleEdit],
+		[handleEdit, storeMap],
 	);
 
 	const handleSubmit: SubmitHandler<UserFormState> = async (values) => {
@@ -170,7 +202,7 @@ function UsersPage() {
 			await updateUserStores(editingUser.id, {
 				store_ids: values.store_ids,
 			});
-			await queryClient.invalidateQueries({ queryKey: queryKeys.users });
+			await queryClient.invalidateQueries({ queryKey: ["users"] });
 			resetForm();
 			return;
 		}
@@ -191,7 +223,7 @@ function UsersPage() {
 				store_ids: values.store_ids,
 			});
 		}
-		await queryClient.invalidateQueries({ queryKey: queryKeys.users });
+		await queryClient.invalidateQueries({ queryKey: ["users"] });
 		await queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
 		resetForm();
 	};
@@ -224,7 +256,7 @@ function UsersPage() {
 						<CardTitle>User List</CardTitle>
 						<div className="flex items-center gap-2">
 							<Badge
-								variant={isPending ? "secondary" : "outline"}
+								variant={usersQuery.isPending ? "secondary" : "outline"}
 							>{`${userCount} items`}</Badge>
 							<SheetTrigger
 								render={
@@ -242,7 +274,25 @@ function UsersPage() {
 						</div>
 					</CardHeader>
 					<CardContent>
-						<DataTable columns={columns} data={users} isLoading={isPending} />
+						<div className="grid gap-4">
+							<DataTable
+								columns={columns}
+								data={users}
+								isLoading={usersQuery.isPending}
+							/>
+							<TablePagination
+								meta={usersQuery.data?.meta}
+								isLoading={usersQuery.isPending}
+								onPageChange={(page) => {
+									void navigate({
+										search: (prev) => ({
+											...prev,
+											page,
+										}),
+									});
+								}}
+							/>
+						</div>
 					</CardContent>
 				</Card>
 			</Sheet>

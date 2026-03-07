@@ -13,14 +13,16 @@ import {
 } from "@/features/payment-methods/components/payment-method-form";
 import {
 	createPaymentMethod,
-	fetchPaymentMethods,
 	type PaymentMethod,
 	queryKeys,
 	updatePaymentMethod,
 } from "@/lib/api";
+import { paymentMethodsQueryOptions } from "@/lib/query-options";
 import { useSheet } from "@/stores/sheet-store";
 
 export const Route = createFileRoute("/_admin/payment-methods")({
+	loader: ({ context }) =>
+		context.queryClient.ensureQueryData(paymentMethodsQueryOptions()),
 	component: PaymentMethodsPage,
 });
 
@@ -28,10 +30,9 @@ function PaymentMethodsPage() {
 	const queryClient = useQueryClient();
 	const { openSheet, closeSheet } = useSheet();
 
-	const { data: paymentMethods = [], isPending } = useQuery({
-		queryKey: queryKeys.paymentMethods,
-		queryFn: fetchPaymentMethods,
-	});
+	const { data: paymentMethods = [], isPending } = useQuery(
+		paymentMethodsQueryOptions(),
+	);
 	const paymentMethodCount = paymentMethods.length;
 
 	const createMutation = useMutation({

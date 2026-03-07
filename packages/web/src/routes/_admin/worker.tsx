@@ -1,8 +1,9 @@
 import { Camera, MagnifyingGlass, X } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { z } from "zod";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,9 +18,6 @@ import {
 } from "@/components/ui/select";
 import {
 	claimOrderService,
-	fetchCurrentUserDetail,
-	fetchMyOrderServices,
-	fetchStores,
 	lookupOrderServiceByItemCode,
 	presignOrderServicePhoto,
 	queryKeys,
@@ -29,9 +27,40 @@ import {
 	updateOrderServiceStatus,
 	uploadFileToPresignedUrl,
 } from "@/lib/api";
+import {
+	currentUserDetailQueryOptions,
+	myOrderServicesQueryOptions,
+	storesQueryOptions,
+} from "@/lib/query-options";
+import {
+	formatOrderServiceStatus,
+	getOrderServiceStatusBadgeVariant,
+} from "@/lib/status";
 import { getCurrentUser } from "@/stores/auth-store";
 
+const workerSearchSchema = z.object({
+	storeId: z.coerce.number().int().positive().optional(),
+});
+
 export const Route = createFileRoute("/_admin/worker")({
+	validateSearch: (search) => workerSearchSchema.parse(search),
+	loaderDeps: ({ search }) => search,
+	loader: async ({ context, deps }) => {
+		const currentUser = getCurrentUser();
+		await context.queryClient.ensureQueryData(storesQueryOptions());
+
+		if (currentUser) {
+			await context.queryClient.ensureQueryData(
+				currentUserDetailQueryOptions(currentUser.id),
+			);
+		}
+
+		if (currentUser?.role === "admin" || deps.storeId !== undefined) {
+			await context.queryClient.ensureQueryData(
+				myOrderServicesQueryOptions(deps.storeId),
+			);
+		}
+	},
 	component: WorkerPage,
 });
 
@@ -56,9 +85,10 @@ type WindowWithBarcodeDetector = typeof window & {
 
 function WorkerPage() {
 	const currentUser = getCurrentUser();
+	const navigate = useNavigate({ from: Route.fullPath });
+	const search = Route.useSearch();
 	const queryClient = useQueryClient();
 
-	const [storeId, setStoreId] = useState<string>("");
 	const [itemCode, setItemCode] = useState("");
 	const [selectedItemCode, setSelectedItemCode] = useState("");
 	const [selectedStatus, setSelectedStatus] =
@@ -75,16 +105,10 @@ function WorkerPage() {
 	const rafRef = useRef<number | null>(null);
 	const scanningRef = useRef(false);
 
-	const storesQuery = useQuery({
-		queryKey: queryKeys.stores,
-		queryFn: fetchStores,
-	});
+	const storesQuery = useQuery(storesQueryOptions());
 
 	const currentUserDetailQuery = useQuery({
-		queryKey: currentUser
-			? queryKeys.userDetail(currentUser.id)
-			: ["user-detail", -1],
-		queryFn: fetchCurrentUserDetail,
+		...currentUserDetailQueryOptions(currentUser?.id ?? -1),
 		enabled: !!currentUser,
 	});
 
@@ -96,7 +120,7 @@ function WorkerPage() {
 	);
 
 	useEffect(() => {
-		if (storeId || !currentUser) {
+		if (search.storeId !== undefined || !currentUser) {
 			return;
 		}
 
@@ -105,15 +129,20 @@ function WorkerPage() {
 		}
 
 		if (userStoreIds.length > 0) {
-			setStoreId(String(userStoreIds[0]));
+			void navigate({
+				search: (prev) => ({
+					...prev,
+					storeId: userStoreIds[0],
+				}),
+				replace: true,
+			});
 		}
-	}, [currentUser, storeId, userStoreIds]);
+	}, [currentUser, navigate, search.storeId, userStoreIds]);
 
-	const parsedStoreId = storeId ? Number(storeId) : undefined;
+	const parsedStoreId = search.storeId;
 
 	const myJobsQuery = useQuery({
-		queryKey: queryKeys.myOrderServices(parsedStoreId),
-		queryFn: () => fetchMyOrderServices(parsedStoreId),
+		...myOrderServicesQueryOptions(parsedStoreId),
 		enabled: currentUser?.role === "admin" ? true : parsedStoreId !== undefined,
 	});
 
@@ -333,8 +362,15 @@ function WorkerPage() {
 					<Field>
 						<FieldLabel htmlFor="worker-store">Store</FieldLabel>
 						<Select
-							value={storeId}
-							onValueChange={(value) => setStoreId(value ?? "")}
+							value={search.storeId?.toString() ?? ""}
+							onValueChange={(value) => {
+								void navigate({
+									search: (prev) => ({
+										...prev,
+										storeId: value ? Number(value) : undefined,
+									}),
+								});
+							}}
 						>
 							<SelectTrigger id="worker-store" className="h-10 w-full">
 								<SelectValue placeholder="Select store" />
@@ -567,7 +603,11 @@ function WorkerPage() {
 							>
 								<div className="flex items-center justify-between gap-2">
 									<p className="font-medium">{job.item_code ?? `#${job.id}`}</p>
-									<Badge variant="outline">{job.status}</Badge>
+									<Badge
+										variant={getOrderServiceStatusBadgeVariant(job.status)}
+									>
+										{formatOrderServiceStatus(job.status)}
+									</Badge>
 								</div>
 								<p className="text-xs text-muted-foreground">
 									{job.service_name}

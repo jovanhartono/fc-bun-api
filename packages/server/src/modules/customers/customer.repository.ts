@@ -1,11 +1,19 @@
-import type { InferInsertModel } from "drizzle-orm";
+import type { InferInsertModel, SQL } from "drizzle-orm";
 import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { customersTable } from "@/db/schema";
 
-export function listCustomers() {
+export function listCustomers({
+  limit,
+  offset,
+}: {
+  limit: number;
+  offset: number;
+}) {
   return db.query.customersTable.findMany({
     orderBy: [asc(customersTable.id)],
+    limit,
+    offset,
     with: {
       originStore: {
         columns: {
@@ -14,6 +22,10 @@ export function listCustomers() {
       },
     },
   });
+}
+
+export function countCustomers(whereClause?: SQL<unknown>) {
+  return db.$count(customersTable, whereClause);
 }
 
 export function findCustomerById(id: number) {
