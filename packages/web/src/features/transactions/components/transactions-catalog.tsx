@@ -73,21 +73,23 @@ export function TransactionsCatalog({
 	onAddService,
 }: TransactionsCatalogProps) {
 	return (
-		<div className="grid gap-5">
+		<div className="grid gap-5 self-start xl:sticky xl:top-24">
 			<Card className="border-border/70">
 				<CardContent className="grid gap-4 p-4 sm:p-5">
 					<div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_240px]">
-						<div className="relative">
-							<MagnifyingGlass
-								className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-								weight="duotone"
-							/>
-							<Input
-								value={searchTerm}
-								onChange={(event) => onSearchTermChange(event.target.value)}
-								placeholder="Search products, services, or categories"
-								className="h-11 pl-9"
-							/>
+						<div>
+							<div className="relative">
+								<MagnifyingGlass
+									className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+									weight="duotone"
+								/>
+								<Input
+									value={searchTerm}
+									onChange={(event) => onSearchTermChange(event.target.value)}
+									placeholder="Search products, services, or categories"
+									className="h-11 pl-9"
+								/>
+							</div>
 						</div>
 						<Field>
 							<FieldLabel htmlFor="transaction-store" asterisk>
@@ -262,7 +264,7 @@ export function TransactionsCatalog({
 										</p>
 										<p className="text-xs text-muted-foreground">
 											{itemCount > 0
-												? `${itemCount} currently in cart`
+												? `${itemCount} line${itemCount === 1 ? "" : "s"} currently in cart`
 												: "Not in cart yet"}
 										</p>
 									</div>

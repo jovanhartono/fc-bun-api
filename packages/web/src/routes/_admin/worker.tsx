@@ -453,7 +453,7 @@ function WorkerPage() {
 					<CardContent className="grid gap-3">
 						<p>{`Order: ${selectedService.order?.code ?? "-"}`}</p>
 						<p>{`Service: ${selectedService.service?.name ?? "-"}`}</p>
-						<p>{`Shoe: ${selectedService.shoe_brand ?? "-"} / ${selectedService.shoe_size ?? "-"}`}</p>
+						<p>{`Item: ${selectedService.color ?? "-"} / ${selectedService.shoe_brand ?? "-"} / ${selectedService.shoe_size ?? "-"}`}</p>
 						<p>{`Status: ${selectedService.status}`}</p>
 						<p>{`Handler: ${selectedService.handler?.name ?? "Not assigned"}`}</p>
 
@@ -613,7 +613,8 @@ function WorkerPage() {
 									{job.service_name}
 								</p>
 								<p className="text-xs text-muted-foreground">
-									{job.shoe_brand ?? "-"} / {job.shoe_size ?? "-"}
+									{job.color ?? "-"} / {job.shoe_brand ?? "-"} /{" "}
+									{job.shoe_size ?? "-"}
 								</p>
 							</button>
 						))

@@ -212,6 +212,7 @@ export async function getMyOrderServices(
 
   return db
     .select({
+      color: ordersServicesTable.color,
       handler_id: ordersServicesTable.handler_id,
       id: ordersServicesTable.id,
       item_code: ordersServicesTable.item_code,

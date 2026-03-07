@@ -52,6 +52,7 @@ const app = new Hono().post(
         },
         services: {
           columns: {
+            color: true,
             id: true,
             item_code: true,
             shoe_brand: true,

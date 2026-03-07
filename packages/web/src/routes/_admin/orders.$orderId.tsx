@@ -2,11 +2,20 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
+import {
+	AlertDialog,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 import {
 	Select,
 	SelectContent,
@@ -58,16 +67,33 @@ export const Route = createFileRoute("/_admin/orders/$orderId")({
 	component: OrderDetailPage,
 });
 
-const STATUS_OPTIONS: UpdateOrderServiceStatusPayload["status"][] = [
-	"received",
-	"queued",
-	"processing",
-	"quality_check",
-	"ready_for_pickup",
-	"picked_up",
-	"refunded",
-	"cancelled",
-];
+const ORDER_STATUS_TRANSITIONS: Record<
+	UpdateOrderServiceStatusPayload["status"],
+	UpdateOrderServiceStatusPayload["status"][]
+> = {
+	received: ["queued", "cancelled"],
+	queued: ["processing", "cancelled"],
+	processing: ["quality_check", "cancelled"],
+	quality_check: ["processing", "ready_for_pickup", "cancelled"],
+	ready_for_pickup: ["picked_up", "refunded", "cancelled"],
+	picked_up: [],
+	refunded: [],
+	cancelled: [],
+};
+
+const STATUS_ACTION_LABELS: Record<
+	UpdateOrderServiceStatusPayload["status"],
+	string
+> = {
+	received: "Receive",
+	queued: "Queue",
+	processing: "Process",
+	quality_check: "Quality Check",
+	ready_for_pickup: "Ready for Pickup",
+	picked_up: "Pick Up",
+	refunded: "Refund",
+	cancelled: "Cancel",
+};
 
 const REFUND_REASONS = ["damaged", "cannot_process", "lost", "other"] as const;
 
@@ -83,9 +109,6 @@ function OrderDetailPage() {
 
 	const [noteByServiceId, setNoteByServiceId] = useState<
 		Record<number, string>
-	>({});
-	const [statusByServiceId, setStatusByServiceId] = useState<
-		Record<number, UpdateOrderServiceStatusPayload["status"]>
 	>({});
 	const [photoTypeByServiceId, setPhotoTypeByServiceId] = useState<
 		Record<number, SaveOrderServicePhotoPayload["photo_type"]>
@@ -125,9 +148,6 @@ function OrderDetailPage() {
 			toast.success("Service claimed");
 			await refreshOrderData();
 		},
-		onError: (error: Error) => {
-			toast.error(error.message || "Failed to claim service");
-		},
 	});
 
 	const updateStatusMutation = useMutation({
@@ -141,9 +161,6 @@ function OrderDetailPage() {
 		onSuccess: async () => {
 			toast.success("Service status updated");
 			await refreshOrderData();
-		},
-		onError: (error: Error) => {
-			toast.error(error.message || "Failed to update status");
 		},
 	});
 
@@ -201,9 +218,6 @@ function OrderDetailPage() {
 			}));
 			await refreshOrderData();
 		},
-		onError: (error: Error) => {
-			toast.error(error.message || "Failed to upload photo");
-		},
 	});
 
 	const refundMutation = useMutation({
@@ -221,9 +235,6 @@ function OrderDetailPage() {
 			setRefundItemNoteByServiceId({});
 			setRefundNote("");
 			await refreshOrderData();
-		},
-		onError: (error: Error) => {
-			toast.error(error.message || "Failed to process refund");
 		},
 	});
 
@@ -271,7 +282,7 @@ function OrderDetailPage() {
 	);
 
 	return (
-		<div className="grid gap-4 lg:grid-cols-12">
+		<div className="grid items-start gap-4 lg:grid-cols-12">
 			<div className="grid gap-4 lg:col-span-4">
 				<Card>
 					<CardHeader>
@@ -469,8 +480,6 @@ function OrderDetailPage() {
 
 			<div className="grid gap-4 lg:col-span-8">
 				{orderServices.map((service) => {
-					const selectedStatusValue =
-						statusByServiceId[service.id] ?? service.status;
 					const selectedPhotoType =
 						photoTypeByServiceId[service.id] ?? "progress";
 					const selectedPhotoFile = photoFileByServiceId[service.id] ?? null;
@@ -489,7 +498,7 @@ function OrderDetailPage() {
 							</CardHeader>
 							<CardContent className="grid gap-3 text-sm">
 								<p>{`Service: ${service.service?.name ?? "Service"}`}</p>
-								<p>{`Shoe: ${service.shoe_brand ?? "-"} / ${service.shoe_size ?? "-"}`}</p>
+								<p>{`Item: ${service.color ?? "-"} / ${service.shoe_brand ?? "-"} / ${service.shoe_size ?? "-"}`}</p>
 								<p>{`Handler: ${service.handler?.name ?? "Not assigned"}`}</p>
 
 								<div className="flex flex-wrap gap-2">
@@ -507,56 +516,87 @@ function OrderDetailPage() {
 									</Button>
 								</div>
 
-								<div className="grid gap-2 md:grid-cols-[220px_1fr_auto]">
-									<Select
-										value={selectedStatusValue}
-										onValueChange={(value) =>
-											setStatusByServiceId((prev) => ({
-												...prev,
-												[service.id]: (value ??
-													service.status) as UpdateOrderServiceStatusPayload["status"],
-											}))
-										}
-									>
-										<SelectTrigger className="h-10 w-full">
-											<SelectValue placeholder="Status" />
-										</SelectTrigger>
-										<SelectContent>
-											{STATUS_OPTIONS.map((status) => (
-												<SelectItem key={status} value={status}>
-													{status}
-												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
-									<Input
-										placeholder="Optional status note"
-										value={noteByServiceId[service.id] ?? ""}
-										onChange={(event) =>
-											setNoteByServiceId((prev) => ({
-												...prev,
-												[service.id]: event.target.value,
-											}))
-										}
-									/>
-									<Button
-										disabled={
-											updateStatusMutation.isPending ||
-											selectedStatusValue === service.status
-										}
-										onClick={async () => {
-											await updateStatusMutation.mutateAsync({
-												serviceId: service.id,
-												payload: {
-													status: selectedStatusValue,
-													note:
-														noteByServiceId[service.id]?.trim() || undefined,
-												},
-											});
-										}}
-									>
-										Update
-									</Button>
+								<div className="flex flex-col gap-2">
+									<div className="flex flex-wrap gap-2">
+										{(ORDER_STATUS_TRANSITIONS[service.status] || []).map(
+											(nextStatus) => {
+												const isCancel = nextStatus === "cancelled";
+
+												return (
+													<AlertDialog key={nextStatus}>
+														<AlertDialogTrigger
+															render={
+																<Button
+																	variant={
+																		isCancel ? "destructive" : "secondary"
+																	}
+																	size="sm"
+																/>
+															}
+														>
+															{STATUS_ACTION_LABELS[nextStatus]}
+														</AlertDialogTrigger>
+														<AlertDialogContent>
+															<AlertDialogHeader>
+																<AlertDialogTitle>
+																	{isCancel
+																		? "Cancel Service"
+																		: `Update Status to ${STATUS_ACTION_LABELS[nextStatus]}`}
+																</AlertDialogTitle>
+																<AlertDialogDescription>
+																	{isCancel
+																		? "Please provide a reason for cancelling this service."
+																		: `Are you sure you want to change the status to ${STATUS_ACTION_LABELS[nextStatus]}?`}
+																</AlertDialogDescription>
+															</AlertDialogHeader>
+															<div className="p-4 py-0">
+																<Textarea
+																	placeholder={
+																		isCancel
+																			? "Cancel reason (required)"
+																			: "Optional status note"
+																	}
+																	value={noteByServiceId[service.id] ?? ""}
+																	onChange={(event) =>
+																		setNoteByServiceId((prev) => ({
+																			...prev,
+																			[service.id]: event.target.value,
+																		}))
+																	}
+																/>
+															</div>
+															<AlertDialogFooter>
+																<AlertDialogCancel>Go back</AlertDialogCancel>
+																<Button
+																	variant={isCancel ? "destructive" : "default"}
+																	disabled={
+																		updateStatusMutation.isPending ||
+																		(isCancel &&
+																			!noteByServiceId[service.id]?.trim())
+																	}
+																	onClick={async () => {
+																		await updateStatusMutation.mutateAsync({
+																			serviceId: service.id,
+																			payload: {
+																				status: nextStatus,
+																				note:
+																					noteByServiceId[service.id]?.trim() ||
+																					undefined,
+																			},
+																		});
+																	}}
+																>
+																	{isCancel
+																		? "Confirm Cancel"
+																		: "Confirm Update"}
+																</Button>
+															</AlertDialogFooter>
+														</AlertDialogContent>
+													</AlertDialog>
+												);
+											},
+										)}
+									</div>
 								</div>
 
 								<div className="grid gap-2 md:grid-cols-[180px_1fr_auto]">

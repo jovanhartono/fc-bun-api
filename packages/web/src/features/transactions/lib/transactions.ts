@@ -17,8 +17,9 @@ export type ProductCartLine = {
 
 export type ServiceCartLine = {
 	kind: "service";
+	line_id: string;
 	id: number;
-	qty: number;
+	color: string;
 	shoe_brand: string;
 	shoe_size: string;
 };
@@ -29,6 +30,18 @@ export type ProductCartDisplayLine = ProductCartLine & {
 
 export type ServiceCartDisplayLine = ServiceCartLine & {
 	service: Service;
+};
+
+export type TransactionDraftValues = {
+	selectedStoreId: string;
+	selectedCustomerId: string;
+	selectedCampaignId: string;
+	selectedPaymentMethodId: string;
+	paymentStatus: CreateOrderPayload["payment_status"];
+	manualDiscount: string;
+	notes: string;
+	productCart: ProductCartLine[];
+	serviceCart: ServiceCartLine[];
 };
 
 export type CategoryTab = {
@@ -128,17 +141,7 @@ export function toTransactionPayload({
 	notes,
 	productCart,
 	serviceCart,
-}: {
-	selectedCustomerId: string;
-	selectedStoreId: string;
-	selectedCampaignId: string;
-	selectedPaymentMethodId: string;
-	paymentStatus: CreateOrderPayload["payment_status"];
-	manualDiscount: string;
-	notes: string;
-	productCart: ProductCartLine[];
-	serviceCart: ServiceCartLine[];
-}): CreateOrderPayload {
+}: TransactionDraftValues): CreateOrderPayload {
 	return {
 		customer_id: Number(selectedCustomerId),
 		store_id: Number(selectedStoreId),
@@ -156,9 +159,9 @@ export function toTransactionPayload({
 		})),
 		services: serviceCart.map((line) => ({
 			id: line.id,
-			qty: line.qty,
-			shoe_brand: line.shoe_brand.trim(),
-			shoe_size: line.shoe_size.trim(),
+			color: line.color.trim() || undefined,
+			shoe_brand: line.shoe_brand.trim() || undefined,
+			shoe_size: line.shoe_size.trim() || undefined,
 			notes: undefined,
 		})),
 	};

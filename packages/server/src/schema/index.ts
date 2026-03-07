@@ -6,6 +6,7 @@ import { orderPaymentStatusEnum } from "@/db/schema";
 import {
   currencySchema,
   isActiveSchema,
+  optionalVarcharSchema,
   phoneSchema,
   textSchema,
   varcharSchema,
@@ -190,10 +191,10 @@ export const POSTOrderSchema = z
         z.object(
           {
             id: z.number("Service is required"),
-            qty: z.int().positive("Quantity must be positive"),
             notes: z.string().optional(),
-            shoe_brand: varcharSchema("Shoe Brand"),
-            shoe_size: varcharSchema("Shoe Size"),
+            shoe_brand: optionalVarcharSchema("Item Brand"),
+            shoe_size: optionalVarcharSchema("Item Size", 64),
+            color: optionalVarcharSchema("Item Color"),
           },
           "Service is required"
         )

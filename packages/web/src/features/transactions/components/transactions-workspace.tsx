@@ -29,7 +29,7 @@ export function TransactionsWorkspace({
 				productCartQtyById={viewModel.productCartQtyById}
 				serviceCartQtyById={viewModel.serviceCartQtyById}
 				onSearchTermChange={viewModel.setSearchTerm}
-				onStoreChange={viewModel.setSelectedStoreId}
+				onStoreChange={viewModel.handleStoreChange}
 				onModeChange={viewModel.setMode}
 				onProductCategoryChange={viewModel.setActiveProductCategory}
 				onServiceCategoryChange={viewModel.setActiveServiceCategory}
@@ -37,16 +37,14 @@ export function TransactionsWorkspace({
 				onAddService={viewModel.handleAddService}
 			/>
 			<TransactionsCheckout
+				form={viewModel.form}
 				selectedStore={viewModel.selectedStore}
 				cartCount={viewModel.cartCount}
-				selectedCustomerId={viewModel.selectedCustomerId}
-				selectedCampaignId={viewModel.selectedCampaignId}
-				selectedPaymentMethodId={viewModel.selectedPaymentMethodId}
+				selectedCustomerLabel={viewModel.selectedCustomerLabel}
+				selectedPaymentMethodLabel={viewModel.selectedPaymentMethodLabel}
 				selectedCampaign={viewModel.selectedCampaign}
 				selectedStoreNumber={viewModel.selectedStoreNumber}
 				paymentStatus={viewModel.paymentStatus}
-				manualDiscount={viewModel.manualDiscount}
-				notes={viewModel.notes}
 				submitError={viewModel.submitError}
 				customerOptions={viewModel.customerOptions}
 				campaignOptions={viewModel.campaignOptions}
@@ -63,16 +61,10 @@ export function TransactionsWorkspace({
 				total={viewModel.total}
 				isSubmitting={viewModel.isSubmitting}
 				onResetCart={viewModel.resetCart}
-				onSelectedCustomerIdChange={viewModel.setSelectedCustomerId}
-				onSelectedCampaignIdChange={viewModel.setSelectedCampaignId}
-				onSelectedPaymentMethodIdChange={viewModel.setSelectedPaymentMethodId}
-				onPaymentStatusChange={viewModel.setPaymentStatus}
-				onManualDiscountChange={viewModel.setManualDiscount}
-				onNotesChange={viewModel.setNotes}
 				onRemoveProduct={viewModel.removeProductFromCart}
 				onUpdateProductQty={viewModel.updateProductQty}
 				onRemoveService={viewModel.removeServiceFromCart}
-				onUpdateServiceQty={viewModel.updateServiceQty}
+				onUpdateServiceColor={viewModel.updateServiceColor}
 				onUpdateServiceBrand={viewModel.updateServiceBrand}
 				onUpdateServiceSize={viewModel.updateServiceSize}
 				onSubmit={viewModel.handleSubmit}

@@ -108,7 +108,7 @@ function TrackOrderPage() {
 						<p>{`Store Contact: ${trackMutation.data.store.phone_number}`}</p>
 
 						<div className="grid gap-2">
-							<p className="font-medium">Shoes</p>
+							<p className="font-medium">Items</p>
 							{sortedServices.map((item) => (
 								<div key={item.id} className="rounded-none border p-3 text-sm">
 									<div className="flex flex-wrap items-center justify-between gap-2">
@@ -119,7 +119,7 @@ function TrackOrderPage() {
 											{formatOrderServiceStatus(item.status)}
 										</Badge>
 									</div>
-									<p>{`Brand/Size: ${item.shoe_brand ?? "-"} / ${item.shoe_size ?? "-"}`}</p>
+									<p>{`Color/Brand/Size: ${item.color ?? "-"} / ${item.shoe_brand ?? "-"} / ${item.shoe_size ?? "-"}`}</p>
 									<div className="mt-2 grid gap-1 border-t pt-2">
 										{item.statusLogs.length > 0 ? (
 											item.statusLogs

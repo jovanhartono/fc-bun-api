@@ -13,6 +13,7 @@ export default defineConfig({
 	resolve: {
 		alias: {
 			"@": path.resolve(__dirname, "./src"),
+			"@fresclean/api": path.resolve(__dirname, "../server/src"),
 		},
 	},
 });

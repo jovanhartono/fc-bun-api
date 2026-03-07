@@ -36,7 +36,7 @@ export type OrderFormState = {
 	}>;
 	services: Array<{
 		id: string;
-		qty: string;
+		color: string;
 		shoe_brand: string;
 		shoe_size: string;
 	}>;
@@ -51,7 +51,7 @@ const defaultForm: OrderFormState = {
 	discount: "",
 	notes: "",
 	products: [{ id: "", qty: "1" }],
-	services: [{ id: "", qty: "1", shoe_brand: "", shoe_size: "" }],
+	services: [{ id: "", color: "", shoe_brand: "", shoe_size: "" }],
 };
 
 function toOrderPayload(values: OrderFormState): CreateOrderPayload {
@@ -70,9 +70,9 @@ function toOrderPayload(values: OrderFormState): CreateOrderPayload {
 			.filter((service) => !!service.id)
 			.map((service) => ({
 				id: Number(service.id),
-				qty: Number(service.qty),
-				shoe_brand: service.shoe_brand,
-				shoe_size: service.shoe_size,
+				color: service.color.trim() || undefined,
+				shoe_brand: service.shoe_brand.trim() || undefined,
+				shoe_size: service.shoe_size.trim() || undefined,
 				notes: undefined,
 			})),
 		discount: values.discount || "0",
@@ -108,7 +108,7 @@ const orderFormResolverSchema = z
 		services: z.array(
 			z.object({
 				id: z.string(),
-				qty: z.string(),
+				color: z.string(),
 				shoe_brand: z.string(),
 				shoe_size: z.string(),
 				notes: z.string().optional(),
@@ -349,7 +349,7 @@ export function OrderForm({
 							onClick={() =>
 								serviceFields.append({
 									id: "",
-									qty: "1",
+									color: "",
 									shoe_brand: "",
 									shoe_size: "",
 								})
@@ -383,12 +383,33 @@ export function OrderForm({
 							/>
 
 							<Controller
+								name={`services.${index}.color`}
+								control={form.control}
+								render={({ field, fieldState }) => (
+									<Field data-invalid={fieldState.invalid}>
+										<FieldLabel htmlFor={`order-service-color-${index}`}>
+											Color
+										</FieldLabel>
+										<Input
+											{...field}
+											id={`order-service-color-${index}`}
+											placeholder="e.g. Black"
+											aria-invalid={fieldState.invalid}
+											disabled={isSubmitting}
+											className="h-10 w-full text-sm md:h-10"
+										/>
+										<FieldError errors={[fieldState.error]} />
+									</Field>
+								)}
+							/>
+
+							<Controller
 								name={`services.${index}.shoe_brand`}
 								control={form.control}
 								render={({ field, fieldState }) => (
 									<Field data-invalid={fieldState.invalid}>
 										<FieldLabel htmlFor={`order-service-brand-${index}`}>
-											Shoe Brand
+											Item Brand
 										</FieldLabel>
 										<Input
 											{...field}
@@ -409,35 +430,12 @@ export function OrderForm({
 								render={({ field, fieldState }) => (
 									<Field data-invalid={fieldState.invalid}>
 										<FieldLabel htmlFor={`order-service-size-${index}`}>
-											Shoe Size
+											Item Size
 										</FieldLabel>
 										<Input
 											{...field}
 											id={`order-service-size-${index}`}
 											placeholder="e.g. 42"
-											aria-invalid={fieldState.invalid}
-											disabled={isSubmitting}
-											className="h-10 w-full text-sm md:h-10"
-										/>
-										<FieldError errors={[fieldState.error]} />
-									</Field>
-								)}
-							/>
-
-							<Controller
-								name={`services.${index}.qty`}
-								control={form.control}
-								render={({ field, fieldState }) => (
-									<Field data-invalid={fieldState.invalid}>
-										<FieldLabel htmlFor={`order-service-qty-${index}`}>
-											Qty
-										</FieldLabel>
-										<Input
-											{...field}
-											id={`order-service-qty-${index}`}
-											type="number"
-											placeholder="e.g. 1"
-											min={1}
 											aria-invalid={fieldState.invalid}
 											disabled={isSubmitting}
 											className="h-10 w-full text-sm md:h-10"

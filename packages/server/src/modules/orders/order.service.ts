@@ -29,8 +29,9 @@ function formatOrderCode(storeCode: string, dateStr: string, sequence: number) {
 interface ExpandedServiceItem {
   id: number;
   notes?: string;
-  shoe_brand: string;
-  shoe_size: string;
+  color?: string;
+  shoe_brand?: string;
+  shoe_size?: string;
 }
 
 interface ResolvedDiscount {
@@ -41,14 +42,13 @@ interface ResolvedDiscount {
 function expandServices(
   payloadServices: z.infer<typeof POSTOrderSchema>["services"] = []
 ): ExpandedServiceItem[] {
-  return payloadServices.flatMap((item) =>
-    Array.from({ length: item.qty }, () => ({
-      id: item.id,
-      notes: item.notes,
-      shoe_brand: item.shoe_brand,
-      shoe_size: item.shoe_size,
-    }))
-  );
+  return payloadServices.map((item) => ({
+    id: item.id,
+    notes: item.notes,
+    color: item.color,
+    shoe_brand: item.shoe_brand,
+    shoe_size: item.shoe_size,
+  }));
 }
 
 type DbService = Awaited<ReturnType<typeof findServices>>[number];
@@ -75,8 +75,8 @@ function buildOrderServiceRows({
       order_id: orderId,
       service_id: service.id,
       price: service.price,
-      qty: 1,
       notes: item.notes,
+      color: item.color,
       shoe_brand: item.shoe_brand,
       shoe_size: item.shoe_size,
       status: "received" as const,

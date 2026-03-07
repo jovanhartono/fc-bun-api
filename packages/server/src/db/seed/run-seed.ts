@@ -184,6 +184,7 @@ interface DraftServiceLine {
   price: number;
   status: OrderServiceStatus;
   handler_id: number | null;
+  color: string;
   shoe_brand: string;
   shoe_size: string;
   notes: string | null;
@@ -343,7 +344,7 @@ function pickFinalServiceStatuses(
   }
 
   if (scenario === "refunded") {
-    const statuses = Array.from({ length: count }, () =>
+    const statuses: OrderServiceStatus[] = Array.from({ length: count }, () =>
       chance(0.18) ? "cancelled" : "picked_up"
     );
     statuses[0] = "refunded";
@@ -959,6 +960,7 @@ async function seedOrders(params: {
         price: Number(service.price),
         status: finalStatus,
         handler_id: handlerId,
+        color: faker.color.human(),
         shoe_brand: faker.helpers.arrayElement(SHOE_BRANDS),
         shoe_size: faker.helpers.arrayElement(SHOE_SIZES),
         notes: chance(0.35)
@@ -1090,9 +1092,9 @@ async function seedOrders(params: {
               service_id: line.service_id,
               item_code: line.item_code,
               price: asMoney(line.price),
-              qty: 1,
               discount: "0",
               notes: line.notes,
+              color: line.color,
               shoe_brand: line.shoe_brand,
               shoe_size: line.shoe_size,
               status: line.status,

@@ -544,7 +544,7 @@ export const ordersServicesTable = pgTable(
     // snapshot
     price: decimal("price", { precision: 12 }).default("0"),
 
-    qty: smallint("qty").notNull().default(1),
+    color: varchar("color", { length: 255 }),
     shoe_brand: varchar("shoe_brand", { length: 255 }),
     shoe_size: varchar("shoe_size", { length: 64 }),
     service_id: integer("service_id").references(() => servicesTable.id, {
@@ -557,7 +557,7 @@ export const ordersServicesTable = pgTable(
       precision: 12,
     }).generatedAlwaysAs(
       (): SQL =>
-        sql`(${ordersServicesTable.price} * ${ordersServicesTable.qty}) - ${ordersServicesTable.discount}`
+        sql`${ordersServicesTable.price} - ${ordersServicesTable.discount}`
     ),
   },
   (table) => [
@@ -574,11 +574,7 @@ export const ordersServicesTable = pgTable(
     index("order_services_item_code_idx").on(table.item_code),
     uniqueIndex("order_services_item_code_uidx").on(table.item_code),
     check("price_non_negative_check", sql`${table.price} >= 0`),
-    check("qty_positive_check", sql`${table.qty} > 0`),
-    check(
-      "discount_valid_check",
-      sql`(${table.price} * ${table.qty}) >= ${table.discount}`
-    ),
+    check("discount_valid_check", sql`${table.price} >= ${table.discount}`),
   ]
 );
 export const ordersServicesRelations = relations(
