@@ -147,7 +147,7 @@ function SidebarNavLinks({ items }: { items: readonly NavItem[] }) {
 	);
 }
 
-export function AppShell({ title, description, children }: AppShellProps) {
+export function AppShell({ title, children }: AppShellProps) {
 	const navigate = useNavigate();
 	const clearToken = useAuthStore((state) => state.clearToken);
 	const user = getCurrentUser();
@@ -187,11 +187,12 @@ export function AppShell({ title, description, children }: AppShellProps) {
 	return (
 		<SidebarProvider>
 			<Sidebar collapsible="offcanvas" variant="inset">
-				<SidebarHeader>
+				<SidebarHeader className="flex-row items-center justify-between">
 					<div className="flex items-center gap-2 px-2 text-sm font-semibold uppercase tracking-[0.2em] text-sidebar-foreground/80">
 						<Buildings className="size-4" weight="duotone" />
 						Fresclean POS
 					</div>
+					<SidebarTrigger className="size-6 shrink-0" />
 				</SidebarHeader>
 
 				<SidebarSeparator />
@@ -261,19 +262,6 @@ export function AppShell({ title, description, children }: AppShellProps) {
 
 			<SidebarInset>
 				<section className="px-3 py-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] sm:px-6 sm:py-5 md:px-8 md:py-6 lg:px-10">
-					<header className="sticky top-0 z-20 -mx-3 mb-5 flex items-start justify-between gap-3 border-b border-border/70 bg-background/95 px-3 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/75 sm:-mx-6 sm:px-6 md:-mx-8 md:mb-6 md:px-8 lg:-mx-10 lg:px-10">
-						<div>
-							<h1 className="text-lg font-semibold tracking-tight sm:text-xl md:text-2xl">
-								{title}
-							</h1>
-							{description ? (
-								<p className="mt-1 text-sm text-muted-foreground">
-									{description}
-								</p>
-							) : null}
-						</div>
-						<SidebarTrigger className="h-10 w-10 shrink-0" />
-					</header>
 					{children}
 				</section>
 			</SidebarInset>

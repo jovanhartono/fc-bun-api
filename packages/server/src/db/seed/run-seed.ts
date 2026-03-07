@@ -29,7 +29,7 @@ const ADMIN_PASSWORD = "rojpyp-2cuzdo-rozmoP";
 const CUSTOMER_COUNT = 120;
 const ORDER_COUNT = 180;
 const ORDER_LOOKBACK_DAYS = 45;
-const PHOTO_BASE_URL = "https://seed.fresclean.id";
+const PHOTO_BASE_URL = "https://picsum.photos/seed";
 
 const STORE_PRESETS = [
   {
@@ -231,6 +231,71 @@ function slugify(value: string): string {
 
 function sanitizeForS3(value: string): string {
   return slugify(value).replace(/-/g, "_");
+}
+
+function createStatusNote(nextStatus: OrderServiceStatus): string {
+  if (nextStatus === "queued") {
+    return faker.helpers.arrayElement([
+      "Item tagged and moved into the cleaning queue",
+      "Queued for the next cleaning batch",
+      "Item verified and lined up for processing",
+    ]);
+  }
+
+  if (nextStatus === "processing") {
+    return faker.helpers.arrayElement([
+      "Cleaning started with material-safe treatment",
+      "Main cleaning process started",
+      "Technician began detailed cleaning work",
+    ]);
+  }
+
+  if (nextStatus === "quality_check") {
+    return faker.helpers.arrayElement([
+      "Finishing complete and moved to quality control",
+      "Quality team is checking the cleaning result",
+      "Final inspection started before release",
+    ]);
+  }
+
+  if (nextStatus === "ready_for_pickup") {
+    return faker.helpers.arrayElement([
+      "Cleaning completed and item is ready for pickup",
+      "Item packed and awaiting customer pickup",
+      "Work finished and customer can be notified",
+    ]);
+  }
+
+  if (nextStatus === "picked_up") {
+    return faker.helpers.arrayElement([
+      "Customer picked up the item in good condition",
+      "Order handed over to customer",
+      "Pickup completed at the counter",
+    ]);
+  }
+
+  if (nextStatus === "refunded") {
+    return faker.helpers.arrayElement([
+      "Service refunded after final review",
+      "Refund processed and item marked as closed",
+      "Refund approved with supporting documentation",
+    ]);
+  }
+
+  return faker.helpers.arrayElement([
+    "Order cancelled after customer confirmation",
+    "Service cancelled and removed from active work queue",
+    "Cancellation recorded in the service timeline",
+  ]);
+}
+
+function createDummyPhotoUrl(
+  itemCode: string,
+  photoType: "dropoff" | "progress" | "pickup" | "refund",
+  photoIndex: number
+): string {
+  const seed = sanitizeForS3(`${itemCode}-${photoType}-${photoIndex + 1}`);
+  return `${PHOTO_BASE_URL}/${seed}/960/720`;
 }
 
 function pickWeighted<T>(items: Array<{ item: T; weight: number }>): T {
@@ -911,7 +976,7 @@ async function seedOrders(params: {
           to_status: nextStatus,
           changed_by: handlerId ?? createdBy,
           created_at: eventAt,
-          note: faker.lorem.sentence(),
+          note: createStatusNote(nextStatus),
         });
         currentStatus = nextStatus;
       }
@@ -1156,7 +1221,11 @@ async function seedOrders(params: {
         return {
           order_service_id: serviceIdByItemCode.get(line.item_code) ?? 0,
           photo_type: photo.photo_type,
-          image_url: `${PHOTO_BASE_URL}/${s3Key}`,
+          image_url: createDummyPhotoUrl(
+            line.item_code,
+            photo.photo_type,
+            photoIndex
+          ),
           s3_key: s3Key,
           uploaded_by: photo.uploaded_by,
           created_at: photo.created_at,

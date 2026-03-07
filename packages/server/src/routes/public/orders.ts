@@ -60,6 +60,14 @@ const app = new Hono().post(
             status: true,
           },
           with: {
+            images: {
+              columns: {
+                id: true,
+                created_at: true,
+                image_url: true,
+                photo_type: true,
+              },
+            },
             service: {
               columns: {
                 id: true,

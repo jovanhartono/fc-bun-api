@@ -129,7 +129,7 @@ export function useTransactionsPage() {
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
 	const currentUser = getCurrentUser();
-	const [mode, setMode] = useState<"products" | "services">("products");
+	const [mode, setMode] = useState<"products" | "services">("services");
 	const [searchTerm, setSearchTerm] = useState("");
 	const [activeProductCategory, setActiveProductCategory] = useState<
 		"all" | number

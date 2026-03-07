@@ -1,6 +1,7 @@
 import { ArrowLeft, ShoppingCart } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { OrderForm } from "@/features/orders/components/order-form";
 import { handleCreatedOrderSuccess } from "@/features/orders/lib/create-order-workflow";
@@ -62,32 +63,38 @@ function CreateOrderPage() {
 	};
 
 	return (
-		<div className="grid gap-4">
-			<div className="flex items-center">
-				<Button
-					type="button"
-					variant="outline"
-					icon={<ArrowLeft className="size-4" weight="duotone" />}
-					onClick={() => {
-						void navigate({ to: "/orders", search: { page: 1 } });
-					}}
-				>
-					Back to Orders
-				</Button>
-			</div>
-			<div className="rounded-none border p-4">
-				<div className="mb-4 flex items-center gap-2 border-b pb-3">
-					<ShoppingCart className="size-4" weight="duotone" />
-					<p className="text-sm font-medium">Create Order</p>
+		<>
+			<PageHeader
+				title="Create Order"
+				description="Create a new order from products and services."
+				actions={
+					<Button
+						type="button"
+						variant="outline"
+						icon={<ArrowLeft className="size-4" weight="duotone" />}
+						onClick={() => {
+							void navigate({ to: "/orders", search: { page: 1 } });
+						}}
+					>
+						Back to Orders
+					</Button>
+				}
+			/>
+			<div className="grid gap-4">
+				<div className="rounded-none border p-4">
+					<div className="mb-4 flex items-center gap-2 border-b pb-3">
+						<ShoppingCart className="size-4" weight="duotone" />
+						<p className="text-sm font-medium">Order Details</p>
+					</div>
+					<OrderForm
+						handleOnSubmit={handleOnSubmit}
+						allowedStoreIds={allowedStoreIds}
+						isSubmitting={
+							createMutation.isPending || currentUserDetailQuery.isPending
+						}
+					/>
 				</div>
-				<OrderForm
-					handleOnSubmit={handleOnSubmit}
-					allowedStoreIds={allowedStoreIds}
-					isSubmitting={
-						createMutation.isPending || currentUserDetailQuery.isPending
-					}
-				/>
 			</div>
-		</div>
+		</>
 	);
 }

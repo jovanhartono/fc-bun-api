@@ -5,10 +5,11 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { useEffect, useMemo } from "react";
 import { z } from "zod";
 import { DataTable } from "@/components/data-table";
+import { PageHeader } from "@/components/page-header";
 import { TablePagination } from "@/components/table-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
 	Select,
 	SelectContent,
@@ -23,7 +24,9 @@ import {
 	storesQueryOptions,
 } from "@/lib/query-options";
 import {
+	formatOrderStatus,
 	formatPaymentStatus,
+	getOrderStatusBadgeVariant,
 	getPaymentStatusBadgeVariant,
 } from "@/lib/status";
 import { getCurrentUser } from "@/stores/auth-store";
@@ -144,8 +147,21 @@ function OrdersPage() {
 					</Link>
 				),
 			},
+			{
+				id: "store",
+				header: "Store",
+				cell: ({ row }) => row.original.store_code,
+			},
 			{ accessorKey: "customer_name", header: "Customer" },
-			{ accessorKey: "customer_phone", header: "Phone" },
+			{
+				accessorKey: "status",
+				header: "Status",
+				cell: ({ row }) => (
+					<Badge variant={getOrderStatusBadgeVariant(row.original.status)}>
+						{formatOrderStatus(row.original.status)}
+					</Badge>
+				),
+			},
 			{
 				accessorKey: "payment_status",
 				header: "Payment",
@@ -156,12 +172,6 @@ function OrdersPage() {
 						{formatPaymentStatus(row.original.payment_status)}
 					</Badge>
 				),
-			},
-			{
-				id: "store",
-				header: "Store",
-				cell: ({ row }) =>
-					`${row.original.store_code} - ${row.original.store_name}`,
 			},
 		],
 		[],
@@ -181,45 +191,12 @@ function OrdersPage() {
 				);
 
 	return (
-		<div className="grid gap-4">
-			<Card>
-				<CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-					<div>
-						<CardTitle>Order List</CardTitle>
-					</div>
-					<div className="flex flex-wrap items-center gap-2">
-						<Select
-							value={
-								currentUser?.role === "admin"
-									? (search.storeId?.toString() ?? "all")
-									: (search.storeId?.toString() ?? "")
-							}
-							onValueChange={(value) => {
-								void navigate({
-									search: (prev) => ({
-										...prev,
-										page: 1,
-										storeId:
-											value && value !== "all" ? Number(value) : undefined,
-									}),
-								});
-							}}
-						>
-							<SelectTrigger className="h-10 min-w-48">
-								<SelectValue placeholder="Filter by store" />
-							</SelectTrigger>
-							<SelectContent>
-								{currentUser?.role === "admin" ? (
-									<SelectItem value="all">All stores</SelectItem>
-								) : null}
-								{visibleStores.map((store) => (
-									<SelectItem key={store.id} value={String(store.id)}>
-										{`${store.code} - ${store.name}`}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-
+		<>
+			<PageHeader
+				title="Orders"
+				description="Review historical orders, payment status, and order detail records."
+				actions={
+					<>
 						<Badge
 							variant={ordersQuery.isPending ? "secondary" : "outline"}
 						>{`${orderCount} items`}</Badge>
@@ -229,30 +206,67 @@ function OrdersPage() {
 						>
 							Add Order
 						</Button>
-					</div>
-				</CardHeader>
-				<CardContent>
-					<div className="grid gap-4">
-						<DataTable
-							columns={columns}
-							data={orders}
-							isLoading={ordersQuery.isPending || storesQuery.isPending}
-						/>
-						<TablePagination
-							meta={ordersQuery.data?.meta}
-							isLoading={ordersQuery.isPending}
-							onPageChange={(page) => {
-								void navigate({
-									search: (prev) => ({
-										...prev,
-										page,
-									}),
-								});
-							}}
-						/>
-					</div>
-				</CardContent>
-			</Card>
-		</div>
+					</>
+				}
+			/>
+			<div className="grid gap-4">
+				<Card>
+					<CardContent className="pt-6">
+						<div className="mb-4 flex flex-wrap items-center gap-2">
+							<Select
+								value={
+									currentUser?.role === "admin"
+										? (search.storeId?.toString() ?? "all")
+										: (search.storeId?.toString() ?? "")
+								}
+								onValueChange={(value) => {
+									void navigate({
+										search: (prev) => ({
+											...prev,
+											page: 1,
+											storeId:
+												value && value !== "all" ? Number(value) : undefined,
+										}),
+									});
+								}}
+							>
+								<SelectTrigger className="h-10 min-w-48 w-max">
+									<SelectValue placeholder="Filter by store" />
+								</SelectTrigger>
+								<SelectContent>
+									{currentUser?.role === "admin" ? (
+										<SelectItem value="all">All stores</SelectItem>
+									) : null}
+									{visibleStores.map((store) => (
+										<SelectItem key={store.id} value={String(store.id)}>
+											{`${store.code} - ${store.name}`}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+						<div className="grid gap-4">
+							<DataTable
+								columns={columns}
+								data={orders}
+								isLoading={ordersQuery.isPending || storesQuery.isPending}
+							/>
+							<TablePagination
+								meta={ordersQuery.data?.meta}
+								isLoading={ordersQuery.isPending}
+								onPageChange={(page) => {
+									void navigate({
+										search: (prev) => ({
+											...prev,
+											page,
+										}),
+									});
+								}}
+							/>
+						</div>
+					</CardContent>
+				</Card>
+			</div>
+		</>
 	);
 }

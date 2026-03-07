@@ -1,17 +1,13 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+	type UseMutationResult,
+	useMutation,
+	useQuery,
+	useQueryClient,
+} from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
-import {
-	AlertDialog,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-	AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,6 +46,7 @@ import {
 } from "@/lib/status";
 import { formatIDRCurrency } from "@/shared/utils";
 import { getCurrentUser } from "@/stores/auth-store";
+import { useDialog } from "@/stores/dialog-store";
 
 export const Route = createFileRoute("/_admin/orders/$orderId")({
 	loader: async ({ context, params }) => {
@@ -97,6 +94,110 @@ const STATUS_ACTION_LABELS: Record<
 
 const REFUND_REASONS = ["damaged", "cannot_process", "lost", "other"] as const;
 
+function ServiceStatusUpdateButton({
+	serviceId,
+	nextStatus,
+	isCancel,
+	updateStatusMutation,
+}: {
+	serviceId: number;
+	nextStatus: UpdateOrderServiceStatusPayload["status"];
+	isCancel: boolean;
+	updateStatusMutation: UseMutationResult<
+		unknown,
+		Error,
+		{ serviceId: number; payload: UpdateOrderServiceStatusPayload },
+		unknown
+	>;
+}) {
+	const { openDialog, closeDialog } = useDialog();
+
+	const handleClick = () => {
+		openDialog({
+			title: isCancel
+				? "Cancel Service"
+				: `Update Status to ${STATUS_ACTION_LABELS[nextStatus]}`,
+			description: isCancel
+				? "Please provide a reason for cancelling this service."
+				: `Are you sure you want to change the status to ${STATUS_ACTION_LABELS[nextStatus]}?`,
+			content: (
+				<DialogForm
+					isCancel={isCancel}
+					serviceId={serviceId}
+					nextStatus={nextStatus}
+					updateStatusMutation={updateStatusMutation}
+					closeDialog={closeDialog}
+				/>
+			),
+		});
+	};
+
+	return (
+		<Button
+			variant={isCancel ? "destructive" : "secondary"}
+			size="sm"
+			onClick={handleClick}
+		>
+			{STATUS_ACTION_LABELS[nextStatus]}
+		</Button>
+	);
+}
+
+function DialogForm({
+	isCancel,
+	serviceId,
+	nextStatus,
+	updateStatusMutation,
+	closeDialog,
+}: {
+	isCancel: boolean;
+	serviceId: number;
+	nextStatus: UpdateOrderServiceStatusPayload["status"];
+	updateStatusMutation: UseMutationResult<
+		unknown,
+		Error,
+		{ serviceId: number; payload: UpdateOrderServiceStatusPayload },
+		unknown
+	>;
+	closeDialog: () => void;
+}) {
+	const [note, setNote] = useState("");
+	return (
+		<div className="flex flex-col gap-4">
+			<Textarea
+				placeholder={
+					isCancel ? "Cancel reason (required)" : "Optional status note"
+				}
+				value={note}
+				onChange={(e) => setNote(e.target.value)}
+			/>
+			<div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+				<Button variant="outline" onClick={closeDialog}>
+					Go back
+				</Button>
+				<Button
+					variant={isCancel ? "destructive" : "default"}
+					disabled={
+						updateStatusMutation.isPending || (isCancel && !note.trim())
+					}
+					onClick={async () => {
+						await updateStatusMutation.mutateAsync({
+							serviceId,
+							payload: {
+								status: nextStatus,
+								note: note.trim() || undefined,
+							},
+						});
+						closeDialog();
+					}}
+				>
+					{isCancel ? "Confirm Cancel" : "Confirm Update"}
+				</Button>
+			</div>
+		</div>
+	);
+}
+
 function OrderDetailPage() {
 	const user = getCurrentUser();
 	const isPaymentAllowed = user?.role === "admin" || user?.role === "cashier";
@@ -107,9 +208,6 @@ function OrderDetailPage() {
 	const isValidOrderId = Number.isInteger(id) && id > 0;
 	const queryClient = useQueryClient();
 
-	const [noteByServiceId, setNoteByServiceId] = useState<
-		Record<number, string>
-	>({});
 	const [photoTypeByServiceId, setPhotoTypeByServiceId] = useState<
 		Record<number, SaveOrderServicePhotoPayload["photo_type"]>
 	>({});
@@ -282,414 +380,444 @@ function OrderDetailPage() {
 	);
 
 	return (
-		<div className="grid items-start gap-4 lg:grid-cols-12">
-			<div className="grid gap-4 lg:col-span-4">
+		<>
+			<PageHeader
+				title={`Order ${detail.code}`}
+				description={`Customer: ${detail.customer?.name ?? "-"} • Store: ${detail.store?.name ?? "-"}`}
+				actions={
+					<>
+						<Badge variant={getOrderStatusBadgeVariant(detail.status)}>
+							{formatOrderStatus(detail.status)}
+						</Badge>
+						<Badge
+							variant={getPaymentStatusBadgeVariant(detail.payment_status)}
+						>
+							{formatPaymentStatus(detail.payment_status)}
+						</Badge>
+					</>
+				}
+			/>
+
+			<div className="mb-6 grid gap-4 md:grid-cols-3">
 				<Card>
-					<CardHeader>
-						<CardTitle>{`Order ${detail.code}`}</CardTitle>
+					<CardHeader className="pb-2">
+						<CardTitle className="text-sm font-medium text-muted-foreground">
+							Customer Details
+						</CardTitle>
 					</CardHeader>
-					<CardContent className="grid gap-2 text-sm">
-						<div className="flex flex-wrap gap-2">
-							<Badge variant={getOrderStatusBadgeVariant(detail.status)}>
-								{formatOrderStatus(detail.status)}
-							</Badge>
-							<Badge
-								variant={getPaymentStatusBadgeVariant(detail.payment_status)}
-							>
-								{formatPaymentStatus(detail.payment_status)}
-							</Badge>
-						</div>
-						<p>{`Customer: ${detail.customer?.name ?? "-"}`}</p>
-						<p>{`Store: ${detail.store?.name ?? "-"}`}</p>
-						<p>{`Total: ${formatIDRCurrency(String(detail.total ?? 0))}`}</p>
-						<p>{`Discount: ${formatIDRCurrency(String(detail.discount ?? 0))}`}</p>
-						<p>{`Refunded: ${formatIDRCurrency(String(detail.refunded_amount ?? 0))}`}</p>
+					<CardContent>
+						<p className="font-medium">{detail.customer?.name ?? "-"}</p>
+						<p className="text-sm text-muted-foreground">
+							{detail.customer?.phone_number ?? "-"}
+						</p>
 					</CardContent>
 				</Card>
-
-				{isPaymentAllowed && detail.payment_status !== "paid" ? (
-					<Card>
-						<CardHeader>
-							<CardTitle>Payment</CardTitle>
-						</CardHeader>
-						<CardContent className="grid gap-3">
-							<Select
-								value={selectedPaymentMethodId}
-								onValueChange={(value) =>
-									setSelectedPaymentMethodId(value ?? "")
-								}
-							>
-								<SelectTrigger className="h-10 w-full">
-									<SelectValue placeholder="Select payment method" />
-								</SelectTrigger>
-								<SelectContent>
-									{paymentMethods.map((method) => (
-										<SelectItem key={method.id} value={String(method.id)}>
-											{method.name}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-							<Button
-								disabled={paymentMutation.isPending || !selectedPaymentMethodId}
-								onClick={async () => {
-									await paymentMutation.mutateAsync(
-										Number(selectedPaymentMethodId),
-									);
-								}}
-							>
-								Mark as paid
-							</Button>
-						</CardContent>
-					</Card>
-				) : null}
-
-				{isRefundAllowed ? (
-					<Card>
-						<CardHeader>
-							<CardTitle>Refund</CardTitle>
-						</CardHeader>
-						<CardContent className="grid gap-3">
-							<div className="flex gap-2">
-								<Button
-									variant="outline"
-									onClick={() =>
-										setRefundServiceIds(
-											refundableServices.map((service) => service.id),
-										)
-									}
-								>
-									Select all refundable
-								</Button>
-								<Button
-									variant="outline"
-									onClick={() => setRefundServiceIds([])}
-								>
-									Clear
-								</Button>
-							</div>
-
-							{refundableServices.map((service) => {
-								const selected = refundServiceIds.includes(service.id);
-								const reason = refundReasonByServiceId[service.id] ?? "damaged";
-								return (
-									<div
-										key={service.id}
-										className="grid gap-2 rounded-none border p-3"
-									>
-										<label className="flex items-center gap-2 text-sm">
-											<input
-												type="checkbox"
-												checked={selected}
-												onChange={(event) => {
-													if (event.target.checked) {
-														setRefundServiceIds((prev) =>
-															prev.includes(service.id)
-																? prev
-																: [...prev, service.id],
-														);
-														return;
-													}
-													setRefundServiceIds((prev) =>
-														prev.filter((id) => id !== service.id),
-													);
-												}}
-											/>
-											<span>
-												{service.item_code ?? `Service #${service.id}`}
-											</span>
-										</label>
-
-										<Select
-											value={reason}
-											onValueChange={(value) =>
-												setRefundReasonByServiceId((prev) => ({
-													...prev,
-													[service.id]: (value ??
-														"damaged") as (typeof REFUND_REASONS)[number],
-												}))
-											}
-											disabled={!selected}
-										>
-											<SelectTrigger className="h-10 w-full">
-												<SelectValue placeholder="Select reason" />
-											</SelectTrigger>
-											<SelectContent>
-												{REFUND_REASONS.map((refundReason) => (
-													<SelectItem key={refundReason} value={refundReason}>
-														{refundReason}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
-
-										<Textarea
-											placeholder="Reason note (required when reason is other)"
-											value={refundItemNoteByServiceId[service.id] ?? ""}
-											onChange={(event) =>
-												setRefundItemNoteByServiceId((prev) => ({
-													...prev,
-													[service.id]: event.target.value,
-												}))
-											}
-											disabled={!selected}
-										/>
-									</div>
-								);
+				<Card>
+					<CardHeader className="pb-2">
+						<CardTitle className="text-sm font-medium text-muted-foreground">
+							Order Details
+						</CardTitle>
+					</CardHeader>
+					<CardContent>
+						<p className="font-medium">{detail.store?.name ?? "-"}</p>
+						<p className="text-sm text-muted-foreground">
+							{new Date(detail.created_at).toLocaleString("en-ID", {
+								dateStyle: "medium",
+								timeStyle: "short",
 							})}
-
-							<Field>
-								<FieldLabel htmlFor="refund-note">
-									Refund note (optional)
-								</FieldLabel>
-								<Textarea
-									id="refund-note"
-									placeholder="General refund note"
-									value={refundNote}
-									onChange={(event) => setRefundNote(event.target.value)}
-								/>
-							</Field>
-
-							<Button
-								disabled={
-									refundMutation.isPending ||
-									refundServiceIds.length === 0 ||
-									!!refundValidationError
-								}
-								onClick={async () => {
-									if (refundValidationError) {
-										toast.error("Refund note is required when reason is other");
-										return;
-									}
-
-									await refundMutation.mutateAsync({
-										orderId: id,
-										payload: {
-											items: selectedRefundItems,
-											note: refundNote.trim() || undefined,
-										},
-									});
-								}}
-							>
-								Process refund
-							</Button>
-						</CardContent>
-					</Card>
-				) : null}
+						</p>
+						{detail.notes ? (
+							<p className="mt-2 border-t pt-2 text-sm text-muted-foreground">
+								{detail.notes}
+							</p>
+						) : null}
+					</CardContent>
+				</Card>
+				<Card>
+					<CardHeader className="pb-2">
+						<CardTitle className="text-sm font-medium text-muted-foreground">
+							Financial Summary
+						</CardTitle>
+					</CardHeader>
+					<CardContent className="grid gap-2 text-sm">
+						<div className="flex justify-between">
+							<span className="text-muted-foreground">Total</span>
+							<span>{formatIDRCurrency(String(detail.total ?? 0))}</span>
+						</div>
+						<div className="flex justify-between">
+							<span className="text-muted-foreground">Discount</span>
+							<span>-{formatIDRCurrency(String(detail.discount ?? 0))}</span>
+						</div>
+						<div className="flex justify-between border-t pt-2 font-medium">
+							<span>Net Total</span>
+							<span>
+								{formatIDRCurrency(
+									String(
+										Number(detail.total ?? 0) - Number(detail.discount ?? 0),
+									),
+								)}
+							</span>
+						</div>
+						{Number(detail.refunded_amount) > 0 ? (
+							<div className="flex justify-between text-destructive">
+								<span>Refunded</span>
+								<span>
+									-{formatIDRCurrency(String(detail.refunded_amount ?? 0))}
+								</span>
+							</div>
+						) : null}
+					</CardContent>
+				</Card>
 			</div>
 
-			<div className="grid gap-4 lg:col-span-8">
-				{orderServices.map((service) => {
-					const selectedPhotoType =
-						photoTypeByServiceId[service.id] ?? "progress";
-					const selectedPhotoFile = photoFileByServiceId[service.id] ?? null;
-
-					return (
-						<Card key={service.id}>
-							<CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
-								<CardTitle className="text-base">
-									{service.item_code ?? `Service #${service.id}`}
-								</CardTitle>
-								<Badge
-									variant={getOrderServiceStatusBadgeVariant(service.status)}
-								>
-									{formatOrderServiceStatus(service.status)}
-								</Badge>
+			<div className="grid items-start gap-4 lg:grid-cols-12">
+				<div className="grid gap-4 lg:col-span-4">
+					{isPaymentAllowed && detail.payment_status !== "paid" ? (
+						<Card>
+							<CardHeader>
+								<CardTitle>Payment</CardTitle>
 							</CardHeader>
-							<CardContent className="grid gap-3 text-sm">
-								<p>{`Service: ${service.service?.name ?? "Service"}`}</p>
-								<p>{`Item: ${service.color ?? "-"} / ${service.shoe_brand ?? "-"} / ${service.shoe_size ?? "-"}`}</p>
-								<p>{`Handler: ${service.handler?.name ?? "Not assigned"}`}</p>
-
-								<div className="flex flex-wrap gap-2">
-									<Button
-										size="sm"
-										variant="outline"
-										disabled={claimMutation.isPending}
-										onClick={async () => {
-											await claimMutation.mutateAsync({
-												serviceId: service.id,
-											});
-										}}
-									>
-										Handled by me
-									</Button>
-								</div>
-
-								<div className="flex flex-col gap-2">
-									<div className="flex flex-wrap gap-2">
-										{(ORDER_STATUS_TRANSITIONS[service.status] || []).map(
-											(nextStatus) => {
-												const isCancel = nextStatus === "cancelled";
-
-												return (
-													<AlertDialog key={nextStatus}>
-														<AlertDialogTrigger
-															render={
-																<Button
-																	variant={
-																		isCancel ? "destructive" : "secondary"
-																	}
-																	size="sm"
-																/>
-															}
-														>
-															{STATUS_ACTION_LABELS[nextStatus]}
-														</AlertDialogTrigger>
-														<AlertDialogContent>
-															<AlertDialogHeader>
-																<AlertDialogTitle>
-																	{isCancel
-																		? "Cancel Service"
-																		: `Update Status to ${STATUS_ACTION_LABELS[nextStatus]}`}
-																</AlertDialogTitle>
-																<AlertDialogDescription>
-																	{isCancel
-																		? "Please provide a reason for cancelling this service."
-																		: `Are you sure you want to change the status to ${STATUS_ACTION_LABELS[nextStatus]}?`}
-																</AlertDialogDescription>
-															</AlertDialogHeader>
-															<div className="p-4 py-0">
-																<Textarea
-																	placeholder={
-																		isCancel
-																			? "Cancel reason (required)"
-																			: "Optional status note"
-																	}
-																	value={noteByServiceId[service.id] ?? ""}
-																	onChange={(event) =>
-																		setNoteByServiceId((prev) => ({
-																			...prev,
-																			[service.id]: event.target.value,
-																		}))
-																	}
-																/>
-															</div>
-															<AlertDialogFooter>
-																<AlertDialogCancel>Go back</AlertDialogCancel>
-																<Button
-																	variant={isCancel ? "destructive" : "default"}
-																	disabled={
-																		updateStatusMutation.isPending ||
-																		(isCancel &&
-																			!noteByServiceId[service.id]?.trim())
-																	}
-																	onClick={async () => {
-																		await updateStatusMutation.mutateAsync({
-																			serviceId: service.id,
-																			payload: {
-																				status: nextStatus,
-																				note:
-																					noteByServiceId[service.id]?.trim() ||
-																					undefined,
-																			},
-																		});
-																	}}
-																>
-																	{isCancel
-																		? "Confirm Cancel"
-																		: "Confirm Update"}
-																</Button>
-															</AlertDialogFooter>
-														</AlertDialogContent>
-													</AlertDialog>
-												);
-											},
-										)}
-									</div>
-								</div>
-
-								<div className="grid gap-2 md:grid-cols-[180px_1fr_auto]">
-									<Select
-										value={selectedPhotoType}
-										onValueChange={(value) =>
-											setPhotoTypeByServiceId((prev) => ({
-												...prev,
-												[service.id]: (value ??
-													"progress") as SaveOrderServicePhotoPayload["photo_type"],
-											}))
-										}
-									>
-										<SelectTrigger className="h-10 w-full">
-											<SelectValue placeholder="Photo type" />
-										</SelectTrigger>
-										<SelectContent>
-											<SelectItem value="dropoff">dropoff</SelectItem>
-											<SelectItem value="progress">progress</SelectItem>
-											<SelectItem value="pickup">pickup</SelectItem>
-											<SelectItem value="refund">refund</SelectItem>
-										</SelectContent>
-									</Select>
-									<input
-										type="file"
-										accept="image/jpeg,image/png,image/webp,image/heic"
-										onChange={(event) =>
-											setPhotoFileByServiceId((prev) => ({
-												...prev,
-												[service.id]: event.target.files?.[0] ?? null,
-											}))
-										}
-									/>
-									<Button
-										variant="outline"
-										disabled={
-											!selectedPhotoFile || uploadPhotoMutation.isPending
-										}
-										onClick={async () => {
-											if (!selectedPhotoFile) {
-												return;
-											}
-											await uploadPhotoMutation.mutateAsync({
-												serviceId: service.id,
-												photoType: selectedPhotoType,
-												file: selectedPhotoFile,
-											});
-										}}
-									>
-										Upload
-									</Button>
-								</div>
-
-								<div className="grid gap-1 rounded-none border p-2">
-									<p className="font-medium">Photos</p>
-									{service.images.length > 0 ? (
-										service.images.map((image) => (
-											<a
-												key={image.id}
-												href={image.image_url}
-												target="_blank"
-												rel="noopener"
-												className="text-xs underline"
-											>
-												{`${image.photo_type} - ${new Date(image.created_at).toLocaleString()}`}
-											</a>
-										))
-									) : (
-										<p className="text-xs text-muted-foreground">No photos</p>
-									)}
-								</div>
-
-								<div className="grid gap-1 rounded-none border p-2">
-									<p className="font-medium">Timeline</p>
-									{service.statusLogs.length > 0 ? (
-										service.statusLogs.map((log) => (
-											<p key={log.id} className="text-xs">
-												{`${log.to_status} by ${log.changedBy?.name ?? "-"} at ${new Date(
-													log.created_at,
-												).toLocaleString()}`}
-											</p>
-										))
-									) : (
-										<p className="text-xs text-muted-foreground">
-											No status logs
-										</p>
-									)}
-								</div>
+							<CardContent className="grid gap-3">
+								<Select
+									value={selectedPaymentMethodId}
+									onValueChange={(value) =>
+										setSelectedPaymentMethodId(value ?? "")
+									}
+								>
+									<SelectTrigger className="h-10 w-full">
+										<SelectValue placeholder="Select payment method" />
+									</SelectTrigger>
+									<SelectContent>
+										{paymentMethods.map((method) => (
+											<SelectItem key={method.id} value={String(method.id)}>
+												{method.name}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+								<Button
+									disabled={
+										paymentMutation.isPending || !selectedPaymentMethodId
+									}
+									onClick={async () => {
+										await paymentMutation.mutateAsync(
+											Number(selectedPaymentMethodId),
+										);
+									}}
+								>
+									Mark as paid
+								</Button>
 							</CardContent>
 						</Card>
-					);
-				})}
+					) : null}
+
+					{isRefundAllowed ? (
+						<Card>
+							<CardHeader>
+								<CardTitle>Refund</CardTitle>
+							</CardHeader>
+							<CardContent className="grid gap-3">
+								<div className="flex gap-2">
+									<Button
+										variant="outline"
+										onClick={() =>
+											setRefundServiceIds(
+												refundableServices.map((service) => service.id),
+											)
+										}
+									>
+										Select all refundable
+									</Button>
+									<Button
+										variant="outline"
+										onClick={() => setRefundServiceIds([])}
+									>
+										Clear
+									</Button>
+								</div>
+
+								{refundableServices.map((service) => {
+									const selected = refundServiceIds.includes(service.id);
+									const reason =
+										refundReasonByServiceId[service.id] ?? "damaged";
+									return (
+										<div
+											key={service.id}
+											className="grid gap-2 rounded-none border p-3"
+										>
+											<label className="flex items-center gap-2 text-sm">
+												<input
+													type="checkbox"
+													checked={selected}
+													onChange={(event) => {
+														if (event.target.checked) {
+															setRefundServiceIds((prev) =>
+																prev.includes(service.id)
+																	? prev
+																	: [...prev, service.id],
+															);
+															return;
+														}
+														setRefundServiceIds((prev) =>
+															prev.filter((id) => id !== service.id),
+														);
+													}}
+												/>
+												<span>
+													{service.item_code ?? `Service #${service.id}`}
+												</span>
+											</label>
+
+											<Select
+												value={reason}
+												onValueChange={(value) =>
+													setRefundReasonByServiceId((prev) => ({
+														...prev,
+														[service.id]: (value ??
+															"damaged") as (typeof REFUND_REASONS)[number],
+													}))
+												}
+												disabled={!selected}
+											>
+												<SelectTrigger className="h-10 w-full">
+													<SelectValue placeholder="Select reason" />
+												</SelectTrigger>
+												<SelectContent>
+													{REFUND_REASONS.map((refundReason) => (
+														<SelectItem key={refundReason} value={refundReason}>
+															{refundReason}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+
+											<Textarea
+												placeholder="Reason note (required when reason is other)"
+												value={refundItemNoteByServiceId[service.id] ?? ""}
+												onChange={(event) =>
+													setRefundItemNoteByServiceId((prev) => ({
+														...prev,
+														[service.id]: event.target.value,
+													}))
+												}
+												disabled={!selected}
+											/>
+										</div>
+									);
+								})}
+
+								<Field>
+									<FieldLabel htmlFor="refund-note">
+										Refund note (optional)
+									</FieldLabel>
+									<Textarea
+										id="refund-note"
+										placeholder="General refund note"
+										value={refundNote}
+										onChange={(event) => setRefundNote(event.target.value)}
+									/>
+								</Field>
+
+								<Button
+									disabled={
+										refundMutation.isPending ||
+										refundServiceIds.length === 0 ||
+										!!refundValidationError
+									}
+									onClick={async () => {
+										if (refundValidationError) {
+											toast.error(
+												"Refund note is required when reason is other",
+											);
+											return;
+										}
+
+										await refundMutation.mutateAsync({
+											orderId: id,
+											payload: {
+												items: selectedRefundItems,
+												note: refundNote.trim() || undefined,
+											},
+										});
+									}}
+								>
+									Process refund
+								</Button>
+							</CardContent>
+						</Card>
+					) : null}
+				</div>
+
+				<div className="grid gap-4 lg:col-span-8">
+					{orderServices.map((service) => {
+						const selectedPhotoType =
+							photoTypeByServiceId[service.id] ?? "progress";
+						const selectedPhotoFile = photoFileByServiceId[service.id] ?? null;
+
+						return (
+							<Card key={service.id}>
+								<CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
+									<CardTitle className="text-base">
+										{service.item_code ?? `Service #${service.id}`}
+									</CardTitle>
+									<Badge
+										variant={getOrderServiceStatusBadgeVariant(service.status)}
+									>
+										{formatOrderServiceStatus(service.status)}
+									</Badge>
+								</CardHeader>
+								<CardContent className="grid gap-3 text-sm">
+									<p>{`Service: ${service.service?.name ?? "Service"}`}</p>
+									<p>{`Item: ${service.color ?? "-"} / ${service.shoe_brand ?? "-"} / ${service.shoe_size ?? "-"}`}</p>
+									<p>{`Handler: ${service.handler?.name ?? "Not assigned"}`}</p>
+
+									<div className="flex flex-wrap gap-2">
+										<Button
+											size="sm"
+											variant="outline"
+											disabled={claimMutation.isPending}
+											onClick={async () => {
+												await claimMutation.mutateAsync({
+													serviceId: service.id,
+												});
+											}}
+										>
+											Handled by me
+										</Button>
+									</div>
+
+									<div className="flex flex-col gap-2">
+										<div className="flex flex-wrap gap-2">
+											{(ORDER_STATUS_TRANSITIONS[service.status] || []).map(
+												(nextStatus) => {
+													const isCancel = nextStatus === "cancelled";
+
+													return (
+														<ServiceStatusUpdateButton
+															key={nextStatus}
+															serviceId={service.id}
+															nextStatus={nextStatus}
+															isCancel={isCancel}
+															updateStatusMutation={updateStatusMutation}
+														/>
+													);
+												},
+											)}
+										</div>
+									</div>
+
+									<div className="grid gap-2 md:grid-cols-[180px_1fr_auto]">
+										<Select
+											value={selectedPhotoType}
+											onValueChange={(value) =>
+												setPhotoTypeByServiceId((prev) => ({
+													...prev,
+													[service.id]: (value ??
+														"progress") as SaveOrderServicePhotoPayload["photo_type"],
+												}))
+											}
+										>
+											<SelectTrigger className="h-10 w-full">
+												<SelectValue placeholder="Photo type" />
+											</SelectTrigger>
+											<SelectContent>
+												<SelectItem value="dropoff">dropoff</SelectItem>
+												<SelectItem value="progress">progress</SelectItem>
+												<SelectItem value="pickup">pickup</SelectItem>
+												<SelectItem value="refund">refund</SelectItem>
+											</SelectContent>
+										</Select>
+										<input
+											type="file"
+											accept="image/jpeg,image/png,image/webp,image/heic"
+											onChange={(event) =>
+												setPhotoFileByServiceId((prev) => ({
+													...prev,
+													[service.id]: event.target.files?.[0] ?? null,
+												}))
+											}
+										/>
+										<Button
+											variant="outline"
+											disabled={
+												!selectedPhotoFile || uploadPhotoMutation.isPending
+											}
+											onClick={async () => {
+												if (!selectedPhotoFile) {
+													return;
+												}
+												await uploadPhotoMutation.mutateAsync({
+													serviceId: service.id,
+													photoType: selectedPhotoType,
+													file: selectedPhotoFile,
+												});
+											}}
+										>
+											Upload
+										</Button>
+									</div>
+
+									<div className="grid gap-1 rounded-none border p-2">
+										<p className="font-medium">Photos</p>
+										{service.images.length > 0 ? (
+											<div className="grid gap-2 sm:grid-cols-2">
+												{service.images.map((image) => (
+													<a
+														key={image.id}
+														href={image.image_url}
+														target="_blank"
+														rel="noopener"
+														className="grid gap-2 border p-2"
+													>
+														<img
+															src={image.image_url}
+															alt={`${image.photo_type} for ${service.item_code ?? `service-${service.id}`}`}
+															className="aspect-4/3 w-full object-cover"
+															loading="lazy"
+														/>
+														<p className="text-xs text-muted-foreground">
+															{`${image.photo_type} - ${new Date(image.created_at).toLocaleString()}`}
+														</p>
+													</a>
+												))}
+											</div>
+										) : (
+											<p className="text-xs text-muted-foreground">No photos</p>
+										)}
+									</div>
+
+									<div className="grid gap-1 rounded-none border p-2">
+										<p className="font-medium">Timeline</p>
+										{service.statusLogs.length > 0 ? (
+											service.statusLogs.map((log) => (
+												<div
+													key={log.id}
+													className="grid gap-1 border-b pb-2 last:border-b-0 last:pb-0"
+												>
+													<p className="text-xs">
+														{`${log.to_status} by ${log.changedBy?.name ?? "-"} at ${new Date(
+															log.created_at,
+														).toLocaleString()}`}
+													</p>
+													{log.note ? (
+														<p className="text-xs text-muted-foreground">
+															{log.note}
+														</p>
+													) : null}
+												</div>
+											))
+										) : (
+											<p className="text-xs text-muted-foreground">
+												No status logs
+											</p>
+										)}
+									</div>
+								</CardContent>
+							</Card>
+						);
+					})}
+				</div>
 			</div>
-		</div>
+		</>
 	);
 }

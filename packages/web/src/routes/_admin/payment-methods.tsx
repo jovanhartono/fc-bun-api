@@ -4,9 +4,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useCallback, useMemo } from "react";
 import { DataTable } from "@/components/data-table";
+import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
 	PaymentMethodForm,
 	type PaymentMethodFormState,
@@ -145,11 +146,12 @@ function PaymentMethodsPage() {
 	);
 
 	return (
-		<div className="grid gap-4">
-			<Card>
-				<CardHeader className="flex flex-row items-center justify-between space-y-0">
-					<CardTitle>Payment Method List</CardTitle>
-					<div className="flex items-center gap-2">
+		<>
+			<PageHeader
+				title="Payment Methods"
+				description="Insert and edit payment method master data."
+				actions={
+					<>
 						<Badge
 							variant={isPending ? "secondary" : "outline"}
 						>{`${paymentMethodCount} items`}</Badge>
@@ -159,16 +161,20 @@ function PaymentMethodsPage() {
 						>
 							Add Payment Method
 						</Button>
-					</div>
-				</CardHeader>
-				<CardContent>
-					<DataTable
-						columns={columns}
-						data={paymentMethods}
-						isLoading={isPending}
-					/>
-				</CardContent>
-			</Card>
-		</div>
+					</>
+				}
+			/>
+			<div className="grid gap-4">
+				<Card>
+					<CardContent className="pt-6">
+						<DataTable
+							columns={columns}
+							data={paymentMethods}
+							isLoading={isPending}
+						/>
+					</CardContent>
+				</Card>
+			</div>
+		</>
 	);
 }

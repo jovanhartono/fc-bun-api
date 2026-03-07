@@ -8,10 +8,11 @@ import { useCallback, useMemo } from "react";
 import { type SubmitHandler, useForm } from "react-hook-form";
 import { z } from "zod";
 import { DataTable } from "@/components/data-table";
+import { PageHeader } from "@/components/page-header";
 import { TablePagination } from "@/components/table-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
 	CustomerForm,
 	type CustomerFormState,
@@ -225,11 +226,12 @@ function CustomersPage() {
 	);
 
 	return (
-		<div className="grid gap-4">
-			<Card>
-				<CardHeader className="flex flex-row items-center justify-between space-y-0">
-					<CardTitle>Customer List</CardTitle>
-					<div className="flex items-center gap-2">
+		<>
+			<PageHeader
+				title="Customers"
+				description="Insert and edit customer master data."
+				actions={
+					<>
 						<Badge
 							variant={customersQuery.isPending ? "secondary" : "outline"}
 						>{`${customerCount} items`}</Badge>
@@ -239,30 +241,34 @@ function CustomersPage() {
 						>
 							Add Customer
 						</Button>
-					</div>
-				</CardHeader>
-				<CardContent>
-					<div className="grid gap-4">
-						<DataTable
-							columns={columns}
-							data={customers}
-							isLoading={customersQuery.isPending}
-						/>
-						<TablePagination
-							meta={customersQuery.data?.meta}
-							isLoading={customersQuery.isPending}
-							onPageChange={(page) => {
-								void navigate({
-									search: (prev) => ({
-										...prev,
-										page,
-									}),
-								});
-							}}
-						/>
-					</div>
-				</CardContent>
-			</Card>
-		</div>
+					</>
+				}
+			/>
+			<div className="grid gap-4">
+				<Card>
+					<CardContent className="pt-6">
+						<div className="grid gap-4">
+							<DataTable
+								columns={columns}
+								data={customers}
+								isLoading={customersQuery.isPending}
+							/>
+							<TablePagination
+								meta={customersQuery.data?.meta}
+								isLoading={customersQuery.isPending}
+								onPageChange={(page) => {
+									void navigate({
+										search: (prev) => ({
+											...prev,
+											page,
+										}),
+									});
+								}}
+							/>
+						</div>
+					</CardContent>
+				</Card>
+			</div>
+		</>
 	);
 }

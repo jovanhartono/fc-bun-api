@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import {
 	Card,
@@ -33,14 +34,15 @@ function DashboardPage() {
 
 	return (
 		<>
-			<div className="mb-4 flex items-center justify-between">
-				<p className="text-sm text-muted-foreground">
-					Overview count from live admin endpoints.
-				</p>
-				<Badge variant={isFetching ? "secondary" : "outline"}>
-					{isFetching ? "Refreshing" : "Live"}
-				</Badge>
-			</div>
+			<PageHeader
+				title="Dashboard"
+				description="Overview count from live admin endpoints."
+				actions={
+					<Badge variant={isFetching ? "secondary" : "outline"}>
+						{isFetching ? "Refreshing" : "Live"}
+					</Badge>
+				}
+			/>
 
 			<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
 				{cards.map((card) => (

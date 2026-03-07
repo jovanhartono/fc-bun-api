@@ -4,6 +4,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
+import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -347,298 +348,305 @@ function WorkerPage() {
 	};
 
 	return (
-		<div className="grid gap-4 md:max-w-xl">
-			<Card>
-				<CardHeader>
-					<CardTitle>Worker Ops</CardTitle>
-				</CardHeader>
-				<CardContent className="grid gap-3">
-					{currentUser?.role !== "admin" ? (
-						<p className="text-xs text-muted-foreground">
-							This page only shows stores assigned to your account.
-						</p>
-					) : null}
+		<>
+			<PageHeader
+				title="Worker Ops"
+				description="Lookup item tags, claim work, update status, and upload photos."
+			/>
+			<div className="grid gap-4 md:max-w-xl">
+				<Card>
+					<CardContent className="grid gap-3 pt-6">
+						{currentUser?.role !== "admin" ? (
+							<p className="text-xs text-muted-foreground">
+								This page only shows stores assigned to your account.
+							</p>
+						) : null}
 
-					<Field>
-						<FieldLabel htmlFor="worker-store">Store</FieldLabel>
-						<Select
-							value={search.storeId?.toString() ?? ""}
-							onValueChange={(value) => {
-								void navigate({
-									search: (prev) => ({
-										...prev,
-										storeId: value ? Number(value) : undefined,
-									}),
-								});
-							}}
-						>
-							<SelectTrigger id="worker-store" className="h-10 w-full">
-								<SelectValue placeholder="Select store" />
-							</SelectTrigger>
-							<SelectContent>
-								{storesQuery.data
-									?.filter((store) =>
-										currentUser?.role === "admin"
-											? true
-											: userStoreIds.includes(store.id),
-									)
-									.map((store) => (
-										<SelectItem key={store.id} value={String(store.id)}>
-											{`${store.code} - ${store.name}`}
-										</SelectItem>
-									))}
-							</SelectContent>
-						</Select>
-					</Field>
+						<Field>
+							<FieldLabel htmlFor="worker-store">Store</FieldLabel>
+							<Select
+								value={search.storeId?.toString() ?? ""}
+								onValueChange={(value) => {
+									void navigate({
+										search: (prev) => ({
+											...prev,
+											storeId: value ? Number(value) : undefined,
+										}),
+									});
+								}}
+							>
+								<SelectTrigger id="worker-store" className="h-10 w-full">
+									<SelectValue placeholder="Select store" />
+								</SelectTrigger>
+								<SelectContent>
+									{storesQuery.data
+										?.filter((store) =>
+											currentUser?.role === "admin"
+												? true
+												: userStoreIds.includes(store.id),
+										)
+										.map((store) => (
+											<SelectItem key={store.id} value={String(store.id)}>
+												{`${store.code} - ${store.name}`}
+											</SelectItem>
+										))}
+								</SelectContent>
+							</Select>
+						</Field>
 
-					<div className="flex gap-2">
-						<Input
-							placeholder="Scan or type item code"
-							value={itemCode}
-							onChange={(event) => setItemCode(event.target.value)}
-						/>
-						<Button
-							variant="outline"
-							onClick={async () => {
-								if (!itemCode.trim()) {
-									return;
-								}
-								setSelectedItemCode(itemCode.trim());
-								await lookupMutation.mutateAsync(itemCode.trim());
-							}}
-							icon={<MagnifyingGlass className="size-4" weight="duotone" />}
-						>
-							Find
-						</Button>
-					</div>
-
-					<div className="flex gap-2">
-						{isScanning ? (
-							<Button variant="outline" onClick={stopScanner}>
-								Stop Camera
-							</Button>
-						) : (
+						<div className="flex gap-2">
+							<Input
+								placeholder="Scan or type item code"
+								value={itemCode}
+								onChange={(event) => setItemCode(event.target.value)}
+							/>
 							<Button
 								variant="outline"
 								onClick={async () => {
-									await startScanner();
+									if (!itemCode.trim()) {
+										return;
+									}
+									setSelectedItemCode(itemCode.trim());
+									await lookupMutation.mutateAsync(itemCode.trim());
 								}}
-								icon={<Camera className="size-4" weight="duotone" />}
+								icon={<MagnifyingGlass className="size-4" weight="duotone" />}
 							>
-								Scan Tag
+								Find
 							</Button>
-						)}
-						{scanError ? <Badge variant="danger">{scanError}</Badge> : null}
-					</div>
-
-					{isScanning ? (
-						<video
-							ref={videoRef}
-							className="h-56 w-full rounded-none border object-cover"
-							autoPlay
-							playsInline
-							muted
-						/>
-					) : null}
-				</CardContent>
-			</Card>
-
-			{selectedService ? (
-				<Card>
-					<CardHeader>
-						<CardTitle>
-							{selectedService.item_code ?? `Service #${selectedService.id}`}
-						</CardTitle>
-					</CardHeader>
-					<CardContent className="grid gap-3">
-						<p>{`Order: ${selectedService.order?.code ?? "-"}`}</p>
-						<p>{`Service: ${selectedService.service?.name ?? "-"}`}</p>
-						<p>{`Item: ${selectedService.color ?? "-"} / ${selectedService.shoe_brand ?? "-"} / ${selectedService.shoe_size ?? "-"}`}</p>
-						<p>{`Status: ${selectedService.status}`}</p>
-						<p>{`Handler: ${selectedService.handler?.name ?? "Not assigned"}`}</p>
+						</div>
 
 						<div className="flex gap-2">
+							{isScanning ? (
+								<Button variant="outline" onClick={stopScanner}>
+									Stop Camera
+								</Button>
+							) : (
+								<Button
+									variant="outline"
+									onClick={async () => {
+										await startScanner();
+									}}
+									icon={<Camera className="size-4" weight="duotone" />}
+								>
+									Scan Tag
+								</Button>
+							)}
+							{scanError ? <Badge variant="danger">{scanError}</Badge> : null}
+						</div>
+
+						{isScanning ? (
+							<video
+								ref={videoRef}
+								className="h-56 w-full rounded-none border object-cover"
+								autoPlay
+								playsInline
+								muted
+							/>
+						) : null}
+					</CardContent>
+				</Card>
+
+				{selectedService ? (
+					<Card>
+						<CardHeader>
+							<CardTitle>
+								{selectedService.item_code ?? `Service #${selectedService.id}`}
+							</CardTitle>
+						</CardHeader>
+						<CardContent className="grid gap-3">
+							<p>{`Order: ${selectedService.order?.code ?? "-"}`}</p>
+							<p>{`Service: ${selectedService.service?.name ?? "-"}`}</p>
+							<p>{`Item: ${selectedService.color ?? "-"} / ${selectedService.shoe_brand ?? "-"} / ${selectedService.shoe_size ?? "-"}`}</p>
+							<p>{`Status: ${selectedService.status}`}</p>
+							<p>{`Handler: ${selectedService.handler?.name ?? "Not assigned"}`}</p>
+
+							<div className="flex gap-2">
+								<Button
+									variant="outline"
+									disabled={claimMutation.isPending || !selectedService.order}
+									onClick={async () => {
+										if (!selectedService.order) {
+											return;
+										}
+										await claimMutation.mutateAsync({
+											orderId: selectedService.order.id,
+											serviceId: selectedService.id,
+										});
+									}}
+								>
+									Handled by me
+								</Button>
+							</div>
+
+							<Field>
+								<FieldLabel htmlFor="worker-status">Status</FieldLabel>
+								<Select
+									value={selectedStatus}
+									onValueChange={(value) =>
+										setSelectedStatus(
+											(value ??
+												"received") as UpdateOrderServiceStatusPayload["status"],
+										)
+									}
+								>
+									<SelectTrigger id="worker-status" className="h-10 w-full">
+										<SelectValue placeholder="Select status" />
+									</SelectTrigger>
+									<SelectContent>
+										{STATUS_OPTIONS.map((status) => (
+											<SelectItem key={status} value={status}>
+												{status}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</Field>
+
+							<Input
+								placeholder="Optional status note"
+								value={note}
+								onChange={(event) => setNote(event.target.value)}
+							/>
+
 							<Button
-								variant="outline"
-								disabled={claimMutation.isPending || !selectedService.order}
+								disabled={statusMutation.isPending || !selectedService.order}
 								onClick={async () => {
 									if (!selectedService.order) {
 										return;
 									}
-									await claimMutation.mutateAsync({
+									await statusMutation.mutateAsync({
 										orderId: selectedService.order.id,
 										serviceId: selectedService.id,
+										payload: {
+											status: selectedStatus,
+											note: note.trim() || undefined,
+										},
 									});
 								}}
 							>
-								Handled by me
+								Update status
 							</Button>
-						</div>
 
-						<Field>
-							<FieldLabel htmlFor="worker-status">Status</FieldLabel>
-							<Select
-								value={selectedStatus}
-								onValueChange={(value) =>
-									setSelectedStatus(
-										(value ??
-											"received") as UpdateOrderServiceStatusPayload["status"],
-									)
+							<Field>
+								<FieldLabel htmlFor="worker-photo-type">Photo Type</FieldLabel>
+								<Select
+									value={photoType}
+									onValueChange={(value) =>
+										setPhotoType(
+											(value ??
+												"progress") as SaveOrderServicePhotoPayload["photo_type"],
+										)
+									}
+								>
+									<SelectTrigger id="worker-photo-type" className="h-10 w-full">
+										<SelectValue placeholder="Select photo type" />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="dropoff">dropoff</SelectItem>
+										<SelectItem value="progress">progress</SelectItem>
+										<SelectItem value="pickup">pickup</SelectItem>
+										<SelectItem value="refund">refund</SelectItem>
+									</SelectContent>
+								</Select>
+							</Field>
+
+							<input
+								type="file"
+								accept="image/jpeg,image/png,image/webp,image/heic"
+								onChange={(event) =>
+									setPhotoFile(event.target.files?.[0] ?? null)
 								}
-							>
-								<SelectTrigger id="worker-status" className="h-10 w-full">
-									<SelectValue placeholder="Select status" />
-								</SelectTrigger>
-								<SelectContent>
-									{STATUS_OPTIONS.map((status) => (
-										<SelectItem key={status} value={status}>
-											{status}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</Field>
+							/>
 
-						<Input
-							placeholder="Optional status note"
-							value={note}
-							onChange={(event) => setNote(event.target.value)}
-						/>
-
-						<Button
-							disabled={statusMutation.isPending || !selectedService.order}
-							onClick={async () => {
-								if (!selectedService.order) {
-									return;
+							<Button
+								variant="outline"
+								disabled={
+									uploadMutation.isPending ||
+									!photoFile ||
+									!selectedService.order
 								}
-								await statusMutation.mutateAsync({
-									orderId: selectedService.order.id,
-									serviceId: selectedService.id,
-									payload: {
-										status: selectedStatus,
-										note: note.trim() || undefined,
-									},
-								});
-							}}
-						>
-							Update status
-						</Button>
-
-						<Field>
-							<FieldLabel htmlFor="worker-photo-type">Photo Type</FieldLabel>
-							<Select
-								value={photoType}
-								onValueChange={(value) =>
-									setPhotoType(
-										(value ??
-											"progress") as SaveOrderServicePhotoPayload["photo_type"],
-									)
-								}
-							>
-								<SelectTrigger id="worker-photo-type" className="h-10 w-full">
-									<SelectValue placeholder="Select photo type" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="dropoff">dropoff</SelectItem>
-									<SelectItem value="progress">progress</SelectItem>
-									<SelectItem value="pickup">pickup</SelectItem>
-									<SelectItem value="refund">refund</SelectItem>
-								</SelectContent>
-							</Select>
-						</Field>
-
-						<input
-							type="file"
-							accept="image/jpeg,image/png,image/webp,image/heic"
-							onChange={(event) =>
-								setPhotoFile(event.target.files?.[0] ?? null)
-							}
-						/>
-
-						<Button
-							variant="outline"
-							disabled={
-								uploadMutation.isPending || !photoFile || !selectedService.order
-							}
-							onClick={async () => {
-								if (!(photoFile && selectedService.order)) {
-									return;
-								}
-
-								await uploadMutation.mutateAsync({
-									orderId: selectedService.order.id,
-									serviceId: selectedService.id,
-									file: photoFile,
-									photoType,
-								});
-							}}
-						>
-							Upload photo
-						</Button>
-					</CardContent>
-				</Card>
-			) : null}
-
-			<Card>
-				<CardHeader>
-					<CardTitle>My Jobs</CardTitle>
-				</CardHeader>
-				<CardContent className="grid gap-2">
-					{myJobsQuery.isPending ? (
-						<p className="text-sm text-muted-foreground">Loading jobs...</p>
-					) : myJobsQuery.data?.length ? (
-						myJobsQuery.data.map((job) => (
-							<button
-								type="button"
-								key={job.id}
-								className="grid gap-1 rounded-none border p-3 text-left"
 								onClick={async () => {
-									if (!job.item_code) {
+									if (!(photoFile && selectedService.order)) {
 										return;
 									}
-									setItemCode(job.item_code);
-									setSelectedItemCode(job.item_code);
-									await lookupMutation.mutateAsync(job.item_code);
+
+									await uploadMutation.mutateAsync({
+										orderId: selectedService.order.id,
+										serviceId: selectedService.id,
+										file: photoFile,
+										photoType,
+									});
 								}}
 							>
-								<div className="flex items-center justify-between gap-2">
-									<p className="font-medium">{job.item_code ?? `#${job.id}`}</p>
-									<Badge
-										variant={getOrderServiceStatusBadgeVariant(job.status)}
-									>
-										{formatOrderServiceStatus(job.status)}
-									</Badge>
-								</div>
-								<p className="text-xs text-muted-foreground">
-									{job.service_name}
-								</p>
-								<p className="text-xs text-muted-foreground">
-									{job.color ?? "-"} / {job.shoe_brand ?? "-"} /{" "}
-									{job.shoe_size ?? "-"}
-								</p>
-							</button>
-						))
-					) : (
-						<p className="text-sm text-muted-foreground">No assigned jobs.</p>
-					)}
-				</CardContent>
-			</Card>
+								Upload photo
+							</Button>
+						</CardContent>
+					</Card>
+				) : null}
 
-			{selectedItemCode ? (
-				<Button
-					variant="outline"
-					onClick={() => {
-						setSelectedItemCode("");
-						setItemCode("");
-						setNote("");
-						setPhotoFile(null);
-						lookupMutation.reset();
-					}}
-					icon={<X className="size-4" weight="duotone" />}
-				>
-					Clear selected item
-				</Button>
-			) : null}
-		</div>
+				<Card>
+					<CardHeader>
+						<CardTitle>My Jobs</CardTitle>
+					</CardHeader>
+					<CardContent className="grid gap-2">
+						{myJobsQuery.isPending ? (
+							<p className="text-sm text-muted-foreground">Loading jobs...</p>
+						) : myJobsQuery.data?.length ? (
+							myJobsQuery.data.map((job) => (
+								<button
+									type="button"
+									key={job.id}
+									className="grid gap-1 rounded-none border p-3 text-left"
+									onClick={async () => {
+										if (!job.item_code) {
+											return;
+										}
+										setItemCode(job.item_code);
+										setSelectedItemCode(job.item_code);
+										await lookupMutation.mutateAsync(job.item_code);
+									}}
+								>
+									<div className="flex items-center justify-between gap-2">
+										<p className="font-medium">
+											{job.item_code ?? `#${job.id}`}
+										</p>
+										<Badge
+											variant={getOrderServiceStatusBadgeVariant(job.status)}
+										>
+											{formatOrderServiceStatus(job.status)}
+										</Badge>
+									</div>
+									<p className="text-xs text-muted-foreground">
+										{job.service_name}
+									</p>
+									<p className="text-xs text-muted-foreground">
+										{job.color ?? "-"} / {job.shoe_brand ?? "-"} /{" "}
+										{job.shoe_size ?? "-"}
+									</p>
+								</button>
+							))
+						) : (
+							<p className="text-sm text-muted-foreground">No assigned jobs.</p>
+						)}
+					</CardContent>
+				</Card>
+
+				{selectedItemCode ? (
+					<Button
+						variant="outline"
+						onClick={() => {
+							setSelectedItemCode("");
+							setItemCode("");
+							setNote("");
+							setPhotoFile(null);
+							lookupMutation.reset();
+						}}
+						icon={<X className="size-4" weight="duotone" />}
+					>
+						Clear selected item
+					</Button>
+				) : null}
+			</div>
+		</>
 	);
 }

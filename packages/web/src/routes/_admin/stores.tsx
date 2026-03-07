@@ -4,9 +4,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useCallback, useMemo } from "react";
 import { DataTable } from "@/components/data-table";
+import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
 	StoreForm,
 	type StoreFormState,
@@ -139,11 +140,12 @@ function StoresPage() {
 	);
 
 	return (
-		<div className="grid gap-4">
-			<Card>
-				<CardHeader className="flex flex-row items-center justify-between space-y-0">
-					<CardTitle>Store List</CardTitle>
-					<div className="flex items-center gap-2">
+		<>
+			<PageHeader
+				title="Stores"
+				description="Insert and edit store master data."
+				actions={
+					<>
 						<Badge
 							variant={isPending ? "secondary" : "outline"}
 						>{`${storeCount} items`}</Badge>
@@ -153,12 +155,16 @@ function StoresPage() {
 						>
 							Add Store
 						</Button>
-					</div>
-				</CardHeader>
-				<CardContent>
-					<DataTable columns={columns} data={stores} isLoading={isPending} />
-				</CardContent>
-			</Card>
-		</div>
+					</>
+				}
+			/>
+			<div className="grid gap-4">
+				<Card>
+					<CardContent className="pt-6">
+						<DataTable columns={columns} data={stores} isLoading={isPending} />
+					</CardContent>
+				</Card>
+			</div>
+		</>
 	);
 }

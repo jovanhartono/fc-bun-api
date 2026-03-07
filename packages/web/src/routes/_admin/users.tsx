@@ -8,18 +8,11 @@ import { useCallback, useMemo, useState } from "react";
 import { type SubmitHandler, useForm } from "react-hook-form";
 import { z } from "zod";
 import { DataTable } from "@/components/data-table";
+import { PageHeader } from "@/components/page-header";
 import { TablePagination } from "@/components/table-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-	Sheet,
-	SheetContent,
-	SheetDescription,
-	SheetHeader,
-	SheetTitle,
-	SheetTrigger,
-} from "@/components/ui/sheet";
+import { Card, CardContent } from "@/components/ui/card";
 import {
 	UserForm,
 	type UserFormState,
@@ -32,6 +25,7 @@ import {
 	updateUserStores,
 } from "@/lib/api";
 import { storesQueryOptions, usersPageQueryOptions } from "@/lib/query-options";
+import { useSheet } from "@/stores/sheet-store";
 
 const PAGE_SIZE = 25;
 
@@ -73,8 +67,8 @@ function UsersPage() {
 	const navigate = useNavigate({ from: Route.fullPath });
 	const search = Route.useSearch();
 	const queryClient = useQueryClient();
+	const { openSheet, closeSheet } = useSheet();
 	const [editingUser, setEditingUser] = useState<User | null>(null);
-	const [isSheetOpen, setSheetOpen] = useState(false);
 
 	const form = useForm<UserFormState>({
 		resolver: zodResolver(userFormSchema),
@@ -98,8 +92,8 @@ function UsersPage() {
 	const resetForm = useCallback(() => {
 		form.reset(defaultForm);
 		setEditingUser(null);
-		setSheetOpen(false);
-	}, [form]);
+		closeSheet();
+	}, [form, closeSheet]);
 
 	const createMutation = useMutation({
 		mutationKey: ["create-user"],
@@ -119,6 +113,51 @@ function UsersPage() {
 
 	const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
+	const handleSubmit: SubmitHandler<UserFormState> = useCallback(
+		async (values) => {
+			if (editingUser) {
+				const payload: Parameters<typeof updateUser>[1] = {
+					username: values.username,
+					name: values.name,
+					role: values.role,
+					is_active: values.is_active,
+				};
+				await updateMutation.mutateAsync({
+					id: editingUser.id,
+					payload,
+				});
+				await updateUserStores(editingUser.id, {
+					store_ids: values.store_ids,
+				});
+				await queryClient.invalidateQueries({ queryKey: ["users"] });
+				resetForm();
+				return;
+			}
+
+			const payload: Parameters<typeof createUser>[0] = {
+				username: values.username,
+				name: values.name,
+				password: values.password,
+				confirm_password: values.confirm_password,
+				role: values.role,
+				is_active: values.is_active,
+			};
+
+			const createdUser = await createMutation.mutateAsync(payload);
+			const createdUserId = (createdUser as { data?: { id?: number } }).data
+				?.id;
+			if (createdUserId && values.store_ids.length > 0) {
+				await updateUserStores(createdUserId, {
+					store_ids: values.store_ids,
+				});
+			}
+			await queryClient.invalidateQueries({ queryKey: ["users"] });
+			await queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
+			resetForm();
+		},
+		[createMutation, editingUser, queryClient, resetForm, updateMutation],
+	);
+
 	const handleEdit = useCallback(
 		(user: User) => {
 			setEditingUser(user);
@@ -131,10 +170,51 @@ function UsersPage() {
 				is_active: user.is_active,
 				store_ids: user.userStores.map((item) => item.store_id),
 			});
-			setSheetOpen(true);
+			openSheet({
+				title: "Edit User",
+				description: `Editing ID ${user.id}`,
+				content: (
+					<UserForm
+						control={form.control}
+						handleSubmit={form.handleSubmit}
+						onSubmit={handleSubmit}
+						isSubmitting={isSubmitting}
+						isEditing={true}
+						stores={storesQuery.data ?? []}
+						onReset={resetForm}
+					/>
+				),
+			});
 		},
-		[form],
+		[form, openSheet, isSubmitting, storesQuery.data, resetForm, handleSubmit],
 	);
+
+	const handleCreate = useCallback(() => {
+		setEditingUser(null);
+		form.reset(defaultForm);
+		openSheet({
+			title: "Add User",
+			description: "Create a new user",
+			content: (
+				<UserForm
+					control={form.control}
+					handleSubmit={form.handleSubmit}
+					onSubmit={handleSubmit}
+					isSubmitting={isSubmitting}
+					isEditing={false}
+					stores={storesQuery.data ?? []}
+					onReset={resetForm}
+				/>
+			),
+		});
+	}, [
+		form,
+		openSheet,
+		isSubmitting,
+		storesQuery.data,
+		resetForm,
+		handleSubmit,
+	]);
 
 	const columns = useMemo<ColumnDef<User>[]>(
 		() => [
@@ -187,93 +267,28 @@ function UsersPage() {
 		[handleEdit, storeMap],
 	);
 
-	const handleSubmit: SubmitHandler<UserFormState> = async (values) => {
-		if (editingUser) {
-			const payload: Parameters<typeof updateUser>[1] = {
-				username: values.username,
-				name: values.name,
-				role: values.role,
-				is_active: values.is_active,
-			};
-			await updateMutation.mutateAsync({
-				id: editingUser.id,
-				payload,
-			});
-			await updateUserStores(editingUser.id, {
-				store_ids: values.store_ids,
-			});
-			await queryClient.invalidateQueries({ queryKey: ["users"] });
-			resetForm();
-			return;
-		}
-
-		const payload: Parameters<typeof createUser>[0] = {
-			username: values.username,
-			name: values.name,
-			password: values.password,
-			confirm_password: values.confirm_password,
-			role: values.role,
-			is_active: values.is_active,
-		};
-
-		const createdUser = await createMutation.mutateAsync(payload);
-		const createdUserId = (createdUser as { data?: { id?: number } }).data?.id;
-		if (createdUserId && values.store_ids.length > 0) {
-			await updateUserStores(createdUserId, {
-				store_ids: values.store_ids,
-			});
-		}
-		await queryClient.invalidateQueries({ queryKey: ["users"] });
-		await queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
-		resetForm();
-	};
-
 	return (
-		<div className="grid gap-4">
-			<Sheet open={isSheetOpen} onOpenChange={setSheetOpen}>
-				<SheetContent side="right" className="w-full max-w-xl overflow-y-auto">
-					<SheetHeader>
-						<SheetTitle>{editingUser ? "Edit User" : "Add User"}</SheetTitle>
-						<SheetDescription>
-							{editingUser
-								? `Editing ID ${editingUser.id}`
-								: "Create a new user"}
-						</SheetDescription>
-					</SheetHeader>
-					<UserForm
-						control={form.control}
-						handleSubmit={form.handleSubmit}
-						onSubmit={handleSubmit}
-						isSubmitting={isSubmitting}
-						isEditing={!!editingUser}
-						stores={storesQuery.data ?? []}
-						onReset={resetForm}
-					/>
-				</SheetContent>
-
+		<>
+			<PageHeader
+				title="Users"
+				description="Insert and edit users with role management."
+				actions={
+					<>
+						<Badge
+							variant={usersQuery.isPending ? "secondary" : "outline"}
+						>{`${userCount} items`}</Badge>
+						<Button
+							icon={<PlusIcon className="size-4" weight="duotone" />}
+							onClick={handleCreate}
+						>
+							Add User
+						</Button>
+					</>
+				}
+			/>
+			<div className="grid gap-4">
 				<Card>
-					<CardHeader className="flex flex-row items-center justify-between space-y-0">
-						<CardTitle>User List</CardTitle>
-						<div className="flex items-center gap-2">
-							<Badge
-								variant={usersQuery.isPending ? "secondary" : "outline"}
-							>{`${userCount} items`}</Badge>
-							<SheetTrigger
-								render={
-									<Button
-										icon={<PlusIcon className="size-4" weight="duotone" />}
-										onClick={() => {
-											setEditingUser(null);
-											form.reset(defaultForm);
-										}}
-									/>
-								}
-							>
-								Add User
-							</SheetTrigger>
-						</div>
-					</CardHeader>
-					<CardContent>
+					<CardContent className="pt-6">
 						<div className="grid gap-4">
 							<DataTable
 								columns={columns}
@@ -295,7 +310,7 @@ function UsersPage() {
 						</div>
 					</CardContent>
 				</Card>
-			</Sheet>
-		</div>
+			</div>
+		</>
 	);
 }

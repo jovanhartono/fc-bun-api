@@ -120,6 +120,29 @@ function TrackOrderPage() {
 										</Badge>
 									</div>
 									<p>{`Color/Brand/Size: ${item.color ?? "-"} / ${item.shoe_brand ?? "-"} / ${item.shoe_size ?? "-"}`}</p>
+									{item.images.length > 0 ? (
+										<div className="mt-2 grid gap-2 sm:grid-cols-2">
+											{item.images.map((image) => (
+												<a
+													key={image.id}
+													href={image.image_url}
+													target="_blank"
+													rel="noopener"
+													className="grid gap-2 border p-2"
+												>
+													<img
+														src={image.image_url}
+														alt={`${image.photo_type} for ${item.item_code ?? `service-${item.id}`}`}
+														className="aspect-[4/3] w-full object-cover"
+														loading="lazy"
+													/>
+													<p className="text-xs text-muted-foreground">
+														{`${image.photo_type} - ${new Date(image.created_at).toLocaleString()}`}
+													</p>
+												</a>
+											))}
+										</div>
+									) : null}
 									<div className="mt-2 grid gap-1 border-t pt-2">
 										{item.statusLogs.length > 0 ? (
 											item.statusLogs
@@ -129,12 +152,16 @@ function TrackOrderPage() {
 														new Date(b.created_at).getTime(),
 												)
 												.map((log) => (
-													<p
-														key={log.id}
-														className="text-xs text-muted-foreground"
-													>
-														{`${formatOrderServiceStatus(log.to_status)} at ${new Date(log.created_at).toLocaleString()}`}
-													</p>
+													<div key={log.id} className="grid gap-1">
+														<p className="text-xs text-muted-foreground">
+															{`${formatOrderServiceStatus(log.to_status)} at ${new Date(log.created_at).toLocaleString()}`}
+														</p>
+														{log.note ? (
+															<p className="text-xs text-muted-foreground">
+																{log.note}
+															</p>
+														) : null}
+													</div>
 												))
 										) : (
 											<p className="text-xs text-muted-foreground">

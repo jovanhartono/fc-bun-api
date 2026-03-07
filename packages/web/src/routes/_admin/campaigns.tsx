@@ -2,24 +2,13 @@ import { PencilSimpleLine, Plus, Trash } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
-import { useState } from "react";
 import { z } from "zod";
 import { DataTable } from "@/components/data-table";
+import { PageHeader } from "@/components/page-header";
 import { TablePagination } from "@/components/table-pagination";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-	AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
 	Select,
 	SelectContent,
@@ -45,6 +34,7 @@ import {
 } from "@/lib/query-options";
 import { formatIDRCurrency } from "@/shared/utils";
 import { getCurrentUser } from "@/stores/auth-store";
+import { useDialog } from "@/stores/dialog-store";
 import { useSheet } from "@/stores/sheet-store";
 
 const campaignsSearchSchema = z.object({
@@ -117,43 +107,40 @@ function DeleteCampaignButton({
 	isPending: boolean;
 	onConfirm: (campaignId: number) => Promise<void>;
 }) {
-	const [open, setOpen] = useState(false);
+	const { openDialog, closeDialog } = useDialog();
 
 	return (
-		<AlertDialog open={open} onOpenChange={setOpen}>
-			<AlertDialogTrigger
-				render={
-					<Button
-						variant="outline"
-						size="sm"
-						disabled={disabled || isPending}
-						icon={<Trash className="size-4" weight="duotone" />}
-					/>
-				}
-			>
-				Delete
-			</AlertDialogTrigger>
-			<AlertDialogContent>
-				<AlertDialogHeader>
-					<AlertDialogTitle>Delete campaign?</AlertDialogTitle>
-					<AlertDialogDescription>
-						{`This will permanently remove ${campaign.code} (${campaign.name}). This action cannot be undone.`}
-					</AlertDialogDescription>
-				</AlertDialogHeader>
-				<AlertDialogFooter>
-					<AlertDialogCancel>Cancel</AlertDialogCancel>
-					<AlertDialogAction
-						disabled={isPending}
-						onClick={async () => {
-							await onConfirm(campaign.id);
-							setOpen(false);
-						}}
-					>
-						Delete campaign
-					</AlertDialogAction>
-				</AlertDialogFooter>
-			</AlertDialogContent>
-		</AlertDialog>
+		<Button
+			variant="outline"
+			size="sm"
+			disabled={disabled || isPending}
+			icon={<Trash className="size-4" weight="duotone" />}
+			onClick={() => {
+				openDialog({
+					title: "Delete campaign?",
+					description: `This will permanently remove ${campaign.code} (${campaign.name}). This action cannot be undone.`,
+					footer: (
+						<>
+							<Button variant="outline" onClick={closeDialog}>
+								Cancel
+							</Button>
+							<Button
+								variant="destructive"
+								disabled={isPending}
+								onClick={async () => {
+									await onConfirm(campaign.id);
+									closeDialog();
+								}}
+							>
+								Delete campaign
+							</Button>
+						</>
+					),
+				});
+			}}
+		>
+			Delete
+		</Button>
 	);
 }
 
@@ -342,35 +329,12 @@ function CampaignsPage() {
 	];
 
 	return (
-		<div className="grid gap-4">
-			<Card>
-				<CardHeader className="flex flex-row items-center justify-between space-y-0">
-					<CardTitle>Campaign List</CardTitle>
-					<div className="flex items-center gap-2">
-						<Select
-							value={search.status}
-							onValueChange={(value) => {
-								void navigate({
-									search: (prev) => ({
-										...prev,
-										page: 1,
-										status:
-											(value as z.infer<
-												typeof campaignsSearchSchema
-											>["status"]) ?? "all",
-									}),
-								});
-							}}
-						>
-							<SelectTrigger className="h-10 min-w-40">
-								<SelectValue placeholder="Filter status" />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="all">All status</SelectItem>
-								<SelectItem value="active">Active only</SelectItem>
-								<SelectItem value="inactive">Inactive only</SelectItem>
-							</SelectContent>
-						</Select>
+		<>
+			<PageHeader
+				title="Campaigns"
+				description="Create and manage discount campaigns per store."
+				actions={
+					<>
 						<Badge variant={campaignsQuery.isPending ? "secondary" : "outline"}>
 							{`${campaignsMeta?.total ?? 0} items`}
 						</Badge>
@@ -381,30 +345,60 @@ function CampaignsPage() {
 						>
 							Add Campaign
 						</Button>
-					</div>
-				</CardHeader>
-				<CardContent>
-					<div className="grid gap-4">
-						<DataTable
-							columns={columns}
-							data={campaigns}
-							isLoading={campaignsQuery.isPending || storesQuery.isPending}
-						/>
-						<TablePagination
-							meta={campaignsMeta}
-							isLoading={campaignsQuery.isPending}
-							onPageChange={(page) => {
-								void navigate({
-									search: (prev) => ({
-										...prev,
-										page,
-									}),
-								});
-							}}
-						/>
-					</div>
-				</CardContent>
-			</Card>
-		</div>
+					</>
+				}
+			/>
+			<div className="grid gap-4">
+				<Card>
+					<CardContent className="pt-6">
+						<div className="mb-4 flex items-center gap-2">
+							<Select
+								value={search.status}
+								onValueChange={(value) => {
+									void navigate({
+										search: (prev) => ({
+											...prev,
+											page: 1,
+											status:
+												(value as z.infer<
+													typeof campaignsSearchSchema
+												>["status"]) ?? "all",
+										}),
+									});
+								}}
+							>
+								<SelectTrigger className="h-10 min-w-40 w-max">
+									<SelectValue placeholder="Filter status" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="all">All status</SelectItem>
+									<SelectItem value="active">Active only</SelectItem>
+									<SelectItem value="inactive">Inactive only</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
+						<div className="grid gap-4">
+							<DataTable
+								columns={columns}
+								data={campaigns}
+								isLoading={campaignsQuery.isPending || storesQuery.isPending}
+							/>
+							<TablePagination
+								meta={campaignsMeta}
+								isLoading={campaignsQuery.isPending}
+								onPageChange={(page) => {
+									void navigate({
+										search: (prev) => ({
+											...prev,
+											page,
+										}),
+									});
+								}}
+							/>
+						</div>
+					</CardContent>
+				</Card>
+			</div>
+		</>
 	);
 }
