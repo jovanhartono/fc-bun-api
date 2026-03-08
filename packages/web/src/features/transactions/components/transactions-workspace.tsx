@@ -40,17 +40,14 @@ export function TransactionsWorkspace({
 				form={viewModel.form}
 				selectedStore={viewModel.selectedStore}
 				cartCount={viewModel.cartCount}
-				selectedCustomerLabel={viewModel.selectedCustomerLabel}
 				selectedPaymentMethodLabel={viewModel.selectedPaymentMethodLabel}
 				selectedCampaign={viewModel.selectedCampaign}
 				selectedStoreNumber={viewModel.selectedStoreNumber}
 				paymentStatus={viewModel.paymentStatus}
 				submitError={viewModel.submitError}
-				customerOptions={viewModel.customerOptions}
 				campaignOptions={viewModel.campaignOptions}
 				paymentMethodOptions={viewModel.paymentMethodOptions}
 				campaignsLoading={viewModel.campaignsLoading}
-				customersLoading={viewModel.customersLoading}
 				paymentMethodsLoading={viewModel.paymentMethodsLoading}
 				cartProductRows={viewModel.cartProductRows}
 				cartServiceRows={viewModel.cartServiceRows}

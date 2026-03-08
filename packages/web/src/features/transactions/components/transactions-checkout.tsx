@@ -24,6 +24,7 @@ import {
 	SheetTitle,
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
+import { CustomerAutocomplete } from "@/features/orders/components/customer-autocomplete";
 import type {
 	ProductCartDisplayLine,
 	ServiceCartDisplayLine,
@@ -37,17 +38,14 @@ type TransactionsCheckoutProps = {
 	form: UseFormReturn<TransactionDraftValues>;
 	selectedStore?: Store;
 	selectedStoreNumber?: number;
-	selectedCustomerLabel?: string;
 	selectedPaymentMethodLabel?: string;
 	selectedCampaign?: Campaign;
 	paymentStatus: "paid" | "unpaid";
 	cartCount: number;
 	submitError: string;
-	customerOptions: ComboboxOption[];
 	campaignOptions: ComboboxOption[];
 	paymentMethodOptions: ComboboxOption[];
 	campaignsLoading: boolean;
-	customersLoading: boolean;
 	paymentMethodsLoading: boolean;
 	cartProductRows: ProductCartDisplayLine[];
 	cartServiceRows: ServiceCartDisplayLine[];
@@ -102,11 +100,9 @@ export function TransactionsCheckout({
 	paymentStatus,
 	cartCount,
 	submitError,
-	customerOptions,
 	campaignOptions,
 	paymentMethodOptions,
 	campaignsLoading,
-	customersLoading,
 	paymentMethodsLoading,
 	cartProductRows,
 	cartServiceRows,
@@ -132,13 +128,6 @@ export function TransactionsCheckout({
 	const orderMeta = useMemo(
 		() => [
 			{
-				label: "Customer",
-				value: selectedCustomerLabel ?? "Pending",
-				variant: selectedCustomerId
-					? ("secondary" as const)
-					: ("outline" as const),
-			},
-			{
 				label: "Campaign",
 				value: selectedCampaign?.code ?? "None",
 				variant: selectedCampaignId
@@ -161,8 +150,6 @@ export function TransactionsCheckout({
 			paymentStatus,
 			selectedCampaign?.code,
 			selectedCampaignId,
-			selectedCustomerId,
-			selectedCustomerLabel,
 			selectedPaymentMethodLabel,
 		],
 	);
@@ -209,6 +196,18 @@ export function TransactionsCheckout({
 						</div>
 					</CardHeader>
 					<CardContent className="grid gap-5">
+						<Controller
+							name="selectedCustomerId"
+							control={form.control}
+							render={({ field, fieldState }) => (
+								<CustomerAutocomplete
+									value={field.value}
+									onValueChange={field.onChange}
+									error={fieldState.error}
+									required
+								/>
+							)}
+						/>
 						<div className="grid max-h-[52vh] gap-3 overflow-y-auto pr-2">
 							{cartProductRows.length === 0 && cartServiceRows.length === 0 ? (
 								<div className="border border-dashed border-border p-4 text-sm text-muted-foreground">
@@ -457,31 +456,6 @@ export function TransactionsCheckout({
 					</SheetHeader>
 
 					<div className="grid gap-5 overflow-y-auto p-4">
-						<Controller
-							name="selectedCustomerId"
-							control={form.control}
-							render={({ field, fieldState }) => (
-								<Field data-invalid={fieldState.invalid}>
-									<FieldLabel htmlFor="transaction-customer" asterisk>
-										Customer
-									</FieldLabel>
-									<Combobox
-										id="transaction-customer"
-										required
-										triggerClassName="h-10 w-full text-sm"
-										options={customerOptions}
-										value={field.value}
-										onValueChange={field.onChange}
-										loading={customersLoading}
-										placeholder="Select customer"
-										searchPlaceholder="Search customer..."
-										emptyText="No customer found"
-									/>
-									<FieldError errors={[fieldState.error]} />
-								</Field>
-							)}
-						/>
-
 						<Controller
 							name="selectedCampaignId"
 							control={form.control}

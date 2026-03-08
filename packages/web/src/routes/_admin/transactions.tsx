@@ -24,7 +24,6 @@ export const Route = createFileRoute("/_admin/transactions")({
 			context.queryClient.ensureQueryData(productsQueryOptions()),
 			context.queryClient.ensureQueryData(servicesQueryOptions()),
 			context.queryClient.ensureQueryData(paymentMethodsQueryOptions()),
-			context.queryClient.ensureQueryData(customersQueryOptions()),
 		]);
 
 		if (!currentUser) {

@@ -6,14 +6,17 @@ import { customersTable } from "@/db/schema";
 export function listCustomers({
   limit,
   offset,
+  whereClause,
 }: {
   limit: number;
   offset: number;
+  whereClause?: SQL<unknown>;
 }) {
   return db.query.customersTable.findMany({
     orderBy: [asc(customersTable.id)],
     limit,
     offset,
+    where: whereClause,
     with: {
       originStore: {
         columns: {

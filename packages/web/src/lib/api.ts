@@ -149,6 +149,7 @@ export type FetchOrdersQuery = {
 export type FetchCustomersQuery = {
 	limit?: number;
 	offset?: number;
+	search?: string;
 };
 
 export type FetchUsersQuery = {
@@ -281,6 +282,7 @@ export async function fetchCustomersPage(
 							...(query.offset !== undefined
 								? { offset: String(query.offset) }
 								: {}),
+							...(query.search ? { search: query.search } : {}),
 						}
 					: undefined,
 		}),

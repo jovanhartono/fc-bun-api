@@ -1,5 +1,6 @@
 import type { InferInsertModel } from "drizzle-orm";
-import type { customersTable } from "@/db/schema";
+import { ilike, or } from "drizzle-orm";
+import { customersTable } from "@/db/schema";
 import {
   countCustomers,
   createCustomer,
@@ -12,12 +13,21 @@ import { buildPaginationMeta, normalizePagination } from "@/utils/pagination";
 
 export async function getCustomers(query?: GetCustomersQuery) {
   const pagination = normalizePagination(query, { maxPageSize: 100 });
+  const searchPrefix = query?.search ? `%${query.search}%` : undefined;
+  const whereClause = searchPrefix
+    ? or(
+        ilike(customersTable.name, searchPrefix),
+        ilike(customersTable.phone_number, searchPrefix)
+      )
+    : undefined;
+
   const [items, total] = await Promise.all([
     listCustomers({
       limit: pagination.limit,
       offset: pagination.offset,
+      whereClause,
     }),
-    countCustomers(),
+    countCustomers(whereClause),
   ]);
 
   return {

@@ -27,7 +27,6 @@ import {
 	campaignsQueryOptions,
 	categoriesQueryOptions,
 	currentUserDetailQueryOptions,
-	customersQueryOptions,
 	paymentMethodsQueryOptions,
 	productsQueryOptions,
 	servicesQueryOptions,
@@ -195,7 +194,6 @@ export function useTransactionsPage() {
 	const categoriesQuery = useQuery(categoriesQueryOptions());
 	const productsQuery = useQuery(productsQueryOptions());
 	const servicesQuery = useQuery(servicesQueryOptions());
-	const customersQuery = useQuery(customersQueryOptions());
 	const paymentMethodsQuery = useQuery(paymentMethodsQueryOptions());
 	const currentUserDetailQuery = useQuery({
 		...currentUserDetailQueryOptions(currentUser?.id ?? -1),
@@ -247,7 +245,6 @@ export function useTransactionsPage() {
 		categoriesQuery.isPending ||
 		productsQuery.isPending ||
 		servicesQuery.isPending ||
-		customersQuery.isPending ||
 		paymentMethodsQuery.isPending ||
 		currentUserDetailQuery.isPending;
 
@@ -329,14 +326,6 @@ export function useTransactionsPage() {
 
 	const activeItems = mode === "products" ? filteredProducts : filteredServices;
 
-	const customerOptions = useMemo(
-		() =>
-			(customersQuery.data ?? []).map((customer) => ({
-				value: String(customer.id),
-				label: `${customer.name} ${customer.phone_number}`,
-			})),
-		[customersQuery.data],
-	);
 	const paymentMethodOptions = useMemo(
 		() => [
 			{ value: "none", label: "No payment method" },
@@ -451,9 +440,6 @@ export function useTransactionsPage() {
 	const cartCount =
 		productCart.reduce((sum, item) => sum + item.qty, 0) + serviceCart.length;
 
-	const selectedCustomerLabel = selectedCustomerId
-		? findOptionLabel(customerOptions, selectedCustomerId)
-		: undefined;
 	const selectedPaymentMethodLabel = selectedPaymentMethodId
 		? findOptionLabel(paymentMethodOptions, selectedPaymentMethodId)
 		: undefined;
@@ -590,7 +576,6 @@ export function useTransactionsPage() {
 		selectedCustomerId,
 		selectedCampaignId,
 		selectedPaymentMethodId,
-		selectedCustomerLabel,
 		selectedPaymentMethodLabel,
 		paymentStatus,
 		manualDiscount,
@@ -606,11 +591,9 @@ export function useTransactionsPage() {
 		productTabs,
 		serviceTabs,
 		activeItems,
-		customerOptions,
 		campaignOptions,
 		paymentMethodOptions,
 		campaignsLoading: campaignsQuery.isFetching,
-		customersLoading: customersQuery.isFetching,
 		paymentMethodsLoading: paymentMethodsQuery.isFetching,
 		cartProductRows,
 		cartServiceRows,
