@@ -94,7 +94,6 @@ export function TransactionsCheckout({
 	form,
 	selectedStore,
 	selectedStoreNumber,
-	selectedCustomerLabel,
 	selectedPaymentMethodLabel,
 	selectedCampaign,
 	paymentStatus,
@@ -170,30 +169,18 @@ export function TransactionsCheckout({
 								{cartCount === 1 ? "" : "s"}
 							</p>
 						</div>
-						<div className="flex gap-2">
-							<Button
-								type="button"
-								variant="outline"
-								size="sm"
-								onClick={onResetCart}
-								disabled={
-									cartCount === 0 && !selectedCustomerId && !selectedCampaignId
-								}
-								icon={<Trash className="size-4" weight="duotone" />}
-							>
-								Reset
-							</Button>
-							<Button
-								type="button"
-								size="sm"
-								variant="outline"
-								onClick={() => setPaymentSheetOpen(true)}
-								disabled={cartCount === 0}
-								icon={<CreditCard className="size-4" weight="duotone" />}
-							>
-								Payment
-							</Button>
-						</div>
+						<Button
+							type="button"
+							variant="outline"
+							size="sm"
+							onClick={onResetCart}
+							disabled={
+								cartCount === 0 && !selectedCustomerId && !selectedCampaignId
+							}
+							icon={<Trash className="size-4" weight="duotone" />}
+						>
+							Reset
+						</Button>
 					</CardHeader>
 					<CardContent className="grid gap-5">
 						<Controller
@@ -438,7 +425,7 @@ export function TransactionsCheckout({
 								disabled={cartCount === 0}
 								icon={<CreditCard className="size-4" weight="duotone" />}
 							>
-								Review Payment
+								Review Checkout
 							</Button>
 						</div>
 					</CardContent>

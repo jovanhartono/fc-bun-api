@@ -33,6 +33,7 @@ import {
 	storesQueryOptions,
 } from "@/lib/query-options";
 import { getCurrentUser } from "@/stores/auth-store";
+import { useTransactionPreferencesStore } from "@/stores/transaction-preferences-store";
 
 const defaultDraftValues: TransactionDraftValues = {
 	selectedStoreId: "",
@@ -128,6 +129,16 @@ export function useTransactionsPage() {
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
 	const currentUser = getCurrentUser();
+	const currentUserKey = currentUser ? String(currentUser.id) : "";
+	const persistedSelectedStoreId = useTransactionPreferencesStore((state) =>
+		currentUserKey ? (state.selectedStoreIdByUser[currentUserKey] ?? "") : "",
+	);
+	const setPersistedSelectedStoreId = useTransactionPreferencesStore(
+		(state) => state.setSelectedStoreId,
+	);
+	const clearPersistedSelectedStoreId = useTransactionPreferencesStore(
+		(state) => state.clearSelectedStoreId,
+	);
 	const [mode, setMode] = useState<"products" | "services">("services");
 	const [searchTerm, setSearchTerm] = useState("");
 	const [activeProductCategory, setActiveProductCategory] = useState<
@@ -214,18 +225,53 @@ export function useTransactionsPage() {
 	}, [currentUser?.role, storesQuery.data, userStoreIds]);
 
 	useEffect(() => {
-		if (currentUser?.role === "admin" || selectedStoreId) {
+		const canResolveStoreSelection =
+			storesQuery.isSuccess &&
+			(currentUser?.role === "admin" || currentUserDetailQuery.isSuccess);
+
+		if (!canResolveStoreSelection || !currentUserKey) {
 			return;
 		}
 
-		const firstStoreId = userStoreIds[0];
+		const hasPersistedVisibleStore =
+			persistedSelectedStoreId.length > 0 &&
+			visibleStores.some(
+				(store) => String(store.id) === persistedSelectedStoreId,
+			);
+		const fallbackStoreId =
+			currentUser?.role === "admin" ? "" : String(visibleStores[0]?.id ?? "");
+		const nextStoreId = hasPersistedVisibleStore
+			? persistedSelectedStoreId
+			: fallbackStoreId;
 
-		if (firstStoreId) {
-			form.setValue("selectedStoreId", String(firstStoreId), {
+		if (selectedStoreId !== nextStoreId) {
+			form.setValue("selectedStoreId", nextStoreId, {
 				shouldDirty: false,
 			});
 		}
-	}, [currentUser?.role, form, selectedStoreId, userStoreIds]);
+
+		if (nextStoreId) {
+			if (persistedSelectedStoreId !== nextStoreId) {
+				setPersistedSelectedStoreId(currentUserKey, nextStoreId);
+			}
+			return;
+		}
+
+		if (persistedSelectedStoreId) {
+			clearPersistedSelectedStoreId(currentUserKey);
+		}
+	}, [
+		clearPersistedSelectedStoreId,
+		currentUser?.role,
+		currentUserDetailQuery.isSuccess,
+		currentUserKey,
+		form,
+		persistedSelectedStoreId,
+		selectedStoreId,
+		setPersistedSelectedStoreId,
+		storesQuery.isSuccess,
+		visibleStores,
+	]);
 
 	const selectedStoreNumber =
 		selectedStoreId && Number.isFinite(Number(selectedStoreId))
@@ -517,6 +563,9 @@ export function useTransactionsPage() {
 			shouldDirty: true,
 			shouldValidate: true,
 		});
+		if (currentUserKey) {
+			setPersistedSelectedStoreId(currentUserKey, value);
+		}
 		form.setValue("selectedCampaignId", "", {
 			shouldDirty: true,
 			shouldValidate: true,

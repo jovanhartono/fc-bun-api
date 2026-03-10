@@ -74,28 +74,28 @@ export function TransactionsCatalog({
 	return (
 		<div className="grid gap-5 self-start xl:sticky xl:top-24">
 			<div className="grid gap-4">
-				<Card className="border-border/70 bg-gradient-to-br from-card via-card to-muted/20">
+				<Card className="border-border/70 bg-linear-to-br from-card via-card to-muted/20">
 					<CardContent className="grid gap-4 p-4 sm:p-5">
 						<div className="flex items-start justify-between gap-4">
 							<div>
 								<p className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
-									Transaction Workspace
+									Order Builder
 								</p>
 								<h2 className="mt-1 text-lg font-semibold">
-									Service-first order intake
+									Pick a store and start building the order
 								</h2>
 								<p className="mt-1 text-sm text-muted-foreground">
-									Search fast, pick a category, and add items directly from the
-									catalog.
+									Choose the store, search the catalog, and add services or
+									products to the cart.
 								</p>
 							</div>
-							<Badge variant="secondary">Default: Services</Badge>
+							<Badge variant="secondary">Starts in Services</Badge>
 						</div>
 
 						<div className="grid gap-3 lg:grid-cols-[minmax(0,1.25fr)_300px]">
 							<Field>
 								<FieldLabel htmlFor="transaction-search">
-									Search Catalog
+									Search Items
 								</FieldLabel>
 								<div className="relative">
 									<MagnifyingGlass
@@ -114,7 +114,7 @@ export function TransactionsCatalog({
 
 							<Field>
 								<FieldLabel htmlFor="transaction-store" asterisk>
-									Store Context
+									Store
 								</FieldLabel>
 								<Combobox
 									id="transaction-store"
@@ -131,6 +131,11 @@ export function TransactionsCatalog({
 									emptyText="No store available"
 									disabled={!isAdmin}
 								/>
+								<p className="text-xs text-muted-foreground">
+									{isAdmin
+										? "The selected store controls campaign availability and the final order context."
+										: "Your assigned store is preselected and kept for your next visit."}
+								</p>
 							</Field>
 						</div>
 					</CardContent>
