@@ -42,7 +42,6 @@ import { getCurrentUser } from "@/stores/auth-store";
 
 const QUEUE_PAGE_SIZE = 20;
 const QUEUE_STATUS_OPTIONS = [
-	"received",
 	"queued",
 	"processing",
 	"quality_check",

@@ -84,7 +84,7 @@ function buildOrderServiceRows({
       color: item.color,
       shoe_brand: item.shoe_brand,
       shoe_size: item.shoe_size,
-      status: "received" as const,
+      status: "queued" as const,
     };
   });
 }

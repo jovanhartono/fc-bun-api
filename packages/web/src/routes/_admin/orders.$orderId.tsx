@@ -21,9 +21,12 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { OrderFulfillmentOverview } from "@/features/orders/components/order-fulfillment-overview";
+import { OrderIntakePhotoCard } from "@/features/orders/components/order-intake-photo-card";
 import { QueueServiceDetail } from "@/features/orders/components/queue-service-detail";
 import {
 	claimOrderService,
+	completeOrderPickup,
 	createOrderRefund,
 	presignOrderServicePhoto,
 	queryKeys,
@@ -39,9 +42,11 @@ import {
 	paymentMethodsQueryOptions,
 } from "@/lib/query-options";
 import {
+	formatOrderPickupState,
 	formatOrderServiceStatus,
 	formatOrderStatus,
 	formatPaymentStatus,
+	getOrderPickupStateBadgeVariant,
 	getOrderServiceStatusBadgeVariant,
 	getOrderStatusBadgeVariant,
 	getPaymentStatusBadgeVariant,
@@ -300,6 +305,17 @@ function AdminOrderDetailPage() {
 		},
 	});
 
+	const completePickupMutation = useMutation({
+		mutationFn: () => completeOrderPickup(id),
+		onSuccess: async () => {
+			toast.success("Order marked as completed");
+			await refreshOrderData();
+		},
+		onError: (error: Error) => {
+			toast.error(error.message || "Failed to complete pickup");
+		},
+	});
+
 	const uploadPhotoMutation = useMutation({
 		mutationFn: async ({
 			serviceId,
@@ -416,6 +432,11 @@ function AdminOrderDetailPage() {
 							{formatOrderStatus(detail.status)}
 						</Badge>
 						<Badge
+							variant={getOrderPickupStateBadgeVariant(detail.fulfillment)}
+						>
+							{formatOrderPickupState(detail.fulfillment)}
+						</Badge>
+						<Badge
 							variant={getPaymentStatusBadgeVariant(detail.payment_status)}
 						>
 							{formatPaymentStatus(detail.payment_status)}
@@ -423,6 +444,17 @@ function AdminOrderDetailPage() {
 					</>
 				}
 			/>
+
+			<div className="mb-6 grid gap-4">
+				<OrderFulfillmentOverview
+					order={detail}
+					canCompletePickup={detail.fulfillment.is_ready_for_pickup}
+					isCompleting={completePickupMutation.isPending}
+					onCompletePickup={async () => {
+						await completePickupMutation.mutateAsync();
+					}}
+				/>
+			</div>
 
 			<div className="mb-6 grid gap-4 md:grid-cols-3">
 				<Card>
@@ -498,6 +530,12 @@ function AdminOrderDetailPage() {
 
 			<div className="grid items-start gap-4 lg:grid-cols-12">
 				<div className="grid gap-4 lg:col-span-4">
+					<OrderIntakePhotoCard
+						order={detail}
+						canManage={user?.role === "admin" || user?.role === "cashier"}
+						onUploaded={refreshOrderData}
+					/>
+
 					{isPaymentAllowed && detail.payment_status !== "paid" ? (
 						<Card>
 							<CardHeader>
@@ -805,6 +843,8 @@ function AdminOrderDetailPage() {
 														<img
 															src={image.image_url}
 															alt={`${image.photo_type} for ${service.item_code ?? `service-${service.id}`}`}
+															width={960}
+															height={768}
 															className="aspect-4/3 w-full object-cover"
 															loading="lazy"
 														/>

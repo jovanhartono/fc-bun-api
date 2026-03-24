@@ -419,6 +419,9 @@ export const ordersTable = pgTable(
     customer_id: integer("customer_id")
       .references(() => customersTable.id)
       .notNull(),
+    intake_photo_s3_key: varchar("intake_photo_s3_key", { length: 512 }),
+    intake_photo_uploaded_at: timestamp("intake_photo_uploaded_at"),
+    intake_photo_url: varchar("intake_photo_url", { length: 255 }),
     discount_source: discountSourceEnum("discount_source")
       .default("none")
       .notNull(),
@@ -554,7 +557,7 @@ export const ordersServicesTable = pgTable(
       onDelete: "cascade",
     }),
 
-    status: orderServiceStatusEnum("status").default("received").notNull(),
+    status: orderServiceStatusEnum("status").default("queued").notNull(),
 
     subtotal: decimal("subtotal", {
       precision: 12,

@@ -21,24 +21,24 @@ import type {
   PatchOrderPaymentInput,
   PatchOrderServiceHandlerInput,
   PatchOrderServiceStatusInput,
+  PostOrderIntakePhotoPresignInput,
   PostOrderRefundInput,
   PostOrderServicePhotoInput,
   PostOrderServicePhotoPresignInput,
+  PutOrderIntakePhotoInput,
 } from "@/modules/orders/order-admin.schema";
 import {
   normalizeOrderServiceQueueQuery,
   ORDER_STATUS_TRANSITIONS,
 } from "@/modules/orders/order-admin.schema";
+import {
+  isTerminalOrderServiceStatus,
+  summarizeOrderFulfillment,
+} from "@/modules/orders/order-fulfillment";
 import type { JWTPayload } from "@/types";
 import { assertStoreAccess, getUserStoreIds } from "@/utils/authorization";
 import { buildPaginationMeta } from "@/utils/pagination";
 import { buildS3ObjectUrl, createPresignedUploadUrl } from "@/utils/s3";
-
-const ORDER_TERMINAL_SERVICE_STATUSES = new Set([
-  "picked_up",
-  "refunded",
-  "cancelled",
-]);
 
 function roundCurrencyUnit(value: number) {
   return Math.round(value);
@@ -130,22 +130,6 @@ async function getOrderServiceOrThrow(orderId: number, serviceId: number) {
   return orderService;
 }
 
-async function ensureDropoffPhotoExists(serviceId: number) {
-  const hasDropoffPhoto = await db.query.orderServicesImagesTable.findFirst({
-    where: and(
-      eq(orderServicesImagesTable.order_service_id, serviceId),
-      eq(orderServicesImagesTable.photo_type, "dropoff")
-    ),
-    columns: { id: true },
-  });
-
-  if (!hasDropoffPhoto) {
-    throw new BadRequestException(
-      "At least one dropoff photo is required before processing"
-    );
-  }
-}
-
 async function ensurePickupPhotoExists(serviceId: number) {
   const hasPickupPhoto = await db.query.orderServicesImagesTable.findFirst({
     where: and(
@@ -177,10 +161,10 @@ async function recalculateOrderStatus(orderId: number, updatedBy: number) {
   if (services.length === 0) {
     nextStatus = products > 0 ? "completed" : "created";
   } else if (
-    services.every((item) => ORDER_TERMINAL_SERVICE_STATUSES.has(item.status))
+    services.every((item) => isTerminalOrderServiceStatus(item.status))
   ) {
     nextStatus = "completed";
-  } else if (services.some((item) => item.status !== "received")) {
+  } else if (services.some((item) => item.status !== "queued")) {
     nextStatus = "processing";
   }
 
@@ -445,8 +429,8 @@ export async function getOrderServiceQueue(
   };
 }
 
-export function getOrderDetailById(id: number) {
-  return db.query.ordersTable.findFirst({
+export async function getOrderDetailById(id: number) {
+  const detail = await db.query.ordersTable.findFirst({
     where: eq(ordersTable.id, id),
     with: {
       campaign: true,
@@ -522,6 +506,17 @@ export function getOrderDetailById(id: number) {
       store: true,
     },
   });
+
+  if (!detail) {
+    return null;
+  }
+
+  return {
+    ...detail,
+    fulfillment: summarizeOrderFulfillment(
+      detail.services.map((service) => service.status)
+    ),
+  };
 }
 
 export async function updateOrderPayment({
@@ -629,10 +624,6 @@ export async function startOrderServiceWork({
     );
   }
 
-  if (orderService.status === "received") {
-    await ensureDropoffPhotoExists(serviceId);
-  }
-
   await db.transaction(async (tx) => {
     if (orderService.handler_id !== user.id) {
       await tx
@@ -738,10 +729,6 @@ export async function updateOrderServiceStatus({
     );
   }
 
-  if (orderService.status === "received" && body.status !== "received") {
-    await ensureDropoffPhotoExists(serviceId);
-  }
-
   if (body.status === "picked_up") {
     await ensurePickupPhotoExists(serviceId);
   }
@@ -788,6 +775,29 @@ export async function createOrderServicePhotoPresign({
   });
 }
 
+export async function createOrderIntakePhotoPresign({
+  orderId,
+  body,
+}: {
+  orderId: number;
+  body: PostOrderIntakePhotoPresignInput;
+}) {
+  const order = await db.query.ordersTable.findFirst({
+    where: eq(ordersTable.id, orderId),
+    columns: { id: true },
+  });
+
+  if (!order) {
+    throw new BadRequestException("Order not found");
+  }
+
+  const key = `orders/${orderId}/intake/${crypto.randomUUID()}`;
+  return createPresignedUploadUrl({
+    contentType: body.content_type,
+    key,
+  });
+}
+
 export async function saveOrderServicePhoto({
   orderId,
   serviceId,
@@ -813,6 +823,126 @@ export async function saveOrderServicePhoto({
     .returning();
 
   return photo;
+}
+
+export async function saveOrderIntakePhoto({
+  orderId,
+  body,
+  user,
+}: {
+  orderId: number;
+  body: PutOrderIntakePhotoInput;
+  user: JWTPayload;
+}) {
+  const [order] = await db
+    .update(ordersTable)
+    .set({
+      intake_photo_s3_key: body.s3_key,
+      intake_photo_uploaded_at: new Date(),
+      intake_photo_url: buildS3ObjectUrl(body.s3_key),
+      updated_by: user.id,
+    })
+    .where(eq(ordersTable.id, orderId))
+    .returning({
+      id: ordersTable.id,
+      intake_photo_uploaded_at: ordersTable.intake_photo_uploaded_at,
+      intake_photo_url: ordersTable.intake_photo_url,
+    });
+
+  if (!order) {
+    throw new BadRequestException("Order not found");
+  }
+
+  return order;
+}
+
+export async function completeOrderPickup({
+  orderId,
+  user,
+}: {
+  orderId: number;
+  user: JWTPayload;
+}) {
+  assertCanProcessPaymentOrRefund(user);
+
+  const order = await db.query.ordersTable.findFirst({
+    where: eq(ordersTable.id, orderId),
+    columns: {
+      id: true,
+    },
+    with: {
+      services: {
+        columns: {
+          id: true,
+          item_code: true,
+          status: true,
+        },
+        with: {
+          images: {
+            columns: {
+              id: true,
+              photo_type: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!order) {
+    throw new BadRequestException("Order not found");
+  }
+
+  const activeServices = order.services.filter(
+    (service) => !isTerminalOrderServiceStatus(service.status)
+  );
+
+  if (activeServices.length === 0) {
+    throw new BadRequestException("This order has no remaining pickup items");
+  }
+
+  if (activeServices.some((service) => service.status !== "ready_for_pickup")) {
+    throw new BadRequestException(
+      "All remaining order lines must already be ready for pickup"
+    );
+  }
+
+  const missingPickupPhotoServices = activeServices.filter(
+    (service) => !service.images.some((image) => image.photo_type === "pickup")
+  );
+
+  if (missingPickupPhotoServices.length > 0) {
+    throw new BadRequestException(
+      `Pickup photo is still required for ${missingPickupPhotoServices
+        .map((service) => service.item_code ?? String(service.id))
+        .join(", ")}`
+    );
+  }
+
+  await db.transaction(async (tx) => {
+    for (const service of activeServices) {
+      await tx
+        .update(ordersServicesTable)
+        .set({ status: "picked_up" })
+        .where(eq(ordersServicesTable.id, service.id));
+
+      await tx.insert(orderServiceStatusLogsTable).values({
+        order_service_id: service.id,
+        from_status: service.status,
+        to_status: "picked_up",
+        changed_by: user.id,
+        note: "Completed from order pickup desk",
+      });
+    }
+  });
+
+  await recalculateOrderStatus(orderId, user.id);
+
+  return {
+    completed_line_count: activeServices.length,
+    order_id: orderId,
+    status: "completed" as const,
+  };
 }
 
 export async function createOrderRefund({

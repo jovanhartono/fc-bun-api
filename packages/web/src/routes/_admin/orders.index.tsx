@@ -18,6 +18,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { DateRangeFilter } from "@/features/orders/components/date-range-filter";
+import { PickupRadar } from "@/features/orders/components/pickup-radar";
 import type { Order } from "@/lib/api";
 import {
 	currentUserDetailQueryOptions,
@@ -25,8 +26,10 @@ import {
 	storesQueryOptions,
 } from "@/lib/query-options";
 import {
+	formatOrderPickupState,
 	formatOrderStatus,
 	formatPaymentStatus,
+	getOrderPickupStateBadgeVariant,
 	getOrderStatusBadgeVariant,
 	getPaymentStatusBadgeVariant,
 } from "@/lib/status";
@@ -185,6 +188,17 @@ function OrdersPage() {
 				),
 			},
 			{
+				id: "pickup_state",
+				header: "Pickup",
+				cell: ({ row }) => (
+					<Badge
+						variant={getOrderPickupStateBadgeVariant(row.original.fulfillment)}
+					>
+						{formatOrderPickupState(row.original.fulfillment)}
+					</Badge>
+				),
+			},
+			{
 				accessorKey: "payment_status",
 				header: "Payment",
 				cell: ({ row }) => (
@@ -306,6 +320,7 @@ function OrdersPage() {
 								}}
 							/>
 						</div>
+						<PickupRadar orders={orders} />
 						<div className="grid gap-4">
 							<DataTable
 								columns={columns}

@@ -381,8 +381,9 @@ export function OrderForm({
 						</Button>
 					</div>
 					<p className="text-xs text-muted-foreground">
-						Dropoff photo is required before processing starts. You can upload
-						it after order creation from order detail or worker screen.
+						The cashier can upload one intake photo for the whole order after
+						creation. Each service line can still collect progress and pickup
+						photos later from order detail or the worker screen.
 					</p>
 					<FieldError
 						errors={[form.formState.errors.services as { message?: string }]}

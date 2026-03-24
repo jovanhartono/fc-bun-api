@@ -40,8 +40,23 @@ export const POSTOrderServicePhotoPresignSchema = z.object({
   photo_type: z.enum(orderServicePhotoTypeEnum.enumValues),
 });
 
+export const POSTOrderIntakePhotoPresignSchema = z.object({
+  content_type: z
+    .string()
+    .trim()
+    .refine(
+      (value) =>
+        ["image/jpeg", "image/png", "image/webp", "image/heic"].includes(value),
+      "Unsupported content type"
+    ),
+});
+
 export const POSTOrderServicePhotoSchema = z.object({
   photo_type: z.enum(orderServicePhotoTypeEnum.enumValues),
+  s3_key: z.string().trim().min(1).max(512),
+});
+
+export const PUTOrderIntakePhotoSchema = z.object({
   s3_key: z.string().trim().min(1).max(512),
 });
 
@@ -130,11 +145,17 @@ export type PostOrderServicePhotoInput = z.infer<
 export type PostOrderServicePhotoPresignInput = z.infer<
   typeof POSTOrderServicePhotoPresignSchema
 >;
+export type PostOrderIntakePhotoPresignInput = z.infer<
+  typeof POSTOrderIntakePhotoPresignSchema
+>;
 export type PostOrderRefundInput = z.infer<typeof POSTOrderRefundSchema>;
 export type PatchOrderServiceHandlerInput = z.infer<
   typeof PATCHOrderServiceHandlerSchema
 >;
 export type PatchOrderPaymentInput = z.infer<typeof PATCHOrderPaymentSchema>;
+export type PutOrderIntakePhotoInput = z.infer<
+  typeof PUTOrderIntakePhotoSchema
+>;
 
 export function normalizeOrderServiceQueueQuery(
   query?: GetOrderServiceQueueQuery

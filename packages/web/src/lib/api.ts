@@ -242,6 +242,14 @@ export type SaveOrderServicePhotoPayload = {
 	s3_key: string;
 };
 
+export type PresignOrderIntakePhotoPayload = {
+	content_type: "image/jpeg" | "image/png" | "image/webp" | "image/heic";
+};
+
+export type SaveOrderIntakePhotoPayload = {
+	s3_key: string;
+};
+
 export type OrderRefundReason = "damaged" | "cannot_process" | "lost" | "other";
 
 export type CreateOrderRefundPayload = {
@@ -830,6 +838,42 @@ export async function saveOrderServicePhoto(
 		rpcWithAuth().api.admin.orders[":id"].services[":serviceId"].photos.$post({
 			param: { id: String(orderId), serviceId: String(serviceId) },
 			json: payload,
+		}),
+	);
+}
+
+export async function presignOrderIntakePhoto(
+	orderId: number,
+	payload: PresignOrderIntakePhotoPayload,
+) {
+	return parseSuccessData<{
+		upload_url: string;
+		key: string;
+		expires_in_seconds: number;
+	}>(
+		rpcWithAuth().api.admin.orders[":id"]["intake-photo"].presign.$post({
+			param: { id: String(orderId) },
+			json: payload,
+		}),
+	);
+}
+
+export async function saveOrderIntakePhoto(
+	orderId: number,
+	payload: SaveOrderIntakePhotoPayload,
+) {
+	return parseResponse(
+		rpcWithAuth().api.admin.orders[":id"]["intake-photo"].$put({
+			param: { id: String(orderId) },
+			json: payload,
+		}),
+	);
+}
+
+export async function completeOrderPickup(orderId: number) {
+	return parseResponse(
+		rpcWithAuth().api.admin.orders[":id"].complete.$post({
+			param: { id: String(orderId) },
 		}),
 	);
 }

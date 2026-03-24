@@ -321,9 +321,6 @@ export function QueueServiceDetail({
 		selectedService.handler_id !== null &&
 		selectedService.handler_id !== undefined &&
 		!isHandledByCurrentUser;
-	const hasDropoffPhoto = selectedService.images.some(
-		(image) => image.photo_type === "dropoff",
-	);
 	const hasPickupPhoto = selectedService.images.some(
 		(image) => image.photo_type === "pickup",
 	);
@@ -406,16 +403,6 @@ export function QueueServiceDetail({
 							<p>{`Customer ${detail.customer?.name ?? "-"}`}</p>
 						</div>
 					</div>
-
-					{!hasDropoffPhoto ? (
-						<div className="flex items-start gap-2 border border-warning/40 bg-warning/10 px-3 py-3 text-sm text-foreground">
-							<WarningCircle className="mt-0.5 size-4 shrink-0" weight="fill" />
-							<p>
-								Add at least one dropoff photo before moving this item into
-								processing.
-							</p>
-						</div>
-					) : null}
 
 					{selectedService.status === "ready_for_pickup" && !hasPickupPhoto ? (
 						<div className="flex items-start gap-2 border border-warning/40 bg-warning/10 px-3 py-3 text-sm text-foreground">
@@ -541,6 +528,8 @@ export function QueueServiceDetail({
 									<img
 										src={selectedPhotoPreviewUrl}
 										alt="Selected upload preview"
+										width={960}
+										height={768}
 										className="aspect-4/3 w-full max-w-md object-cover"
 									/>
 									<div className="flex flex-col gap-2 sm:flex-row">
@@ -548,7 +537,7 @@ export function QueueServiceDetail({
 											type="button"
 											className="sm:flex-1"
 											loading={uploadMutation.isPending}
-											loadingText="Uploading..."
+											loadingText="Uploading…"
 											onClick={async () => {
 												if (!selectedPhotoFile) {
 													return;
@@ -589,6 +578,8 @@ export function QueueServiceDetail({
 								<img
 									src={image.image_url}
 									alt={`${image.photo_type} for ${selectedService.item_code ?? `service-${selectedService.id}`}`}
+									width={960}
+									height={768}
 									className="aspect-[5/4] w-full object-cover"
 									loading="lazy"
 								/>
@@ -693,16 +684,9 @@ export function QueueServiceDetail({
 function getRecommendedPhotoType(
 	service: NonNullable<OrderDetail["services"]>[number],
 ): SaveOrderServicePhotoPayload["photo_type"] {
-	const hasDropoffPhoto = service.images.some(
-		(image) => image.photo_type === "dropoff",
-	);
 	const hasPickupPhoto = service.images.some(
 		(image) => image.photo_type === "pickup",
 	);
-
-	if (!hasDropoffPhoto) {
-		return "dropoff";
-	}
 
 	if (service.status === "ready_for_pickup" && !hasPickupPhoto) {
 		return "pickup";
