@@ -1,4 +1,5 @@
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import dayjs from "dayjs";
+import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   orderRefundItemsTable,
@@ -11,10 +12,12 @@ import {
   ordersTable,
   servicesTable,
   storesTable,
+  usersTable,
 } from "@/db/schema";
 import { BadRequestException, ForbiddenException } from "@/errors";
 import type {
   GetMyOrderServicesQuery,
+  GetOrderServiceQueueQuery,
   PatchOrderPaymentInput,
   PatchOrderServiceHandlerInput,
   PatchOrderServiceStatusInput,
@@ -22,9 +25,13 @@ import type {
   PostOrderServicePhotoInput,
   PostOrderServicePhotoPresignInput,
 } from "@/modules/orders/order-admin.schema";
-import { ORDER_STATUS_TRANSITIONS } from "@/modules/orders/order-admin.schema";
+import {
+  normalizeOrderServiceQueueQuery,
+  ORDER_STATUS_TRANSITIONS,
+} from "@/modules/orders/order-admin.schema";
 import type { JWTPayload } from "@/types";
 import { assertStoreAccess, getUserStoreIds } from "@/utils/authorization";
+import { buildPaginationMeta } from "@/utils/pagination";
 import { buildS3ObjectUrl, createPresignedUploadUrl } from "@/utils/s3";
 
 const ORDER_TERMINAL_SERVICE_STATUSES = new Set([
@@ -121,6 +128,38 @@ async function getOrderServiceOrThrow(orderId: number, serviceId: number) {
   }
 
   return orderService;
+}
+
+async function ensureDropoffPhotoExists(serviceId: number) {
+  const hasDropoffPhoto = await db.query.orderServicesImagesTable.findFirst({
+    where: and(
+      eq(orderServicesImagesTable.order_service_id, serviceId),
+      eq(orderServicesImagesTable.photo_type, "dropoff")
+    ),
+    columns: { id: true },
+  });
+
+  if (!hasDropoffPhoto) {
+    throw new BadRequestException(
+      "At least one dropoff photo is required before processing"
+    );
+  }
+}
+
+async function ensurePickupPhotoExists(serviceId: number) {
+  const hasPickupPhoto = await db.query.orderServicesImagesTable.findFirst({
+    where: and(
+      eq(orderServicesImagesTable.order_service_id, serviceId),
+      eq(orderServicesImagesTable.photo_type, "pickup")
+    ),
+    columns: { id: true },
+  });
+
+  if (!hasPickupPhoto) {
+    throw new BadRequestException(
+      "At least one pickup photo is required before marking picked up"
+    );
+  }
 }
 
 async function recalculateOrderStatus(orderId: number, updatedBy: number) {
@@ -276,6 +315,7 @@ export async function getMyOrderServices(
       color: ordersServicesTable.color,
       handler_id: ordersServicesTable.handler_id,
       id: ordersServicesTable.id,
+      is_priority: ordersServicesTable.is_priority,
       item_code: ordersServicesTable.item_code,
       order_code: ordersTable.code,
       order_created_at: ordersTable.created_at,
@@ -298,6 +338,111 @@ export async function getMyOrderServices(
     )
     .where(and(...conditions))
     .orderBy(asc(ordersServicesTable.id));
+}
+
+export async function getOrderServiceQueue(
+  user: JWTPayload,
+  query?: GetOrderServiceQueueQuery
+) {
+  const normalized = normalizeOrderServiceQueueQuery(query);
+  const conditions = [
+    sql`${ordersServicesTable.status} NOT IN ('picked_up', 'refunded', 'cancelled')`,
+  ];
+
+  if (user.role === "admin") {
+    if (normalized.store_id === undefined) {
+      throw new BadRequestException("Store is required for admin queue access");
+    }
+
+    conditions.push(eq(ordersTable.store_id, normalized.store_id));
+  } else if (normalized.store_id !== undefined) {
+    await assertStoreAccess(user, normalized.store_id);
+    conditions.push(eq(ordersTable.store_id, normalized.store_id));
+  } else {
+    const storeIds = await getUserStoreIds(user.id);
+    if (storeIds.length === 0) {
+      return {
+        items: [],
+        meta: buildPaginationMeta(0, normalized),
+      };
+    }
+
+    conditions.push(inArray(ordersTable.store_id, storeIds));
+  }
+
+  if (normalized.status !== undefined) {
+    conditions.push(eq(ordersServicesTable.status, normalized.status));
+  }
+
+  if (normalized.date_from) {
+    conditions.push(
+      gte(
+        ordersTable.created_at,
+        dayjs(normalized.date_from).startOf("day").toDate()
+      )
+    );
+  }
+
+  if (normalized.date_to) {
+    conditions.push(
+      lte(
+        ordersTable.created_at,
+        dayjs(normalized.date_to).endOf("day").toDate()
+      )
+    );
+  }
+
+  const whereClause = and(...conditions);
+
+  const [items, countRows] = await Promise.all([
+    db
+      .select({
+        color: ordersServicesTable.color,
+        handler_id: ordersServicesTable.handler_id,
+        handler_name: usersTable.name,
+        id: ordersServicesTable.id,
+        is_priority: ordersServicesTable.is_priority,
+        item_code: ordersServicesTable.item_code,
+        order_code: ordersTable.code,
+        order_created_at: ordersTable.created_at,
+        order_id: ordersTable.id,
+        service_name: servicesTable.name,
+        shoe_brand: ordersServicesTable.shoe_brand,
+        shoe_size: ordersServicesTable.shoe_size,
+        status: ordersServicesTable.status,
+        store_code: storesTable.code,
+        store_id: storesTable.id,
+        store_name: storesTable.name,
+      })
+      .from(ordersServicesTable)
+      .innerJoin(ordersTable, eq(ordersServicesTable.order_id, ordersTable.id))
+      .innerJoin(storesTable, eq(ordersTable.store_id, storesTable.id))
+      .innerJoin(
+        servicesTable,
+        eq(ordersServicesTable.service_id, servicesTable.id)
+      )
+      .leftJoin(usersTable, eq(ordersServicesTable.handler_id, usersTable.id))
+      .where(whereClause)
+      .orderBy(
+        desc(ordersServicesTable.is_priority),
+        asc(ordersTable.created_at),
+        asc(ordersServicesTable.id)
+      )
+      .limit(normalized.limit)
+      .offset(normalized.offset),
+    db
+      .select({
+        total: sql<number>`count(*)`,
+      })
+      .from(ordersServicesTable)
+      .innerJoin(ordersTable, eq(ordersServicesTable.order_id, ordersTable.id))
+      .where(whereClause),
+  ]);
+
+  return {
+    items,
+    meta: buildPaginationMeta(Number(countRows[0]?.total ?? 0), normalized),
+  };
 }
 
 export function getOrderDetailById(id: number) {
@@ -457,6 +602,77 @@ export async function claimOrderService({
   return { order_service_id: serviceId, handler_id: user.id };
 }
 
+export async function startOrderServiceWork({
+  orderId,
+  serviceId,
+  user,
+}: {
+  orderId: number;
+  serviceId: number;
+  user: JWTPayload;
+}) {
+  const orderService = await getOrderServiceOrThrow(orderId, serviceId);
+
+  if (!["received", "queued"].includes(orderService.status)) {
+    throw new BadRequestException(
+      `Service ${serviceId} cannot be started from status ${orderService.status}`
+    );
+  }
+
+  if (
+    orderService.handler_id !== null &&
+    orderService.handler_id !== undefined &&
+    orderService.handler_id !== user.id
+  ) {
+    throw new ForbiddenException(
+      "This item is already assigned to another worker"
+    );
+  }
+
+  if (orderService.status === "received") {
+    await ensureDropoffPhotoExists(serviceId);
+  }
+
+  await db.transaction(async (tx) => {
+    if (orderService.handler_id !== user.id) {
+      await tx
+        .update(ordersServicesTable)
+        .set({ handler_id: user.id, status: "processing" })
+        .where(eq(ordersServicesTable.id, serviceId));
+
+      await tx.insert(orderServiceHandlerLogsTable).values({
+        order_service_id: serviceId,
+        from_handler_id: orderService.handler_id,
+        to_handler_id: user.id,
+        changed_by: user.id,
+        note: "Started from queue",
+      });
+    } else {
+      await tx
+        .update(ordersServicesTable)
+        .set({ status: "processing" })
+        .where(eq(ordersServicesTable.id, serviceId));
+    }
+
+    await tx.insert(orderServiceStatusLogsTable).values({
+      order_service_id: serviceId,
+      from_status: orderService.status,
+      to_status: "processing",
+      changed_by: user.id,
+      note: "Started from queue",
+    });
+  });
+
+  await recalculateOrderStatus(orderId, user.id);
+
+  return {
+    from_status: orderService.status,
+    handler_id: user.id,
+    order_service_id: serviceId,
+    to_status: "processing" as const,
+  };
+}
+
 export async function updateOrderServiceHandler({
   orderId,
   serviceId,
@@ -504,6 +720,15 @@ export async function updateOrderServiceStatus({
   body: PatchOrderServiceStatusInput;
   user: JWTPayload;
 }) {
+  if (
+    user.role === "worker" &&
+    (body.status === "cancelled" || body.status === "refunded")
+  ) {
+    throw new ForbiddenException(
+      "Workers cannot cancel or refund items from the Queue"
+    );
+  }
+
   const orderService = await getOrderServiceOrThrow(orderId, serviceId);
 
   const allowedStatuses = ORDER_STATUS_TRANSITIONS[orderService.status];
@@ -514,35 +739,11 @@ export async function updateOrderServiceStatus({
   }
 
   if (orderService.status === "received" && body.status !== "received") {
-    const hasDropoffPhoto = await db.query.orderServicesImagesTable.findFirst({
-      where: and(
-        eq(orderServicesImagesTable.order_service_id, serviceId),
-        eq(orderServicesImagesTable.photo_type, "dropoff")
-      ),
-      columns: { id: true },
-    });
-
-    if (!hasDropoffPhoto) {
-      throw new BadRequestException(
-        "At least one dropoff photo is required before processing"
-      );
-    }
+    await ensureDropoffPhotoExists(serviceId);
   }
 
   if (body.status === "picked_up") {
-    const hasPickupPhoto = await db.query.orderServicesImagesTable.findFirst({
-      where: and(
-        eq(orderServicesImagesTable.order_service_id, serviceId),
-        eq(orderServicesImagesTable.photo_type, "pickup")
-      ),
-      columns: { id: true },
-    });
-
-    if (!hasPickupPhoto) {
-      throw new BadRequestException(
-        "At least one pickup photo is required before marking picked up"
-      );
-    }
+    await ensurePickupPhotoExists(serviceId);
   }
 
   await db.transaction(async (tx) => {

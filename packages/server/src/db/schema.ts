@@ -181,6 +181,7 @@ export const servicesTable = pgTable(
     description: text("description"),
     id: integer().primaryKey().generatedAlwaysAsIdentity(),
     is_active: boolean("is_active").default(false).notNull(),
+    is_priority: boolean("is_priority").default(false).notNull(),
     name: varchar("name", { length: 255 }).notNull(),
     created_at: timestamp("created_at").defaultNow().notNull(),
     updated_at: timestamp("updated_at")
@@ -191,6 +192,7 @@ export const servicesTable = pgTable(
   (table) => [
     index("service_name_idx").on(table.name),
     index("service_code_idx").on(table.code),
+    index("service_priority_idx").on(table.is_priority),
     check(
       "code_len_check",
       sql`LENGTH(TRIM(${table.code})) >= 1 AND LENGTH(TRIM(${table.code})) <= 4`
@@ -535,6 +537,7 @@ export const ordersServicesTable = pgTable(
 
     handler_id: integer("handler_id").references(() => usersTable.id),
     id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    is_priority: boolean("is_priority").default(false).notNull(),
     item_code: varchar("item_code", { length: 64 }),
     notes: text("notes"),
     order_id: integer("order_id").references(() => ordersTable.id, {
@@ -571,6 +574,7 @@ export const ordersServicesTable = pgTable(
       table.handler_id,
       table.status
     ),
+    index("order_services_priority_idx").on(table.is_priority),
     index("order_services_item_code_idx").on(table.item_code),
     uniqueIndex("order_services_item_code_uidx").on(table.item_code),
     check("price_non_negative_check", sql`${table.price} >= 0`),

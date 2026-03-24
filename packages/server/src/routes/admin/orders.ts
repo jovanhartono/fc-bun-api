@@ -8,6 +8,7 @@ import { GETOrdersQuerySchema } from "@/modules/orders/order.schema";
 import {
   GETMyOrderServicesQuerySchema,
   GETOrderByItemCodeQuerySchema,
+  GETOrderServiceQueueQuerySchema,
   orderServiceParamSchema,
   PATCHOrderPaymentSchema,
   PATCHOrderServiceHandlerSchema,
@@ -23,7 +24,9 @@ import {
   getMyOrderServices,
   getOrderDetailById,
   getOrderServiceByItemCode,
+  getOrderServiceQueue,
   saveOrderServicePhoto,
+  startOrderServiceWork,
   updateOrderPayment,
   updateOrderServiceHandler,
   updateOrderServiceStatus,
@@ -44,6 +47,18 @@ const app = new Hono()
 
     return c.json(success(items, undefined, meta));
   })
+  .get(
+    "/services/queue",
+    zodValidator("query", GETOrderServiceQueueQuerySchema),
+    async (c) => {
+      const user = c.get("jwtPayload") as JWTPayload;
+      const query = c.req.valid("query");
+
+      const { items, meta } = await getOrderServiceQueue(user, query);
+
+      return c.json(success(items, "Queue retrieved successfully", meta));
+    }
+  )
   .get(
     "/services/by-item-code",
     zodValidator("query", GETOrderByItemCodeQuerySchema),
@@ -128,6 +143,24 @@ const app = new Hono()
       }
 
       return c.json(success(payment, "Payment updated successfully"));
+    }
+  )
+  .post(
+    "/:id/services/:serviceId/start",
+    orderServiceParamSchema,
+    async (c) => {
+      const user = c.get("jwtPayload") as JWTPayload;
+      const { id, serviceId } = c.req.valid("param");
+
+      await assertOrderAccess(user, id);
+
+      const result = await startOrderServiceWork({
+        orderId: id,
+        serviceId,
+        user,
+      });
+
+      return c.json(success(result, "Order service started"));
     }
   )
   .post(

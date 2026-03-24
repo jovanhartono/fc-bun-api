@@ -7,6 +7,7 @@ import {
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
+import { z } from "zod";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { QueueServiceDetail } from "@/features/orders/components/queue-service-detail";
 import {
 	claimOrderService,
 	createOrderRefund,
@@ -48,7 +50,13 @@ import { formatIDRCurrency } from "@/shared/utils";
 import { getCurrentUser } from "@/stores/auth-store";
 import { useDialog } from "@/stores/dialog-store";
 
+const orderDetailSearchSchema = z.object({
+	queueStoreId: z.coerce.number().int().positive().optional(),
+	workerServiceId: z.coerce.number().int().positive().optional(),
+});
+
 export const Route = createFileRoute("/_admin/orders/$orderId")({
+	validateSearch: (search) => orderDetailSearchSchema.parse(search),
 	loader: async ({ context, params }) => {
 		const id = Number(params.orderId);
 
@@ -199,6 +207,24 @@ function DialogForm({
 }
 
 function OrderDetailPage() {
+	const search = Route.useSearch();
+	const { orderId } = Route.useParams();
+	const parsedOrderId = Number(orderId);
+
+	if (search.workerServiceId) {
+		return (
+			<QueueServiceDetail
+				orderId={parsedOrderId}
+				serviceId={search.workerServiceId}
+				queueStoreId={search.queueStoreId}
+			/>
+		);
+	}
+
+	return <AdminOrderDetailPage />;
+}
+
+function AdminOrderDetailPage() {
 	const user = getCurrentUser();
 	const isPaymentAllowed = user?.role === "admin" || user?.role === "cashier";
 	const isRefundAllowed = isPaymentAllowed;
@@ -660,11 +686,18 @@ function OrderDetailPage() {
 									<CardTitle className="text-base">
 										{service.item_code ?? `Service #${service.id}`}
 									</CardTitle>
-									<Badge
-										variant={getOrderServiceStatusBadgeVariant(service.status)}
-									>
-										{formatOrderServiceStatus(service.status)}
-									</Badge>
+									<div className="flex flex-wrap items-center justify-end gap-2">
+										{service.is_priority ? (
+											<Badge variant="warning">Priority</Badge>
+										) : null}
+										<Badge
+											variant={getOrderServiceStatusBadgeVariant(
+												service.status,
+											)}
+										>
+											{formatOrderServiceStatus(service.status)}
+										</Badge>
+									</div>
 								</CardHeader>
 								<CardContent className="grid gap-3 text-sm">
 									<p>{`Service: ${service.service?.name ?? "Service"}`}</p>

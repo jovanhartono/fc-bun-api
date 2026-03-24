@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { orderServicePhotoTypeEnum, orderServiceStatusEnum } from "@/db/schema";
+import { MAX_PAGE_SIZE } from "@/modules/orders/order.schema";
+import { normalizePagination } from "@/utils/pagination";
 import { zodValidator } from "@/utils/zod-validator-wrapper";
+
+const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
 
 export const ORDER_STATUS_TRANSITIONS: Record<
   (typeof orderServiceStatusEnum.enumValues)[number],
@@ -87,8 +91,35 @@ export const GETMyOrderServicesQuerySchema = z.object({
   include_terminal: z.coerce.boolean().optional().default(false),
 });
 
+export const GETOrderServiceQueueQuerySchema = z
+  .object({
+    limit: z.coerce.number().int().min(1).max(MAX_PAGE_SIZE).optional(),
+    offset: z.coerce.number().int().min(0).optional(),
+    store_id: z.coerce.number().int().positive().optional(),
+    status: z.enum(orderServiceStatusEnum.enumValues).optional(),
+    date_from: z
+      .string()
+      .regex(dateRegex, "date_from must use YYYY-MM-DD format")
+      .optional(),
+    date_to: z
+      .string()
+      .regex(dateRegex, "date_to must use YYYY-MM-DD format")
+      .optional(),
+  })
+  .refine(
+    (query) =>
+      !(query.date_from && query.date_to) || query.date_from <= query.date_to,
+    {
+      error: "date_from must be less than or equal to date_to",
+      path: ["date_from"],
+    }
+  );
+
 export type GetMyOrderServicesQuery = z.infer<
   typeof GETMyOrderServicesQuerySchema
+>;
+export type GetOrderServiceQueueQuery = z.infer<
+  typeof GETOrderServiceQueueQuerySchema
 >;
 export type PatchOrderServiceStatusInput = z.infer<
   typeof PATCHOrderServiceStatusSchema
@@ -104,3 +135,20 @@ export type PatchOrderServiceHandlerInput = z.infer<
   typeof PATCHOrderServiceHandlerSchema
 >;
 export type PatchOrderPaymentInput = z.infer<typeof PATCHOrderPaymentSchema>;
+
+export function normalizeOrderServiceQueueQuery(
+  query?: GetOrderServiceQueueQuery
+) {
+  const pagination = normalizePagination(query, {
+    maxPageSize: MAX_PAGE_SIZE,
+  });
+
+  return {
+    limit: pagination.limit,
+    offset: pagination.offset,
+    store_id: query?.store_id,
+    status: query?.status,
+    date_from: query?.date_from,
+    date_to: query?.date_to,
+  };
+}
