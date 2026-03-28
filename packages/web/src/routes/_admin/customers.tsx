@@ -1,4 +1,4 @@
-import { PencilSimpleLine, Plus } from "@phosphor-icons/react";
+import { PencilSimpleLineIcon, PlusIcon } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -93,7 +93,7 @@ function CustomersPage() {
 						variant="outline"
 						size="sm"
 						onClick={() => handleOpenEditSheet(row.original)}
-						icon={<PencilSimpleLine className="size-4" weight="duotone" />}
+						icon={<PencilSimpleLineIcon className="size-4" weight="duotone" />}
 					>
 						Edit
 					</Button>
@@ -114,7 +114,7 @@ function CustomersPage() {
 						>{`${customerCount} items`}</Badge>
 						<Button
 							onClick={handleOpenCreateSheet}
-							icon={<Plus className="size-4" weight="duotone" />}
+							icon={<PlusIcon className="size-4" weight="duotone" />}
 						>
 							Add Customer
 						</Button>

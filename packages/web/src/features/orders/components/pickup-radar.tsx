@@ -1,4 +1,4 @@
-import { ArrowRight, Sparkle, Tote } from "@phosphor-icons/react";
+import { ArrowRightIcon, SparkleIcon, ToteIcon } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -42,7 +42,7 @@ export function PickupRadar({ orders }: PickupRadarProps) {
 					orders={readyOrders}
 					eyebrow="Ready"
 					title="Ready for pickup"
-					icon={<Sparkle className="size-4" weight="duotone" />}
+					icon={<SparkleIcon className="size-4" weight="duotone" />}
 					emptyLabel="None."
 					tone="ready"
 				/>
@@ -50,7 +50,7 @@ export function PickupRadar({ orders }: PickupRadarProps) {
 					orders={partialOrders}
 					eyebrow="Partial"
 					title="Partially picked up"
-					icon={<Tote className="size-4" weight="duotone" />}
+					icon={<ToteIcon className="size-4" weight="duotone" />}
 					emptyLabel="None."
 					tone="partial"
 				/>
@@ -131,7 +131,7 @@ function RadarColumn({
 										className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.24em] text-slate-700 transition-colors hover:text-slate-950"
 									>
 										Inspect
-										<ArrowRight className="size-3.5" />
+										<ArrowRightIcon className="size-3.5" />
 									</Link>
 								</div>
 							</CardContent>

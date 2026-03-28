@@ -1,4 +1,4 @@
-import { CaretRight } from "@phosphor-icons/react";
+import { CaretRightIcon } from "@phosphor-icons/react";
 import {
 	type UseMutationResult,
 	useMutation,
@@ -605,10 +605,7 @@ function AdminOrderDetailPage() {
 									const reason =
 										refundReasonByServiceId[service.id] ?? "damaged";
 									return (
-										<div
-											key={service.id}
-											className="grid gap-2 rounded-md border p-3"
-										>
+										<div key={service.id} className="grid gap-2 border p-3">
 											<label className="flex items-center gap-2 text-sm">
 												<input
 													type="checkbox"
@@ -865,7 +862,7 @@ function AdminOrderDetailPage() {
 														href={image.image_url}
 														target="_blank"
 														rel="noopener noreferrer"
-														className="bg-muted/30 group overflow-hidden rounded-md border transition-opacity hover:opacity-95"
+														className="bg-muted/30 group overflow-hidden border transition-opacity hover:opacity-95"
 													>
 														<img
 															src={image.image_url}
@@ -895,7 +892,7 @@ function AdminOrderDetailPage() {
 
 									<details className="group border-t pt-4">
 										<summary className="flex cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground [&::-webkit-details-marker]:hidden [&::marker]:hidden">
-											<CaretRight
+											<CaretRightIcon
 												className="size-4 shrink-0 transition-transform group-open:rotate-90"
 												aria-hidden="true"
 											/>

@@ -1,4 +1,4 @@
-import { Plus } from "@phosphor-icons/react";
+import { PlusIcon } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -249,7 +249,7 @@ function OrdersPage() {
 						>{`${orderCount} items`}</Badge>
 						<Button
 							onClick={handleAddOrder}
-							icon={<Plus className="size-4" weight="duotone" />}
+							icon={<PlusIcon className="size-4" weight="duotone" />}
 						>
 							Add Order
 						</Button>

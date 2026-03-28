@@ -1,4 +1,8 @@
-import { PencilSimpleLine, Plus, Trash } from "@phosphor-icons/react";
+import {
+	PencilSimpleLineIcon,
+	PlusIcon,
+	TrashIcon,
+} from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -114,7 +118,7 @@ function DeleteCampaignButton({
 			variant="outline"
 			size="sm"
 			disabled={disabled || isPending}
-			icon={<Trash className="size-4" weight="duotone" />}
+			icon={<TrashIcon className="size-4" weight="duotone" />}
 			onClick={() => {
 				openDialog({
 					title: "Delete campaign?",
@@ -309,7 +313,7 @@ function CampaignsPage() {
 						size="sm"
 						disabled={!isAdmin}
 						onClick={() => handleOpenEditSheet(row.original)}
-						icon={<PencilSimpleLine className="size-4" weight="duotone" />}
+						icon={<PencilSimpleLineIcon className="size-4" weight="duotone" />}
 					>
 						Edit
 					</Button>
@@ -338,7 +342,7 @@ function CampaignsPage() {
 						<Button
 							onClick={handleOpenCreateSheet}
 							disabled={!isAdmin}
-							icon={<Plus className="size-4" weight="duotone" />}
+							icon={<PlusIcon className="size-4" weight="duotone" />}
 						>
 							Add Campaign
 						</Button>

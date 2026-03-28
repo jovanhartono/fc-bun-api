@@ -1,4 +1,4 @@
-import { Camera, UploadSimple } from "@phosphor-icons/react";
+import { CameraIcon, UploadSimpleIcon } from "@phosphor-icons/react";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -93,7 +93,7 @@ export function OrderIntakePhotoCard({
 				</Badge>
 			</CardHeader>
 			<CardContent className="space-y-4">
-				<div className="bg-muted relative overflow-hidden rounded-lg border">
+				<div className="bg-muted relative overflow-hidden border">
 					{activePreviewUrl ? (
 						<img
 							src={activePreviewUrl}
@@ -105,7 +105,7 @@ export function OrderIntakePhotoCard({
 						/>
 					) : (
 						<div className="text-muted-foreground flex aspect-16/10 flex-col items-center justify-center gap-2 px-6 text-center">
-							<Camera className="size-8 opacity-50" weight="duotone" />
+							<CameraIcon className="size-8 opacity-50" weight="duotone" />
 							<p className="text-sm">No intake photo yet</p>
 						</div>
 					)}
@@ -142,7 +142,7 @@ export function OrderIntakePhotoCard({
 						type="button"
 						variant="outline"
 						className="flex-1"
-						icon={<Camera className="size-4" weight="duotone" />}
+						icon={<CameraIcon className="size-4" weight="duotone" />}
 						disabled={!canManage}
 						onClick={() => inputRef.current?.click()}
 					>
@@ -151,7 +151,7 @@ export function OrderIntakePhotoCard({
 					<Button
 						type="button"
 						className="flex-1"
-						icon={<UploadSimple className="size-4" weight="duotone" />}
+						icon={<UploadSimpleIcon className="size-4" weight="duotone" />}
 						loading={uploadMutation.isPending}
 						loadingText="Uploading…"
 						disabled={!selectedFile || !canManage}

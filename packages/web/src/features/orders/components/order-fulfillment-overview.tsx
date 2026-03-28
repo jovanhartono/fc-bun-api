@@ -1,4 +1,4 @@
-import { CaretRight } from "@phosphor-icons/react";
+import { CaretRightIcon } from "@phosphor-icons/react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -68,7 +68,7 @@ export function OrderFulfillmentOverview({
 								value={fulfillment.remaining_count}
 							/>
 						</div>
-						<div className="bg-muted h-1.5 w-full max-w-md overflow-hidden rounded-full">
+						<div className="bg-muted h-1.5 w-full max-w-md overflow-hidden">
 							<div
 								className="bg-primary h-full transition-[width] duration-300"
 								style={{ width: `${progressWidth}%` }}
@@ -99,7 +99,7 @@ export function OrderFulfillmentOverview({
 
 				<details className="group">
 					<summary className="flex cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground [&::-webkit-details-marker]:hidden [&::marker]:hidden">
-						<CaretRight
+						<CaretRightIcon
 							className="size-4 shrink-0 transition-transform group-open:rotate-90"
 							aria-hidden="true"
 						/>
@@ -152,16 +152,13 @@ function LaneList({
 				{title}
 			</p>
 			{items.length === 0 ? (
-				<p className="text-muted-foreground border-muted bg-muted/30 rounded-md border border-dashed px-3 py-4 text-sm">
+				<p className="text-muted-foreground border-muted bg-muted/30 border border-dashed px-3 py-4 text-sm">
 					{empty}
 				</p>
 			) : (
 				<ul className="space-y-2">
 					{items.map((service) => (
-						<li
-							key={service.id}
-							className="bg-card rounded-md border px-3 py-2.5 text-sm"
-						>
+						<li key={service.id} className="bg-card border px-3 py-2.5 text-sm">
 							<p className="font-medium leading-snug">
 								{service.item_code ?? `Service #${service.id}`}
 							</p>
