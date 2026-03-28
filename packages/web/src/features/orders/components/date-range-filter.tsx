@@ -1,6 +1,6 @@
 import { CalendarBlank, X } from "@phosphor-icons/react";
 import { format, parseISO } from "date-fns";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { DateRange } from "react-day-picker";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -17,6 +17,7 @@ type DateRangeFilterProps = {
 	dateTo?: string;
 	onRangeChange: (value: { dateFrom?: string; dateTo?: string }) => void;
 	onClear: () => void;
+	resetOnSelect?: boolean;
 };
 
 export function DateRangeFilter({
@@ -24,14 +25,19 @@ export function DateRangeFilter({
 	dateTo,
 	onRangeChange,
 	onClear,
+	resetOnSelect = false,
 }: DateRangeFilterProps) {
 	const hasRange = Boolean(dateFrom || dateTo);
-	const selectedRangeFromProps: DateRange | undefined = hasRange
-		? {
-				from: dateFrom ? parseISO(dateFrom) : undefined,
-				to: dateTo ? parseISO(dateTo) : undefined,
-			}
-		: undefined;
+	const selectedRangeFromProps: DateRange | undefined = useMemo(
+		() =>
+			hasRange
+				? {
+						from: dateFrom ? parseISO(dateFrom) : undefined,
+						to: dateTo ? parseISO(dateTo) : undefined,
+					}
+				: undefined,
+		[dateFrom, dateTo, hasRange],
+	);
 	const [draftRange, setDraftRange] = useState<DateRange | undefined>(
 		selectedRangeFromProps,
 	);
@@ -70,8 +76,8 @@ export function DateRangeFilter({
 					</PopoverTrigger>
 					<PopoverContent className="w-auto p-0" align="start">
 						<Calendar
-							resetOnSelect
 							mode="range"
+							resetOnSelect={resetOnSelect}
 							defaultMonth={displayRange?.from}
 							selected={displayRange}
 							numberOfMonths={2}
