@@ -160,7 +160,7 @@ export function TransactionsCatalog() {
 						</div>
 
 						<Field>
-							<FieldLabel htmlFor="transaction-search">Search Menu</FieldLabel>
+							<FieldLabel htmlFor="transaction-search">Search</FieldLabel>
 							<div className="relative">
 								<MagnifyingGlass
 									className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
@@ -170,7 +170,7 @@ export function TransactionsCatalog() {
 									id="transaction-search"
 									value={searchTerm}
 									onChange={(event) => onSearchTermChange(event.target.value)}
-									placeholder="Search laundry services, treatments, or add-ons"
+									placeholder="Search services or add-ons"
 									className="h-11 border-border/70 bg-background pl-9"
 								/>
 							</div>
@@ -235,7 +235,7 @@ export function TransactionsCatalog() {
 			{activeItems.length === 0 ? (
 				<Card>
 					<CardContent className="py-12 text-center text-sm text-muted-foreground">
-						No catalog items match the current filters.
+						No items.
 					</CardContent>
 				</Card>
 			) : null}

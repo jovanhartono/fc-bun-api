@@ -547,7 +547,7 @@ export function OrderForm({
 							<Textarea
 								{...field}
 								id="order-notes"
-								placeholder="e.g. Customer prefers express service"
+								placeholder="e.g. Express service"
 								aria-invalid={fieldState.invalid}
 								disabled={isSubmitting}
 							/>

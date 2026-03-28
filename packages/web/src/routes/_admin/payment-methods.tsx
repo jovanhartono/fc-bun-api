@@ -69,7 +69,6 @@ function PaymentMethodsPage() {
 		(paymentMethod: PaymentMethod) => {
 			openSheet({
 				title: "Edit Payment Method",
-				description: `Editing ID ${paymentMethod.id}`,
 				content: (
 					<PaymentMethodForm
 						defaultValues={{
@@ -95,7 +94,6 @@ function PaymentMethodsPage() {
 	const handleOpenCreateSheet = useCallback(() => {
 		openSheet({
 			title: "Add Payment Method",
-			description: "Create a new payment method",
 			content: (
 				<PaymentMethodForm
 					handleOnSubmit={async (values: PaymentMethodFormState) => {
@@ -149,7 +147,6 @@ function PaymentMethodsPage() {
 		<>
 			<PageHeader
 				title="Payment Methods"
-				description="Insert and edit payment method master data."
 				actions={
 					<>
 						<Badge

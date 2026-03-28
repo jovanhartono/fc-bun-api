@@ -242,7 +242,6 @@ function OrdersPage() {
 		<>
 			<PageHeader
 				title="Orders"
-				description="Review historical orders, payment status, and order detail records."
 				actions={
 					<>
 						<Badge
@@ -296,6 +295,7 @@ function OrdersPage() {
 						</div>
 						<div className="mb-4">
 							<DateRangeFilter
+								resetOnSelect
 								dateFrom={search.dateFrom}
 								dateTo={search.dateTo}
 								onRangeChange={({ dateFrom, dateTo }) => {

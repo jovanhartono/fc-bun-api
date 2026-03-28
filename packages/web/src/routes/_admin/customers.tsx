@@ -52,7 +52,6 @@ function CustomersPage() {
 		(customer: Customer) => {
 			openSheet({
 				title: "Edit Customer",
-				description: `Editing ID ${customer.id}`,
 				content: <CustomerSheetContent editingCustomer={customer} />,
 			});
 		},
@@ -62,7 +61,6 @@ function CustomersPage() {
 	const handleOpenCreateSheet = useCallback(() => {
 		openSheet({
 			title: "Add Customer",
-			description: "Create a new customer record",
 			content: <CustomerSheetContent />,
 		});
 	}, [openSheet]);
@@ -109,7 +107,6 @@ function CustomersPage() {
 		<>
 			<PageHeader
 				title="Customers"
-				description="Insert and edit customer master data."
 				actions={
 					<>
 						<Badge

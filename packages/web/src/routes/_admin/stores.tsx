@@ -58,7 +58,6 @@ function StoresPage() {
 		(store: Store) => {
 			openSheet({
 				title: "Edit Store",
-				description: `Editing ID ${store.id}`,
 				content: (
 					<StoreForm
 						defaultValues={{
@@ -88,7 +87,6 @@ function StoresPage() {
 	const handleOpenCreateSheet = useCallback(() => {
 		openSheet({
 			title: "Add Store",
-			description: "Create a new store",
 			content: (
 				<StoreForm
 					handleOnSubmit={async (values: StoreFormState) => {
@@ -143,7 +141,6 @@ function StoresPage() {
 		<>
 			<PageHeader
 				title="Stores"
-				description="Insert and edit store master data."
 				actions={
 					<>
 						<Badge

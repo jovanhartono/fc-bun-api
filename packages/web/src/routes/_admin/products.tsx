@@ -64,7 +64,6 @@ function ProductsPage() {
 		(product: Product) => {
 			openSheet({
 				title: "Edit Product",
-				description: `Editing ID ${product.id}`,
 				content: (
 					<ProductForm
 						defaultValues={{
@@ -96,7 +95,6 @@ function ProductsPage() {
 	const handleOpenCreateSheet = useCallback(() => {
 		openSheet({
 			title: "Add Product",
-			description: "Create a new product",
 			content: (
 				<ProductForm
 					handleOnSubmit={async (values: ProductFormState) => {
@@ -166,7 +164,6 @@ function ProductsPage() {
 		<>
 			<PageHeader
 				title="Products"
-				description="Insert and edit product master data."
 				actions={
 					<>
 						<Badge

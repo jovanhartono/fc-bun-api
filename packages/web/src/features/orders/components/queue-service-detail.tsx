@@ -336,7 +336,6 @@ export function QueueServiceDetail({
 		<>
 			<PageHeader
 				title={selectedService.item_code ?? `Queue Item #${selectedService.id}`}
-				description={`${detail.code} • ${detail.store?.name ?? "-"}`}
 				actions={
 					<Button
 						type="button"
