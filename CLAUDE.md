@@ -188,7 +188,6 @@ cd packages/server && bunx tsdown
 
 ## Detailed Standards
 
-Package-specific conventions are documented in AGENTS.md files:
-- `AGENTS.md` - Root: Ultracite rules, TypeScript conventions, testing, security, performance
-- `packages/server/AGENTS.md` - API patterns, module structure, DB, migrations
-- `packages/web/AGENTS.md` - React, TanStack, forms, shadcn, state management, routing
+@AGENTS.md
+@packages/server/AGENTS.md
+@packages/web/AGENTS.md
