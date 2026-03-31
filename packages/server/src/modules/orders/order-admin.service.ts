@@ -556,21 +556,10 @@ export async function getOrderDetailById(id: number) {
     return null;
   }
 
-  const services = detail.services.map((service) => {
-    const {
-      shoe_brand: _shoeBrand,
-      shoe_size: _shoeSize,
-      ...nextService
-    } = service;
-
-    return nextService;
-  });
-
   return {
     ...detail,
-    services,
     fulfillment: summarizeOrderFulfillment(
-      services.map((service) => service.status)
+      detail.services.map((service) => service.status)
     ),
   };
 }
