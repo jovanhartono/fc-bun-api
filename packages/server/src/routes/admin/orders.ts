@@ -36,7 +36,7 @@ import {
   updateOrderServiceHandler,
   updateOrderServiceStatus,
 } from "@/modules/orders/order-admin.service";
-import { findStoreById } from "@/modules/stores/store.repository";
+import { getStoreById } from "@/modules/stores/store.service";
 import { POSTOrderSchema } from "@/schema";
 import { idParamSchema } from "@/schema/param";
 import type { JWTPayload } from "@/types";
@@ -129,7 +129,7 @@ const app = new Hono()
 
     await assertStoreAccess(user, body.store_id);
 
-    const store = await findStoreById(body.store_id);
+    const store = await getStoreById(body.store_id);
     if (!store) {
       throw new NotFoundException("Store not found");
     }

@@ -3,7 +3,11 @@ import { eq } from "drizzle-orm";
 import type z from "zod";
 import { db } from "@/db";
 import { ordersTable } from "@/db/schema";
-import { BadRequestException, NotFoundException } from "@/errors";
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from "@/errors";
 import {
   findOrders,
   insertOrder,
@@ -18,6 +22,7 @@ import {
 } from "@/modules/orders/order.schema";
 import { findProducts } from "@/modules/products/product.repository";
 import { findServices } from "@/modules/services/service.repository";
+import { findUserById } from "@/modules/users/user.repository";
 import type { POSTOrderSchema } from "@/schema";
 import type { JWTPayload } from "@/types";
 import type { Store } from "@/types/entity";
@@ -193,6 +198,14 @@ export async function createOrder(
   store: Store,
   payload: z.infer<typeof POSTOrderSchema>
 ) {
+  const user = await findUserById(userId);
+  if (!user) {
+    throw new NotFoundException("User not found");
+  }
+  if (!user.is_active) {
+    throw new ForbiddenException("User is not active");
+  }
+
   const {
     products = [],
     services = [],

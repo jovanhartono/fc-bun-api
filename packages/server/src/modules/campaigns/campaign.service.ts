@@ -1,10 +1,10 @@
 import { BadRequestException, ForbiddenException } from "@/errors";
 import {
   countCampaigns,
-  createCampaignWithStores,
   deleteCampaignById,
   findCampaignById,
   findStoresByIds,
+  insertCampaignWithStores,
   listCampaigns,
   updateCampaignWithStores,
 } from "@/modules/campaigns/campaign.repository";
@@ -71,7 +71,7 @@ export async function createCampaign({
   const storeIds = [...new Set(payload.store_ids)];
   await ensureStoresExist(storeIds);
 
-  return createCampaignWithStores({
+  return insertCampaignWithStores({
     payload: {
       code: payload.code,
       name: payload.name,

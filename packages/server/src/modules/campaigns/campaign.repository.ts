@@ -102,7 +102,7 @@ export function findStoresByIds(storeIds: number[]) {
   });
 }
 
-export function createCampaignWithStores({
+export function insertCampaignWithStores({
   payload,
   actorId,
   storeIds,
