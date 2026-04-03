@@ -764,11 +764,13 @@ export async function updateOrderServiceStatus({
     await ensurePickupPhotoExists(serviceId);
   }
 
-  const needsAutoAssign =
-    orderService.handler_id === null || orderService.handler_id === undefined;
+  const isClaimTransition =
+    orderService.status === "queued" && body.status === "processing";
+  const needsHandlerAssign =
+    isClaimTransition && orderService.handler_id !== user.id;
 
   await db.transaction(async (tx) => {
-    if (needsAutoAssign) {
+    if (needsHandlerAssign) {
       await tx
         .update(ordersServicesTable)
         .set({ handler_id: user.id, status: body.status })
@@ -776,7 +778,7 @@ export async function updateOrderServiceStatus({
 
       await tx.insert(orderServiceHandlerLogsTable).values({
         order_service_id: serviceId,
-        from_handler_id: null,
+        from_handler_id: orderService.handler_id,
         to_handler_id: user.id,
         changed_by: user.id,
         note: "Auto-assigned on status update",
