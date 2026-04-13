@@ -1108,18 +1108,29 @@ export async function createOrderPickupEvent({
     .returning({ id: ordersServicesTable.id });
 
   if (flipped.length !== uniqueServiceIds.length) {
-    // Best-effort compensating rollback (neon-http has no transactions).
-    // The CHECK constraint pairs status<->pickup_event_id, so we flip the
-    // row back before deleting the event to keep the invariant intact.
-    if (flipped.length > 0) {
+    // Compensating rollback (neon-http has no transactions). The CHECK
+    // constraint pairs status<->pickup_event_id, so we flip rows back
+    // before deleting the event. If rollback itself fails we surface a
+    // 500 so the orphaned state is visible instead of masked by the 400.
+    try {
+      if (flipped.length > 0) {
+        await db
+          .update(ordersServicesTable)
+          .set({ status: "ready_for_pickup", pickup_event_id: null })
+          .where(eq(ordersServicesTable.pickup_event_id, pickupEvent.id));
+      }
       await db
-        .update(ordersServicesTable)
-        .set({ status: "ready_for_pickup", pickup_event_id: null })
-        .where(eq(ordersServicesTable.pickup_event_id, pickupEvent.id));
+        .delete(orderPickupEventsTable)
+        .where(eq(orderPickupEventsTable.id, pickupEvent.id));
+    } catch (rollbackError) {
+      throw new Error(
+        `Pickup rollback failed for event ${pickupEvent.id}: ${
+          rollbackError instanceof Error
+            ? rollbackError.message
+            : String(rollbackError)
+        }`
+      );
     }
-    await db
-      .delete(orderPickupEventsTable)
-      .where(eq(orderPickupEventsTable.id, pickupEvent.id));
     throw new BadRequestException(
       "Another cashier already processed one of the selected items. Refresh and try again."
     );

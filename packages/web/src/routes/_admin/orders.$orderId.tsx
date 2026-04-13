@@ -163,7 +163,8 @@ function ServiceStatusUpdateButton({
 		unknown
 	>;
 }) {
-	const { openDialog, closeDialog } = useDialog();
+	const openDialog = useDialog((s) => s.openDialog);
+	const closeDialog = useDialog((s) => s.closeDialog);
 
 	const handleClick = () => {
 		openDialog({
@@ -337,7 +338,8 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 		user?.role === "cashier" ||
 		user?.can_process_pickup === true;
 	const isRefundAllowed = isPaymentAllowed;
-	const { openDialog, closeDialog } = useDialog();
+	const openDialog = useDialog((s) => s.openDialog);
+	const closeDialog = useDialog((s) => s.closeDialog);
 
 	const queryClient = useQueryClient();
 
