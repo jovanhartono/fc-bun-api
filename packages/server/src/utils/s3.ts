@@ -1,6 +1,5 @@
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { BadRequestException } from "@/errors";
 
 const DEFAULT_PRESIGNED_EXPIRES_SECONDS = 300;
 
@@ -9,7 +8,7 @@ function getS3Config() {
   const bucket = process.env.AWS_S3_BUCKET;
 
   if (!(region && bucket)) {
-    throw new BadRequestException(
+    throw new Error(
       "Missing AWS S3 configuration: AWS_S3_REGION and AWS_S3_BUCKET"
     );
   }
@@ -50,7 +49,7 @@ export function buildMediaUrl(path: string | null | undefined): string | null {
 
   const base = process.env.CDN_BASE_URL;
   if (!base) {
-    throw new BadRequestException("Missing CDN_BASE_URL configuration");
+    throw new Error("Missing CDN_BASE_URL configuration");
   }
 
   const normalizedBase = base.endsWith("/") ? base : `${base}/`;
