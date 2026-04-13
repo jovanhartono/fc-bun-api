@@ -1,22 +1,16 @@
-import { sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { StatusCodes } from "http-status-codes";
 import { z } from "zod";
 import { db } from "@/db";
+import { phoneSchema } from "@/schema/common";
 import { failure, success } from "@/utils/http";
 import { buildMediaUrl } from "@/utils/s3";
 import { zodValidator } from "@/utils/zod-validator-wrapper";
 
 const POSTPublicTrackOrderSchema = z.object({
   code: z.string().trim().min(1).max(32),
-  phone_number: z.string().trim().min(6).max(20),
+  phone_number: phoneSchema,
 });
-
-const nonDigitRegex = /\D/g;
-
-function normalizePhoneNumber(value: string) {
-  return value.replace(nonDigitRegex, "");
-}
 
 function maskPhoneNumber(phone: string) {
   const suffix = phone.slice(-4);
@@ -28,13 +22,9 @@ const app = new Hono().post(
   zodValidator("json", POSTPublicTrackOrderSchema),
   async (c) => {
     const { code, phone_number } = c.req.valid("json");
-    const normalizedPhone = normalizePhoneNumber(phone_number);
 
     const customer = await db.query.customersTable.findFirst({
-      where: {
-        RAW: (c2) =>
-          sql`REGEXP_REPLACE(${c2.phone_number}, '[^0-9]', '', 'g') = ${normalizedPhone}`,
-      },
+      where: { phone_number },
       columns: { id: true },
     });
 
