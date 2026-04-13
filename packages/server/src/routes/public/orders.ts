@@ -30,13 +30,25 @@ const app = new Hono().post(
     const { code, phone_number } = c.req.valid("json");
     const normalizedPhone = normalizePhoneNumber(phone_number);
 
+    const customer = await db.query.customersTable.findFirst({
+      where: {
+        RAW: (c2) =>
+          sql`REGEXP_REPLACE(${c2.phone_number}, '[^0-9]', '', 'g') = ${normalizedPhone}`,
+      },
+      columns: { id: true },
+    });
+
+    if (!customer) {
+      return c.json(
+        failure("Order code or phone number is invalid"),
+        StatusCodes.NOT_FOUND
+      );
+    }
+
     const order = await db.query.ordersTable.findFirst({
       where: {
         code,
-        customer: {
-          RAW: (customer) =>
-            sql`REGEXP_REPLACE(${customer.phone_number}, '\D', '', 'g') = ${normalizedPhone}`,
-        },
+        customer_id: customer.id,
       },
       columns: {
         id: true,
@@ -110,7 +122,7 @@ const app = new Hono().post(
     }
 
     const { intake_photo_path, ...rest } = order;
-    const customer = order.customer;
+    const orderCustomer = order.customer;
 
     return c.json(
       success(
@@ -119,9 +131,9 @@ const app = new Hono().post(
           intake_photo_url: buildMediaUrl(intake_photo_path),
           services: order.services,
           customer: {
-            id: customer.id,
-            name: customer.name,
-            phone_number_masked: maskPhoneNumber(customer.phone_number),
+            id: orderCustomer.id,
+            name: orderCustomer.name,
+            phone_number_masked: maskPhoneNumber(orderCustomer.phone_number),
           },
         },
         "Order status retrieved successfully"
