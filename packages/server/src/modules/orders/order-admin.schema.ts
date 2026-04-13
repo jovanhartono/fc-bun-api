@@ -109,7 +109,7 @@ export const GETOrderServiceByIdQuerySchema = z.object({
 
 export const GETMyOrderServicesQuerySchema = z.object({
   store_id: z.coerce.number().int().positive().optional(),
-  include_terminal: z.coerce.boolean().optional().default(false),
+  include_terminal: z.stringbool().optional().default(false),
 });
 
 export const GETOrderServiceQueueQuerySchema = z
