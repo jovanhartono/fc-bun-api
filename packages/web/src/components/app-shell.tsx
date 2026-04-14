@@ -12,15 +12,8 @@ import {
 	UserGearIcon,
 } from "@phosphor-icons/react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import {
-	type ComponentType,
-	type PropsWithChildren,
-	useEffect,
-	useState,
-} from "react";
+import { type ComponentType, type PropsWithChildren, useEffect } from "react";
 import { ModeToggle } from "@/components/mode-toggle";
-import { useTheme } from "@/components/theme-provider";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
 	Sidebar,
@@ -171,22 +164,10 @@ export function AppShell({ title, children }: AppShellProps) {
 	const clearToken = useAuthStore((state) => state.clearToken);
 	const user = getCurrentUser();
 	const role = user?.role as Role | undefined;
-	const { theme } = useTheme();
-	const [isSystemDark, setIsSystemDark] = useState(false);
-
-	useEffect(() => {
-		const media = window.matchMedia("(prefers-color-scheme: dark)");
-		const onChange = () => setIsSystemDark(media.matches);
-		onChange();
-		media.addEventListener("change", onChange);
-		return () => media.removeEventListener("change", onChange);
-	}, []);
 
 	useEffect(() => {
 		document.title = `${title} | Fresclean POS`;
 	}, [title]);
-
-	const isDarkMode = theme === "dark" || (theme === "system" && isSystemDark);
 
 	const handleLogout = () => {
 		clearToken();
@@ -243,33 +224,22 @@ export function AppShell({ title, children }: AppShellProps) {
 				</SidebarContent>
 
 				<SidebarFooter>
-					<div className="border border-sidebar-border/70 bg-background px-3 py-3">
-						<div className="mb-3 flex items-center justify-between">
+					<div className="space-y-3 border border-sidebar-border/70 bg-background px-3 py-3">
+						<ModeToggle />
+						<div>
 							<p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
-								Theme
+								Signed in as
 							</p>
-							<Badge variant={isDarkMode ? "secondary" : "outline"}>
-								{isDarkMode ? "Dark ON" : "Dark OFF"}
-							</Badge>
+							<p className="mt-1 text-sm font-medium">
+								{user?.name ?? "Unknown User"}
+							</p>
+							<p className="text-xs text-muted-foreground">
+								@{user?.username ?? "-"}
+							</p>
 						</div>
-
-						<div className="mb-3">
-							<ModeToggle />
-						</div>
-
-						<p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
-							Signed in as
-						</p>
-						<p className="mt-1 text-sm font-medium">
-							{user?.name ?? "Unknown User"}
-						</p>
-						<p className="text-xs text-muted-foreground">
-							@{user?.username ?? "-"}
-						</p>
-
 						<Button
 							variant="outline"
-							className="mt-3 w-full justify-start"
+							className="w-full justify-start"
 							onClick={handleLogout}
 							icon={<SignOutIcon className="size-4" />}
 						>
