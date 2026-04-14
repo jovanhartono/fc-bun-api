@@ -300,31 +300,35 @@ function OrderPickupHistoryCard({
 				<CardTitle className="text-base">Pickup history</CardTitle>
 			</CardHeader>
 			<CardContent className="grid gap-3">
-				{pickupEvents.map((event) => (
-					<div key={event.id} className="grid gap-2 border p-2 text-sm">
-						{event.image_url ? (
-							<img
-								src={event.image_url}
-								alt={`Pickup event ${event.id}`}
-								width={640}
-								height={400}
-								className="aspect-16/10 w-full border object-cover"
-								loading="lazy"
-							/>
-						) : null}
-						<div className="grid gap-0.5">
-							<p className="font-medium">
-								{new Date(event.picked_up_at).toLocaleString("en-ID", {
-									dateStyle: "medium",
-									timeStyle: "short",
-								})}
-							</p>
-							<p className="text-muted-foreground text-xs">
-								by {event.picked_up_by?.name ?? "—"}
-							</p>
+				{pickupEvents.map((event) => {
+					const pickedUpAt = new Date(event.picked_up_at).toLocaleString(
+						"en-ID",
+						{
+							dateStyle: "medium",
+							timeStyle: "short",
+						},
+					);
+					const pickedUpBy = event.picked_up_by?.name ?? "unknown operator";
+
+					return (
+						<div key={event.id} className="grid gap-2 border p-2 text-sm">
+							{event.image_url ? (
+								<img
+									src={event.image_url}
+									alt={`Pickup on ${pickedUpAt} by ${pickedUpBy}`}
+									width={640}
+									height={400}
+									className="aspect-16/10 w-full border object-cover"
+									loading="lazy"
+								/>
+							) : null}
+							<div className="grid gap-0.5">
+								<p className="font-medium">{pickedUpAt}</p>
+								<p className="text-muted-foreground text-xs">by {pickedUpBy}</p>
+							</div>
 						</div>
-					</div>
-				))}
+					);
+				})}
 			</CardContent>
 		</Card>
 	);
