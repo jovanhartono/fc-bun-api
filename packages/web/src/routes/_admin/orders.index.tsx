@@ -288,7 +288,7 @@ function OrdersPage() {
 					<CardContent className="pt-6">
 						<div className="mb-4 flex flex-wrap items-center gap-2">
 							<form
-								className="flex flex-1 min-w-0 items-center gap-2 sm:flex-initial"
+								className="flex w-full items-center gap-2 sm:w-auto"
 								onSubmit={(event) => {
 									event.preventDefault();
 									const nextSearch = searchInput.trim();
