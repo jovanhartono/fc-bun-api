@@ -27,9 +27,9 @@
 ## UI/UX — remaining after `feat/uiux-foundational-fixes`
 
 Most PR #19 smoke-test items and full-app-scan items were closed on branch
-`feat/uiux-foundational-fixes` (commits `159089b..5205d27`). The items below
-are what's still open — either deferred, partially covered, or flagged for
-verification rather than a code change.
+`feat/uiux-foundational-fixes` (commits `159089b..HEAD`). Only the primary
+POS responsive rework remains open — deferred intentionally because it
+needs a paired design pass.
 
 ### Deferred — primary UI
 
@@ -41,33 +41,3 @@ verification rather than a code change.
   paired design pass (sticky bottom sheet cart under `lg`, or panel+grid
   stacked above cart under `md`) before touching the layout. File:
   `packages/web/src/routes/_admin/transactions.tsx`.
-
-### Pending — not yet addressed
-
-- [ ] **Order detail page has large vertical gaps on mobile** — the stats /
-  customer / totals 3-column grid stacks with whitespace between cards
-  because of desktop-first grid spans. Verify `grid-cols-*` + `gap-*` reduce
-  cleanly and trailing margins don't accumulate. File:
-  `packages/web/src/routes/_admin/orders.$orderId.tsx`.
-- [ ] **Users list has no filters or search** — customers got a search box in
-  the foundational-fixes branch; users still has none. Match the customers
-  pattern (name / username / role). File:
-  `packages/web/src/routes/_admin/users.tsx`.
-- [ ] **Long emails truncate without a tooltip on `/users`** — customers now
-  carries a `title` attribute on the email cell but users doesn't. Mirror
-  the customers fix so hovering the cell reveals the full address.
-
-### Verify (likely already correct)
-
-- [ ] **Error / 404 pages center vertically** — `global-error-page.tsx` and
-  `not-found-page.tsx` already wrap the card in
-  `grid min-h-dvh place-items-center bg-background`, so in a real browser
-  the card should sit centered. The earlier screenshot that looked
-  off-center was the MCP full-page capture, not the rendered viewport.
-  Re-verify by opening `/login` (redirects) and `/orders/0` (500) at a
-  real mobile viewport before closing the item.
-- [ ] **Sidebar nav overflow on short viewports** — `SidebarContent` already
-  has `flex-1 min-h-0 overflow-auto`, so nav items should scroll under the
-  footer naturally. The earlier clipping was the duplicate floating
-  trigger (fixed in commit `159089b`). Re-verify at `height ≤ 660px` that
-  the footer never steals nav space.

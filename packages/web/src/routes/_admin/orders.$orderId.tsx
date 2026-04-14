@@ -543,7 +543,7 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 
 	return (
 		<>
-			<div className="text-balance mb-6 space-y-1">
+			<div className="text-balance mb-4 space-y-1 sm:mb-6">
 				<PageHeader
 					className="mb-0"
 					title={`Order ${detail.code}`}
@@ -570,7 +570,7 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 				</p>
 			</div>
 
-			<div className="mb-6 grid gap-4">
+			<div className="mb-4 grid gap-3 sm:mb-6 sm:gap-4">
 				<OrderFulfillmentOverview
 					order={detail}
 					canCompletePickup={canOpenPickupDialog}
@@ -581,9 +581,9 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 				/>
 			</div>
 
-			<Card className="mb-6">
-				<CardContent className="grid gap-6 pt-6 sm:grid-cols-3">
-					<div className="space-y-2">
+			<Card className="mb-4 sm:mb-6">
+				<CardContent className="grid gap-4 pt-5 sm:grid-cols-3 sm:gap-6 sm:pt-6">
+					<div className="space-y-1.5">
 						<p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
 							Customer
 						</p>
@@ -594,7 +594,7 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 							{detail.customer?.phone_number ?? "—"}
 						</p>
 					</div>
-					<div className="space-y-2">
+					<div className="space-y-1.5">
 						<p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
 							Notes
 						</p>
@@ -602,11 +602,11 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 							{detail.notes?.trim() ? detail.notes : "—"}
 						</p>
 					</div>
-					<div className="space-y-3">
+					<div className="space-y-2">
 						<p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
 							Totals
 						</p>
-						<dl className="space-y-2 text-sm tabular-nums">
+						<dl className="space-y-1.5 text-sm tabular-nums">
 							<div className="flex justify-between gap-4">
 								<dt className="text-muted-foreground">Subtotal</dt>
 								<dd>{formatIDRCurrency(String(detail.total ?? 0))}</dd>
@@ -617,7 +617,7 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 							</div>
 						</dl>
 						<Separator />
-						<dl className="space-y-2 text-sm tabular-nums">
+						<dl className="space-y-1.5 text-sm tabular-nums">
 							<div className="flex justify-between gap-4 font-medium">
 								<dt>Net</dt>
 								<dd>
@@ -641,8 +641,8 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 				</CardContent>
 			</Card>
 
-			<div className="grid items-start gap-4 lg:grid-cols-12">
-				<div className="grid gap-4 lg:col-span-4">
+			<div className="grid items-start gap-3 sm:gap-4 lg:grid-cols-12">
+				<div className="grid gap-3 sm:gap-4 lg:col-span-4">
 					<OrderDropoffPhotoCard
 						order={detail}
 						canManage={
@@ -830,7 +830,7 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 					) : null}
 				</div>
 
-				<div className="grid gap-4 lg:col-span-8">
+				<div className="grid gap-3 sm:gap-4 lg:col-span-8">
 					{detail.products.length > 0 ? (
 						<Card>
 							<CardHeader>
