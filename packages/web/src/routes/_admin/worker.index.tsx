@@ -641,7 +641,7 @@ function WorkerQueuePage() {
 								<FieldLabel htmlFor="queue-item-code">
 									Find order item
 								</FieldLabel>
-								<div className="grid gap-2 sm:flex sm:flex-row">
+								<div className="grid gap-2 lg:flex lg:flex-row">
 									<Input
 										id="queue-item-code"
 										placeholder="Type item code, order ID, or line ID"
@@ -652,7 +652,7 @@ function WorkerQueuePage() {
 									<Button
 										type="button"
 										variant="outline"
-										className="w-full sm:min-w-28 sm:w-auto"
+										className="h-11 w-full lg:w-auto lg:min-w-28"
 										icon={<MagnifyingGlassIcon className="size-4" />}
 										disabled={!itemCode.trim() || lookupMutation.isPending}
 										onClick={async () => {
@@ -667,7 +667,7 @@ function WorkerQueuePage() {
 									<Button
 										type="button"
 										variant="outline"
-										className="w-full sm:min-w-28 sm:w-auto"
+										className="h-11 w-full lg:w-auto lg:min-w-28"
 										icon={<ScanIcon className="size-4" />}
 										onClick={async () => {
 											if (isScanning) {
