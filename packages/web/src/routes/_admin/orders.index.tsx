@@ -358,7 +358,7 @@ function OrdersPage() {
 									});
 								}}
 							>
-								<SelectTrigger className="h-10 min-w-48 w-max">
+								<SelectTrigger size="md" className="min-w-48 w-max">
 									<SelectValue placeholder="Filter by store" />
 								</SelectTrigger>
 								<SelectContent>

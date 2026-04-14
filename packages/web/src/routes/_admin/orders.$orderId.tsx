@@ -665,7 +665,7 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 										setSelectedPaymentMethodId(value ?? "")
 									}
 								>
-									<SelectTrigger className="h-10 w-full">
+									<SelectTrigger size="md" className="w-full">
 										<SelectValue placeholder="Select payment method" />
 									</SelectTrigger>
 									<SelectContent>
@@ -757,7 +757,7 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 												}
 												disabled={!selected}
 											>
-												<SelectTrigger className="h-10 w-full">
+												<SelectTrigger size="md" className="w-full">
 													<SelectValue placeholder="Select reason" />
 												</SelectTrigger>
 												<SelectContent>

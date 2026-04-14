@@ -542,7 +542,8 @@ function WorkerQueuePage() {
 										>
 											<SelectTrigger
 												id="queue-store-mobile"
-												className="h-11 w-full"
+												size="lg"
+												className="w-full"
 											>
 												<SelectValue placeholder="Select store" />
 											</SelectTrigger>
@@ -622,7 +623,7 @@ function WorkerQueuePage() {
 									value={parsedStoreId?.toString() ?? ""}
 									onValueChange={updateStoreFilter}
 								>
-									<SelectTrigger id="queue-store" className="h-11 w-full">
+									<SelectTrigger id="queue-store" size="lg" className="w-full">
 										<SelectValue placeholder="Select store" />
 									</SelectTrigger>
 									<SelectContent>
