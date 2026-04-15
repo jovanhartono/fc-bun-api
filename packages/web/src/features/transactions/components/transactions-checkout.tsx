@@ -374,7 +374,7 @@ export function TransactionsCheckout({
 											icon={<XIcon className="size-4" />}
 										/>
 									</div>
-									<div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+									<div className="grid gap-3 sm:grid-cols-2">
 										<Field>
 											<FieldLabel htmlFor={`service-color-${line.line_id}`}>
 												Color
