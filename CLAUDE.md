@@ -17,7 +17,10 @@ The web package consumes the server package as a workspace dependency (`@frescle
 
 ```bash
 bun install            # Install all workspace dependencies
-bun run dev            # Start both server (port 8000) and web (port 5173) concurrently
+bun run dev            # Turbo: build API types, then start server (8000) + web (5173)
+bun run build          # Turbo: build all packages (cached)
+bun run lint           # Turbo: lint all packages (cached)
+bun run type-check     # Turbo: type-check all packages (cached)
 ```
 
 ### Server only
@@ -50,7 +53,7 @@ The server reads from `process.env`:
 - **Validation:** Zod 4, `@hono/zod-validator`
 - **Auth:** JWT (`hono/jwt`) with admin middleware on `/admin/*`
 - **Storage:** AWS S3 (`@aws-sdk/client-s3`, presigned URLs)
-- **Build:** `tsdown` bundles types/schemas/RPC for the web package
+- **Build:** `tsdown` bundles types/schemas/RPC for the web package; Turborepo orchestrates cross-package builds
 
 ### Web (`packages/web`)
 - **Framework:** React 19, Vite 8, TypeScript
@@ -60,6 +63,11 @@ The server reads from `process.env`:
 - **State:** Zustand (persisted auth, UI dialogs/sheets, transaction preferences)
 - **UI:** shadcn (base-lyra style), `@base-ui/react`, Phosphor Icons, Tailwind CSS v4
 - **Toasts:** Sonner (auto-handled by global mutation callbacks)
+
+### Monorepo Tooling
+- **Turborepo** for task orchestration (`turbo.json`): `build`, `dev`, `lint`, `type-check`
+- Pipeline topology: `api#build` (tsdown) runs before any web task via `^build` dependency
+- Local caching enabled; no remote caching
 
 ## Architecture
 
