@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | Package | Name | Path | Description |
 | --- | --- | --- | --- |
 | Server | `@fresclean/api` | `packages/server` | Hono REST API with Drizzle ORM (PostgreSQL via Neon) |
-| Web | `@fresclean/web` | `packages/web` | React 19 + Vite admin dashboard |
+| Web | `@fresclean/web` | `apps/web` | React 19 + Vite admin dashboard |
 
 The web package consumes the server package as a workspace dependency (`@fresclean/api`) for shared types, Zod schemas, and typed RPC client.
 
@@ -31,7 +31,7 @@ bun run dev                  # API with hot reload (port 8000) + tsdown --watch 
 
 ### Web only
 ```bash
-cd packages/web
+cd apps/web
 bun run dev                  # Vite dev server at http://localhost:5173
 bun run build               # TypeScript check + Vite production build
 bun run type-check          # TypeScript check only (also regenerates routes)
@@ -55,7 +55,7 @@ The server reads from `process.env`:
 - **Storage:** AWS S3 (`@aws-sdk/client-s3`, presigned URLs)
 - **Build:** `tsdown` bundles types/schemas/RPC for the web package; Turborepo orchestrates cross-package builds
 
-### Web (`packages/web`)
+### Web (`apps/web`)
 - **Framework:** React 19, Vite 8, TypeScript
 - **Routing:** TanStack Router (file-based routes)
 - **Data:** TanStack Query, TanStack Table
@@ -125,7 +125,7 @@ Server package exports (via `tsdown` build into `dist/`):
 ### Web Structure
 
 ```
-packages/web/src/
+apps/web/src/
   components/ui/       # shadcn components
   components/form/     # Shared form fields (CurrencyInput, PhoneNumberField)
   features/<domain>/   # Feature modules (components/, hooks/)
@@ -205,4 +205,4 @@ cd packages/server && bunx tsdown
 
 @AGENTS.md
 @packages/server/AGENTS.md
-@packages/web/AGENTS.md
+@apps/web/AGENTS.md
