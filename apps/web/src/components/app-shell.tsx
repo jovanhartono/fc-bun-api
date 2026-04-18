@@ -9,11 +9,13 @@ import {
 	MonitorIcon,
 	MoonIcon,
 	PackageIcon,
+	ReceiptIcon,
 	ScissorsIcon,
 	ShoppingCartIcon,
 	SignOutIcon,
 	StorefrontIcon,
 	SunIcon,
+	TagIcon,
 	UserGearIcon,
 } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
@@ -58,31 +60,35 @@ type NavItem = {
 	search?: Record<string, number>;
 };
 
-const mainNavigation: NavItem[] = [
-	{ to: "/", label: "Dashboard", icon: HouseIcon, roles: ["admin", "cashier"] },
+const workNavigation: NavItem[] = [
+	{
+		to: "/transactions",
+		label: "Transactions",
+		icon: ShoppingCartIcon,
+		roles: ["admin", "cashier"],
+	},
 	{
 		to: "/worker",
 		label: "Queue",
 		icon: ScissorsIcon,
 		roles: ["admin", "cashier", "worker"],
 	},
-];
-
-const masterDataNavigation: NavItem[] = [
 	{
 		to: "/orders",
 		label: "Orders",
-		icon: ShoppingCartIcon,
+		icon: ReceiptIcon,
 		roles: ["admin", "cashier"],
 		search: { page: 1 },
 	},
 	{
-		to: "/campaigns",
-		label: "Campaigns",
-		icon: CreditCardIcon,
-		roles: ["admin", "cashier"],
-		search: { page: 1 },
+		to: "/shifts",
+		label: "Shifts",
+		icon: ClockIcon,
+		roles: ["admin"],
 	},
+] as const;
+
+const customersNavigation: NavItem[] = [
 	{
 		to: "/customers",
 		label: "Customers",
@@ -91,27 +97,34 @@ const masterDataNavigation: NavItem[] = [
 		search: { page: 1 },
 	},
 	{
-		to: "/users",
-		label: "Users",
-		icon: UserGearIcon,
-		roles: ["admin"],
+		to: "/campaigns",
+		label: "Campaigns",
+		icon: TagIcon,
+		roles: ["admin", "cashier"],
 		search: { page: 1 },
 	},
-	{ to: "/stores", label: "Stores", icon: StorefrontIcon, roles: ["admin"] },
-	{ to: "/categories", label: "Categories", icon: ListIcon, roles: ["admin"] },
+] as const;
+
+const catalogNavigation: NavItem[] = [
 	{ to: "/services", label: "Services", icon: ScissorsIcon, roles: ["admin"] },
 	{ to: "/products", label: "Products", icon: PackageIcon, roles: ["admin"] },
+	{ to: "/categories", label: "Categories", icon: ListIcon, roles: ["admin"] },
 	{
 		to: "/payment-methods",
 		label: "Payment Methods",
 		icon: CreditCardIcon,
 		roles: ["admin"],
 	},
+] as const;
+
+const operationsNavigation: NavItem[] = [
+	{ to: "/stores", label: "Stores", icon: StorefrontIcon, roles: ["admin"] },
 	{
-		to: "/shifts",
-		label: "Shifts",
-		icon: ClockIcon,
+		to: "/users",
+		label: "Users",
+		icon: UserGearIcon,
 		roles: ["admin"],
+		search: { page: 1 },
 	},
 	{
 		to: "/reports",
@@ -119,14 +132,11 @@ const masterDataNavigation: NavItem[] = [
 		icon: ChartLineIcon,
 		roles: ["admin"],
 	},
-] as const;
-
-const transactionNavigation: NavItem[] = [
 	{
-		to: "/transactions",
-		label: "Transactions",
-		icon: ShoppingCartIcon,
-		roles: ["admin", "cashier"],
+		to: "/",
+		label: "Dashboard",
+		icon: HouseIcon,
+		roles: ["admin"],
 	},
 ] as const;
 
@@ -242,13 +252,16 @@ export function AppShell({ title, children }: AppShellProps) {
 		void navigate({ to: "/auth/login" });
 	};
 
-	const allowedMainNavigation = mainNavigation.filter((item) =>
+	const allowedWorkNavigation = workNavigation.filter((item) =>
 		role ? item.roles.includes(role) : false,
 	);
-	const allowedMasterNavigation = masterDataNavigation.filter((item) =>
+	const allowedCustomersNavigation = customersNavigation.filter((item) =>
 		role ? item.roles.includes(role) : false,
 	);
-	const allowedTransactionNavigation = transactionNavigation.filter((item) =>
+	const allowedCatalogNavigation = catalogNavigation.filter((item) =>
+		role ? item.roles.includes(role) : false,
+	);
+	const allowedOperationsNavigation = operationsNavigation.filter((item) =>
 		role ? item.roles.includes(role) : false,
 	);
 
@@ -266,26 +279,38 @@ export function AppShell({ title, children }: AppShellProps) {
 				<SidebarSeparator />
 
 				<SidebarContent>
-					<SidebarGroup>
-						<SidebarGroupContent>
-							<SidebarNavLinks items={allowedMainNavigation} />
-						</SidebarGroupContent>
-					</SidebarGroup>
-
-					{allowedMasterNavigation.length > 0 ? (
+					{allowedWorkNavigation.length > 0 ? (
 						<SidebarGroup>
-							<SidebarGroupLabel>Master Data</SidebarGroupLabel>
+							<SidebarGroupLabel>Work</SidebarGroupLabel>
 							<SidebarGroupContent>
-								<SidebarNavLinks items={allowedMasterNavigation} />
+								<SidebarNavLinks items={allowedWorkNavigation} />
 							</SidebarGroupContent>
 						</SidebarGroup>
 					) : null}
 
-					{allowedTransactionNavigation.length > 0 ? (
+					{allowedCustomersNavigation.length > 0 ? (
 						<SidebarGroup>
-							<SidebarGroupLabel>Transactions</SidebarGroupLabel>
+							<SidebarGroupLabel>Customers</SidebarGroupLabel>
 							<SidebarGroupContent>
-								<SidebarNavLinks items={allowedTransactionNavigation} />
+								<SidebarNavLinks items={allowedCustomersNavigation} />
+							</SidebarGroupContent>
+						</SidebarGroup>
+					) : null}
+
+					{allowedCatalogNavigation.length > 0 ? (
+						<SidebarGroup>
+							<SidebarGroupLabel>Catalog</SidebarGroupLabel>
+							<SidebarGroupContent>
+								<SidebarNavLinks items={allowedCatalogNavigation} />
+							</SidebarGroupContent>
+						</SidebarGroup>
+					) : null}
+
+					{allowedOperationsNavigation.length > 0 ? (
+						<SidebarGroup>
+							<SidebarGroupLabel>Operations</SidebarGroupLabel>
+							<SidebarGroupContent>
+								<SidebarNavLinks items={allowedOperationsNavigation} />
 							</SidebarGroupContent>
 						</SidebarGroup>
 					) : null}

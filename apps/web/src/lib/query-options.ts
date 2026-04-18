@@ -3,6 +3,7 @@ import {
 	type FetchCampaignsQuery,
 	type FetchCustomersQuery,
 	type FetchDailyReportQuery,
+	type FetchDashboardOverviewQuery,
 	type FetchOrdersQuery,
 	type FetchShiftsQuery,
 	type FetchUsersQuery,
@@ -13,6 +14,7 @@ import {
 	fetchCustomersPage,
 	fetchDailyReport,
 	fetchDashboardCounts,
+	fetchDashboardOverview,
 	fetchMyOrderServices,
 	fetchOrderDetail,
 	fetchOrdersPage,
@@ -31,6 +33,14 @@ export const dashboardQueryOptions = () =>
 	queryOptions({
 		queryKey: queryKeys.dashboard,
 		queryFn: fetchDashboardCounts,
+	});
+
+export const dashboardOverviewQueryOptions = (
+	query?: FetchDashboardOverviewQuery,
+) =>
+	queryOptions({
+		queryKey: queryKeys.dashboardOverview(query),
+		queryFn: () => fetchDashboardOverview(query),
 	});
 
 export const customersPageQueryOptions = (query?: FetchCustomersQuery) =>
