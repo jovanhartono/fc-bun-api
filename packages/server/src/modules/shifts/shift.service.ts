@@ -23,7 +23,22 @@ export async function clockIn({
     throw new BadRequestException("You already have an open shift");
   }
 
-  return insertShift({ user_id: user.id, store_id: storeId });
+  try {
+    return await insertShift({ user_id: user.id, store_id: storeId });
+  } catch (error) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "cause" in error &&
+      typeof error.cause === "object" &&
+      error.cause !== null &&
+      "code" in error.cause &&
+      error.cause.code === "23505"
+    ) {
+      throw new BadRequestException("You already have an open shift");
+    }
+    throw error;
+  }
 }
 
 export async function clockOut(user: JWTPayload) {

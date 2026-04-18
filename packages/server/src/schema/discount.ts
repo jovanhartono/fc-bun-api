@@ -49,10 +49,11 @@ export function stackCampaignDiscounts<T extends CampaignDiscountInput>(
   grossTotal: number,
   campaigns: T[]
 ): StackedDiscount<T> {
-  const ordered = [
-    ...campaigns.filter((c) => c.discount_type === "percentage"),
-    ...campaigns.filter((c) => c.discount_type === "fixed"),
-  ];
+  const ordered = [...campaigns].sort(
+    (a, b) =>
+      computeCampaignContribution(b, grossTotal, grossTotal) -
+      computeCampaignContribution(a, grossTotal, grossTotal)
+  );
 
   let running = 0;
   const breakdown: CampaignContribution<T>[] = [];

@@ -11,11 +11,14 @@ export function listCampaigns(filters: CampaignFilters) {
   return db.query.campaignsTable.findMany({
     where: {
       is_active: filters.is_active,
-      stores: filters.store_id
+      ...(filters.store_id !== undefined
         ? {
-            OR: [{ store_id: filters.store_id }, { NOT: { store: true } }],
+            OR: [
+              { stores: { store_id: filters.store_id } },
+              { NOT: { stores: true } },
+            ],
           }
-        : undefined,
+        : {}),
     },
     orderBy: { id: "asc" },
     with: {

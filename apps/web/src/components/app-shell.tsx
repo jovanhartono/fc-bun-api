@@ -6,18 +6,27 @@ import {
 	HouseIcon,
 	IdentificationCardIcon,
 	ListIcon,
+	MonitorIcon,
+	MoonIcon,
 	PackageIcon,
 	ScissorsIcon,
 	ShoppingCartIcon,
 	SignOutIcon,
 	StorefrontIcon,
+	SunIcon,
 	UserGearIcon,
 } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { type ComponentType, type PropsWithChildren, useEffect } from "react";
-import { ModeToggle } from "@/components/mode-toggle";
+import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
 	Sidebar,
 	SidebarContent,
@@ -125,6 +134,44 @@ interface AppShellProps extends PropsWithChildren {
 	title: string;
 	description?: string;
 }
+
+const FooterThemeButton = () => {
+	const { setTheme } = useTheme();
+
+	return (
+		<DropdownMenu>
+			<DropdownMenuTrigger
+				render={
+					<Button
+						variant="ghost"
+						size="icon-sm"
+						aria-label="Toggle theme"
+						icon={
+							<span className="relative size-4">
+								<SunIcon className="absolute inset-0 size-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+								<MoonIcon className="absolute inset-0 size-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+							</span>
+						}
+					/>
+				}
+			/>
+			<DropdownMenuContent align="end" side="top">
+				<DropdownMenuItem onClick={() => setTheme("light")}>
+					<SunIcon className="size-4" />
+					Light
+				</DropdownMenuItem>
+				<DropdownMenuItem onClick={() => setTheme("dark")}>
+					<MoonIcon className="size-4" />
+					Dark
+				</DropdownMenuItem>
+				<DropdownMenuItem onClick={() => setTheme("system")}>
+					<MonitorIcon className="size-4" />
+					System
+				</DropdownMenuItem>
+			</DropdownMenuContent>
+		</DropdownMenu>
+	);
+};
 
 function FloatingSidebarTrigger() {
 	const { isMobile, state } = useSidebar();
@@ -245,28 +292,43 @@ export function AppShell({ title, children }: AppShellProps) {
 				</SidebarContent>
 
 				<SidebarFooter>
-					<div className="space-y-3 border border-sidebar-border/70 bg-background px-3 py-3">
-						<ModeToggle />
-						<div>
-							<p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
-								Signed in as
-							</p>
-							<p className="mt-1 text-sm font-medium">
-								{user?.name ?? "Unknown User"}
-							</p>
-							<p className="text-xs text-muted-foreground">
-								@{user?.username ?? "-"}
-							</p>
+					<div className="border border-sidebar-border/70 bg-background">
+						<div className="flex items-center gap-2.5 px-2.5 py-2">
+							<div className="flex size-9 shrink-0 items-center justify-center border border-sidebar-border/70 bg-sidebar-accent/40 font-semibold text-sm uppercase tracking-wider">
+								{user?.name?.trim()?.charAt(0) ?? "?"}
+							</div>
+							<div className="min-w-0 flex-1">
+								<p className="truncate font-medium text-sm leading-tight">
+									{user?.name ?? "Unknown User"}
+								</p>
+								<p className="truncate font-mono text-[11px] text-muted-foreground leading-tight">
+									@{user?.username ?? "-"}
+								</p>
+							</div>
+							<div className="flex shrink-0 items-center gap-0.5">
+								<FooterThemeButton />
+								<Button
+									variant="ghost"
+									size="icon-sm"
+									aria-label="Logout"
+									onClick={handleLogout}
+									icon={<SignOutIcon className="size-4" />}
+								/>
+							</div>
 						</div>
-						{user ? <ShiftClockCard stores={storesQuery.data ?? []} /> : null}
-						<Button
-							variant="outline"
-							className="w-full justify-start"
-							onClick={handleLogout}
-							icon={<SignOutIcon className="size-4" />}
-						>
-							Logout
-						</Button>
+						<div className="flex items-center justify-between border-sidebar-border/70 border-t px-2.5 py-1.5">
+							<span className="text-[10px] text-muted-foreground uppercase tracking-[0.2em]">
+								Role
+							</span>
+							<span className="font-semibold text-[10px] uppercase tracking-[0.2em]">
+								{role ?? "—"}
+							</span>
+						</div>
+						{user ? (
+							<div className="border-sidebar-border/70 border-t p-2">
+								<ShiftClockCard stores={storesQuery.data ?? []} />
+							</div>
+						) : null}
 					</div>
 				</SidebarFooter>
 			</Sidebar>

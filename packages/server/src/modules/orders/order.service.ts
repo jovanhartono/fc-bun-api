@@ -203,10 +203,12 @@ async function resolveDiscount({
   storeId: number;
   storeCode: string;
 }): Promise<ResolvedDiscount> {
+  const manual = Math.max(0, manualDiscount);
+
   if (campaignIds.length === 0) {
     return {
-      discountAmount: manualDiscount,
-      discountSource: manualDiscount > 0 ? "manual" : "none",
+      discountAmount: manual,
+      discountSource: manual > 0 ? "manual" : "none",
       campaignRows: [],
     };
   }
@@ -234,14 +236,20 @@ async function resolveDiscount({
     })
   );
 
-  const totalDiscount = Math.min(
-    grossTotal,
-    campaignDiscount + Math.max(0, manualDiscount)
-  );
+  const afterCampaign = Math.max(0, grossTotal - campaignDiscount);
+  const appliedManual = Math.min(manual, afterCampaign);
+  const totalDiscount = campaignDiscount + appliedManual;
+
+  let discountSource: ResolvedDiscount["discountSource"] = "none";
+  if (campaignDiscount > 0) {
+    discountSource = "campaign";
+  } else if (manual > 0) {
+    discountSource = "manual";
+  }
 
   return {
     discountAmount: totalDiscount,
-    discountSource: campaignDiscount > 0 ? "campaign" : "manual",
+    discountSource,
     campaignRows,
   };
 }

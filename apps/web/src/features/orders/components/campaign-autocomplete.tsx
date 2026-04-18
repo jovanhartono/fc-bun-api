@@ -1,6 +1,6 @@
 import { CaretDownIcon, XIcon } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -72,6 +72,27 @@ export const CampaignAutocomplete = ({
 
 	const hasSelection = selectedCampaigns.length > 0;
 
+	useEffect(() => {
+		if (
+			!isCampaignQueryEnabled ||
+			campaignQuery.isPending ||
+			values.length === 0
+		) {
+			return;
+		}
+		const validIds = new Set(selectableCampaigns.map((c) => String(c.id)));
+		const pruned = values.filter((id) => validIds.has(id));
+		if (pruned.length !== values.length) {
+			onValuesChange(pruned);
+		}
+	}, [
+		isCampaignQueryEnabled,
+		campaignQuery.isPending,
+		selectableCampaigns,
+		values,
+		onValuesChange,
+	]);
+
 	const handleToggle = (campaignId: string) => {
 		if (valueSet.has(campaignId)) {
 			onValuesChange(values.filter((value) => value !== campaignId));
@@ -85,20 +106,25 @@ export const CampaignAutocomplete = ({
 	};
 
 	const triggerDisabled = disabled || parsedStoreId === undefined;
+	const [isOpen, setIsOpen] = useState(false);
 
 	return (
 		<Field data-invalid={!!error}>
 			<FieldLabel htmlFor={id}>{label}</FieldLabel>
-			<Popover>
+			<Popover open={isOpen} onOpenChange={setIsOpen}>
 				<PopoverTrigger
+					nativeButton={false}
 					render={
-						<button
-							type="button"
+						<div
 							id={id}
-							disabled={triggerDisabled}
+							role="combobox"
+							aria-haspopup="listbox"
+							aria-expanded={isOpen}
+							tabIndex={triggerDisabled ? -1 : 0}
+							aria-disabled={triggerDisabled}
 							className={cn(
-								"flex h-auto min-h-10 w-full items-center justify-between gap-2 border border-input bg-background px-3 py-2 text-left text-sm",
-								"disabled:cursor-not-allowed disabled:opacity-50",
+								"flex h-auto min-h-10 w-full cursor-pointer items-center justify-between gap-2 border border-input bg-background px-3 py-2 text-left text-sm",
+								"aria-disabled:cursor-not-allowed aria-disabled:opacity-50",
 							)}
 						/>
 					}
