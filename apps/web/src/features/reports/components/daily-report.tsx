@@ -122,9 +122,7 @@ function KpiTile({
 				<p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
 					{label}
 				</p>
-				<p className="font-mono text-2xl font-semibold tabular-nums">
-					{value}
-				</p>
+				<p className="font-mono text-2xl font-semibold tabular-nums">{value}</p>
 				{helper ? (
 					<p className="text-muted-foreground text-xs">{helper}</p>
 				) : null}
@@ -162,13 +160,14 @@ function TrendChart({ trend }: { trend: ReportOverview["trend"] }) {
 				<title>Orders in vs orders out trend</title>
 				{trend.map((row, index) => {
 					const x = index * (columnWidth + columnGap);
-					const inHeight =
-						(row.orders_in / maxY) * chartHeight;
+					const inHeight = (row.orders_in / maxY) * chartHeight;
 					const outHeight = (row.orders_out / maxY) * chartHeight;
 					const inY = topPadding + chartHeight - inHeight;
 					const outY = topPadding + chartHeight - outHeight;
 					const barWidth = (columnWidth - 4) / 2;
-					const label = dayShortFormatter.format(new Date(`${row.date}T00:00:00+07:00`));
+					const label = dayShortFormatter.format(
+						new Date(`${row.date}T00:00:00+07:00`),
+					);
 					return (
 						<g key={row.date}>
 							<rect
@@ -203,7 +202,11 @@ function TrendChart({ trend }: { trend: ReportOverview["trend"] }) {
 	);
 }
 
-function CategoryBars({ categories }: { categories: ReportOverview["categories"] }) {
+function CategoryBars({
+	categories,
+}: {
+	categories: ReportOverview["categories"];
+}) {
 	const max = useMemo(
 		() => categories.reduce((m, row) => Math.max(m, row.revenue), 0),
 		[categories],
@@ -211,9 +214,7 @@ function CategoryBars({ categories }: { categories: ReportOverview["categories"]
 
 	if (categories.length === 0) {
 		return (
-			<p className="text-sm text-muted-foreground">
-				No service lines today.
-			</p>
+			<p className="text-sm text-muted-foreground">No service lines today.</p>
 		);
 	}
 
@@ -295,9 +296,7 @@ function TopServicesList({
 	services: ReportOverview["top_services"];
 }) {
 	if (services.length === 0) {
-		return (
-			<p className="text-sm text-muted-foreground">No services today.</p>
-		);
+		return <p className="text-sm text-muted-foreground">No services today.</p>;
 	}
 
 	return (
