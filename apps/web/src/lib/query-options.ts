@@ -5,6 +5,7 @@ import {
 	type FetchDailyReportQuery,
 	type FetchDashboardOverviewQuery,
 	type FetchOrdersQuery,
+	type FetchReportOverviewQuery,
 	type FetchShiftsQuery,
 	type FetchUsersQuery,
 	fetchCampaigns,
@@ -20,6 +21,7 @@ import {
 	fetchOrdersPage,
 	fetchPaymentMethods,
 	fetchProducts,
+	fetchReportOverview,
 	fetchServices,
 	fetchShifts,
 	fetchStores,
@@ -136,4 +138,10 @@ export const dailyReportQueryOptions = (query: FetchDailyReportQuery) =>
 	queryOptions({
 		queryKey: queryKeys.dailyReport(query),
 		queryFn: () => fetchDailyReport(query),
+	});
+
+export const reportOverviewQueryOptions = (query: FetchReportOverviewQuery) =>
+	queryOptions({
+		queryKey: queryKeys.reportOverview(query),
+		queryFn: () => fetchReportOverview(query),
 	});
