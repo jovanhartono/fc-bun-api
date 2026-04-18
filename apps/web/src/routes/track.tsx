@@ -316,10 +316,10 @@ function TrackOrderPage() {
 								onChange={(event) => setPhone(event.target.value)}
 								className="h-11 border-[#2a2922]/15 bg-[#f7f4ef] font-mono text-sm focus-visible:border-[#7bc4a3] focus-visible:ring-[#7bc4a3]/30"
 							/>
-							<FieldError
-								errors={[formError ? { message: formError } : undefined]}
-							/>
 						</Field>
+						{formError ? (
+							<FieldError errors={[{ message: formError }]} />
+						) : null}
 						<Button
 							type="button"
 							onClick={handleTrack}

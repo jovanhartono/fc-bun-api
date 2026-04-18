@@ -8,7 +8,8 @@ import {
   findOldestOpenOrder,
   getEntityCounts,
   perStoreToday,
-  sumRevenueInRange,
+  sumPaidInRange,
+  sumRefundsInRange,
   topServicesInRange,
 } from "@/modules/dashboard/dashboard.repository";
 import type { GetDashboardOverviewQuery } from "@/modules/dashboard/dashboard.schema";
@@ -73,8 +74,10 @@ export async function getDashboardOverview(query: GetDashboardOverviewQuery) {
   };
 
   const [
-    revenueToday,
-    revenueYesterday,
+    paidToday,
+    paidYesterday,
+    refundedToday,
+    refundedYesterday,
     ordersInToday,
     ordersInYesterday,
     ordersOutToday,
@@ -88,8 +91,10 @@ export async function getDashboardOverview(query: GetDashboardOverviewQuery) {
     lowStockProductsCount,
     expiredCampaignsCount,
   ] = await Promise.all([
-    sumRevenueInRange(todayRange),
-    sumRevenueInRange(yesterdayRange),
+    sumPaidInRange(todayRange),
+    sumPaidInRange(yesterdayRange),
+    sumRefundsInRange(todayRange),
+    sumRefundsInRange(yesterdayRange),
     countOrdersInRange(todayRange),
     countOrdersInRange(yesterdayRange),
     countPickupsInRange(todayRange),
@@ -107,7 +112,10 @@ export async function getDashboardOverview(query: GetDashboardOverviewQuery) {
   return {
     date: dateStr,
     kpi: {
-      revenue: buildKpi(revenueToday, revenueYesterday),
+      revenue: buildKpi(
+        paidToday - refundedToday,
+        paidYesterday - refundedYesterday
+      ),
       orders_in: buildKpi(ordersInToday, ordersInYesterday),
       orders_out: buildKpi(ordersOutToday, ordersOutYesterday),
       queue_depth: buildKpi(queueDepthNow, queueDepthYesterday),

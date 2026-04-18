@@ -3,6 +3,7 @@ import { db } from "@/db";
 import {
   campaignsTable,
   orderPickupEventsTable,
+  orderRefundsTable,
   ordersServicesTable,
   ordersTable,
   productsTable,
@@ -66,10 +67,10 @@ export async function getEntityCounts() {
   };
 }
 
-export async function sumRevenueInRange(range: DateRange) {
+export async function sumPaidInRange(range: DateRange) {
   const [row] = await db
     .select({
-      revenue: sql<string>`COALESCE(SUM(${ordersTable.paid_amount} - ${ordersTable.refunded_amount}), 0)`,
+      paid: sql<string>`COALESCE(SUM(${ordersTable.paid_amount}), 0)`,
     })
     .from(ordersTable)
     .where(
@@ -79,7 +80,23 @@ export async function sumRevenueInRange(range: DateRange) {
       )
     );
 
-  return Number(row?.revenue ?? 0);
+  return Number(row?.paid ?? 0);
+}
+
+export async function sumRefundsInRange(range: DateRange) {
+  const [row] = await db
+    .select({
+      refunded: sql<string>`COALESCE(SUM(${orderRefundsTable.total_amount}), 0)`,
+    })
+    .from(orderRefundsTable)
+    .where(
+      and(
+        gte(orderRefundsTable.created_at, range.start),
+        lt(orderRefundsTable.created_at, range.end)
+      )
+    );
+
+  return Number(row?.refunded ?? 0);
 }
 
 export async function countOrdersInRange(range: DateRange) {
@@ -131,16 +148,31 @@ export async function countActiveQueueAtMoment(moment: Date) {
 }
 
 export async function perStoreToday(range: DateRange) {
-  const revenueRows = await db
+  const paidRows = await db
     .select({
       store_id: ordersTable.store_id,
-      revenue: sql<string>`COALESCE(SUM(${ordersTable.paid_amount} - ${ordersTable.refunded_amount}), 0)`,
+      paid: sql<string>`COALESCE(SUM(${ordersTable.paid_amount}), 0)`,
     })
     .from(ordersTable)
     .where(
       and(
         gte(ordersTable.paid_at, range.start),
         lt(ordersTable.paid_at, range.end)
+      )
+    )
+    .groupBy(ordersTable.store_id);
+
+  const refundRows = await db
+    .select({
+      store_id: ordersTable.store_id,
+      refunded: sql<string>`COALESCE(SUM(${orderRefundsTable.total_amount}), 0)`,
+    })
+    .from(orderRefundsTable)
+    .innerJoin(ordersTable, eq(orderRefundsTable.order_id, ordersTable.id))
+    .where(
+      and(
+        gte(orderRefundsTable.created_at, range.start),
+        lt(orderRefundsTable.created_at, range.end)
       )
     )
     .groupBy(ordersTable.store_id);
@@ -183,8 +215,11 @@ export async function perStoreToday(range: DateRange) {
     .from(storesTable)
     .orderBy(asc(storesTable.code));
 
-  const revenueByStore = new Map<number, number>(
-    revenueRows.map((row) => [row.store_id, Number(row.revenue)])
+  const paidByStore = new Map<number, number>(
+    paidRows.map((row) => [row.store_id, Number(row.paid)])
+  );
+  const refundedByStore = new Map<number, number>(
+    refundRows.map((row) => [row.store_id, Number(row.refunded)])
   );
   const ordersByStore = new Map<number, number>(
     ordersRows.map((row) => [row.store_id, Number(row.count)])
@@ -197,7 +232,8 @@ export async function perStoreToday(range: DateRange) {
     store_id: store.id,
     store_code: store.code,
     store_name: store.name,
-    revenue: revenueByStore.get(store.id) ?? 0,
+    revenue:
+      (paidByStore.get(store.id) ?? 0) - (refundedByStore.get(store.id) ?? 0),
     orders_in: ordersByStore.get(store.id) ?? 0,
     queue_depth: queueByStore.get(store.id) ?? 0,
   }));

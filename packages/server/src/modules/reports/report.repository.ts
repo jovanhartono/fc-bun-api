@@ -3,6 +3,7 @@ import { db } from "@/db";
 import {
   categoriesTable,
   orderPickupEventsTable,
+  orderRefundsTable,
   orderServiceStatusLogsTable,
   ordersServicesTable,
   ordersTable,
@@ -18,7 +19,7 @@ interface DateRange {
   end: Date;
 }
 
-export async function sumDailyRevenue({
+export async function sumDailyPaid({
   range,
   storeId,
 }: {
@@ -35,12 +36,38 @@ export async function sumDailyRevenue({
 
   const [row] = await db
     .select({
-      revenue: sql<string>`COALESCE(SUM(${ordersTable.paid_amount} - ${ordersTable.refunded_amount}), 0)`,
+      paid: sql<string>`COALESCE(SUM(${ordersTable.paid_amount}), 0)`,
     })
     .from(ordersTable)
     .where(and(...conditions));
 
-  return Number(row?.revenue ?? 0);
+  return Number(row?.paid ?? 0);
+}
+
+export async function sumDailyRefunds({
+  range,
+  storeId,
+}: {
+  range: DateRange;
+  storeId?: number;
+}) {
+  const conditions = [
+    gte(orderRefundsTable.created_at, range.start),
+    lt(orderRefundsTable.created_at, range.end),
+  ];
+  if (storeId !== undefined) {
+    conditions.push(eq(ordersTable.store_id, storeId));
+  }
+
+  const [row] = await db
+    .select({
+      refunded: sql<string>`COALESCE(SUM(${orderRefundsTable.total_amount}), 0)`,
+    })
+    .from(orderRefundsTable)
+    .innerJoin(ordersTable, eq(orderRefundsTable.order_id, ordersTable.id))
+    .where(and(...conditions));
+
+  return Number(row?.refunded ?? 0);
 }
 
 export async function countDailyItemsProcessed({
@@ -148,7 +175,6 @@ export async function ordersInTrendSeries({
     .select({
       day: dayExpr,
       orders_in: sql<number>`COUNT(*)::int`,
-      revenue: sql<string>`COALESCE(SUM(CASE WHEN ${ordersTable.paid_at} IS NOT NULL THEN ${ordersTable.paid_amount} - ${ordersTable.refunded_amount} ELSE 0 END), 0)`,
     })
     .from(ordersTable)
     .where(and(...conditions))
@@ -157,7 +183,71 @@ export async function ordersInTrendSeries({
   return rows.map((row) => ({
     day: row.day,
     orders_in: Number(row.orders_in),
-    revenue: Number(row.revenue),
+  }));
+}
+
+export async function paidTrendSeries({
+  range,
+  storeId,
+}: {
+  range: DateRange;
+  storeId?: number;
+}) {
+  const conditions = [
+    gte(ordersTable.paid_at, range.start),
+    lt(ordersTable.paid_at, range.end),
+  ];
+  if (storeId !== undefined) {
+    conditions.push(eq(ordersTable.store_id, storeId));
+  }
+
+  const dayExpr = sql<string>`to_char(${ordersTable.paid_at} AT TIME ZONE ${JAKARTA_DAY_SQL}, 'YYYY-MM-DD')`;
+
+  const rows = await db
+    .select({
+      day: dayExpr,
+      paid: sql<string>`COALESCE(SUM(${ordersTable.paid_amount}), 0)`,
+    })
+    .from(ordersTable)
+    .where(and(...conditions))
+    .groupBy(dayExpr);
+
+  return rows.map((row) => ({
+    day: row.day,
+    paid: Number(row.paid),
+  }));
+}
+
+export async function refundsTrendSeries({
+  range,
+  storeId,
+}: {
+  range: DateRange;
+  storeId?: number;
+}) {
+  const conditions = [
+    gte(orderRefundsTable.created_at, range.start),
+    lt(orderRefundsTable.created_at, range.end),
+  ];
+  if (storeId !== undefined) {
+    conditions.push(eq(ordersTable.store_id, storeId));
+  }
+
+  const dayExpr = sql<string>`to_char(${orderRefundsTable.created_at} AT TIME ZONE ${JAKARTA_DAY_SQL}, 'YYYY-MM-DD')`;
+
+  const rows = await db
+    .select({
+      day: dayExpr,
+      refunded: sql<string>`COALESCE(SUM(${orderRefundsTable.total_amount}), 0)`,
+    })
+    .from(orderRefundsTable)
+    .innerJoin(ordersTable, eq(orderRefundsTable.order_id, ordersTable.id))
+    .where(and(...conditions))
+    .groupBy(dayExpr);
+
+  return rows.map((row) => ({
+    day: row.day,
+    refunded: Number(row.refunded),
   }));
 }
 
@@ -282,16 +372,31 @@ export async function topServicesForRange({
 }
 
 export async function perStoreForRange({ range }: { range: DateRange }) {
-  const revenueRows = await db
+  const paidRows = await db
     .select({
       store_id: ordersTable.store_id,
-      revenue: sql<string>`COALESCE(SUM(${ordersTable.paid_amount} - ${ordersTable.refunded_amount}), 0)`,
+      paid: sql<string>`COALESCE(SUM(${ordersTable.paid_amount}), 0)`,
     })
     .from(ordersTable)
     .where(
       and(
         gte(ordersTable.paid_at, range.start),
         lt(ordersTable.paid_at, range.end)
+      )
+    )
+    .groupBy(ordersTable.store_id);
+
+  const refundRows = await db
+    .select({
+      store_id: ordersTable.store_id,
+      refunded: sql<string>`COALESCE(SUM(${orderRefundsTable.total_amount}), 0)`,
+    })
+    .from(orderRefundsTable)
+    .innerJoin(ordersTable, eq(orderRefundsTable.order_id, ordersTable.id))
+    .where(
+      and(
+        gte(orderRefundsTable.created_at, range.start),
+        lt(orderRefundsTable.created_at, range.end)
       )
     )
     .groupBy(ordersTable.store_id);
@@ -334,8 +439,11 @@ export async function perStoreForRange({ range }: { range: DateRange }) {
     .from(storesTable)
     .orderBy(asc(storesTable.code));
 
-  const revenueByStore = new Map<number, number>(
-    revenueRows.map((row) => [row.store_id, Number(row.revenue)])
+  const paidByStore = new Map<number, number>(
+    paidRows.map((row) => [row.store_id, Number(row.paid)])
+  );
+  const refundedByStore = new Map<number, number>(
+    refundRows.map((row) => [row.store_id, Number(row.refunded)])
   );
   const ordersInByStore = new Map<number, number>(
     ordersInRows.map((row) => [row.store_id, Number(row.count)])
@@ -348,7 +456,8 @@ export async function perStoreForRange({ range }: { range: DateRange }) {
     store_id: store.id,
     store_code: store.code,
     store_name: store.name,
-    revenue: revenueByStore.get(store.id) ?? 0,
+    revenue:
+      (paidByStore.get(store.id) ?? 0) - (refundedByStore.get(store.id) ?? 0),
     orders_in: ordersInByStore.get(store.id) ?? 0,
     orders_out: ordersOutByStore.get(store.id) ?? 0,
   }));

@@ -5,8 +5,11 @@ import {
   countDailyOrdersOut,
   ordersInTrendSeries,
   ordersOutTrendSeries,
+  paidTrendSeries,
   perStoreForRange,
-  sumDailyRevenue,
+  refundsTrendSeries,
+  sumDailyPaid,
+  sumDailyRefunds,
   topServicesForRange,
 } from "@/modules/reports/report.repository";
 import type {
@@ -37,17 +40,19 @@ export async function getDailyReport(query: GetDailyReportQuery) {
   const range = getJakartaDayRange(query.date);
   const storeId = query.store_id;
 
-  const [revenue, itemsProcessed, ordersIn, ordersOut] = await Promise.all([
-    sumDailyRevenue({ range, storeId }),
-    countDailyItemsProcessed({ range, storeId }),
-    countDailyOrdersIn({ range, storeId }),
-    countDailyOrdersOut({ range, storeId }),
-  ]);
+  const [paid, refunded, itemsProcessed, ordersIn, ordersOut] =
+    await Promise.all([
+      sumDailyPaid({ range, storeId }),
+      sumDailyRefunds({ range, storeId }),
+      countDailyItemsProcessed({ range, storeId }),
+      countDailyOrdersIn({ range, storeId }),
+      countDailyOrdersOut({ range, storeId }),
+    ]);
 
   return {
     date: query.date,
     store_id: storeId ?? null,
-    revenue,
+    revenue: paid - refunded,
     items_processed: itemsProcessed,
     orders_in: ordersIn,
     orders_out: ordersOut,
@@ -69,6 +74,8 @@ export async function getReportOverview(query: GetReportOverviewQuery) {
     daily,
     ordersInTrend,
     ordersOutTrend,
+    paidTrend,
+    refundsTrend,
     categories,
     topServices,
     perStore,
@@ -76,6 +83,8 @@ export async function getReportOverview(query: GetReportOverviewQuery) {
     getDailyReport({ date: query.date, store_id: storeId }),
     ordersInTrendSeries({ range: trendRange, storeId }),
     ordersOutTrendSeries({ range: trendRange, storeId }),
+    paidTrendSeries({ range: trendRange, storeId }),
+    refundsTrendSeries({ range: trendRange, storeId }),
     categoryRevenueForRange({ range: dayRange, storeId }),
     topServicesForRange({ range: dayRange, storeId }),
     perStoreForRange({ range: dayRange }),
@@ -83,16 +92,18 @@ export async function getReportOverview(query: GetReportOverviewQuery) {
 
   const ordersInByDay = new Map(ordersInTrend.map((row) => [row.day, row]));
   const ordersOutByDay = new Map(ordersOutTrend.map((row) => [row.day, row]));
+  const paidByDay = new Map(paidTrend.map((row) => [row.day, row.paid]));
+  const refundedByDay = new Map(
+    refundsTrend.map((row) => [row.day, row.refunded])
+  );
 
   const trend = Array.from({ length: trendDays }, (_, index) => {
     const day = shiftDate(trendStartDate, index);
-    const inRow = ordersInByDay.get(day);
-    const outRow = ordersOutByDay.get(day);
     return {
       date: day,
-      orders_in: inRow?.orders_in ?? 0,
-      orders_out: outRow?.orders_out ?? 0,
-      revenue: inRow?.revenue ?? 0,
+      orders_in: ordersInByDay.get(day)?.orders_in ?? 0,
+      orders_out: ordersOutByDay.get(day)?.orders_out ?? 0,
+      revenue: (paidByDay.get(day) ?? 0) - (refundedByDay.get(day) ?? 0),
     };
   });
 
