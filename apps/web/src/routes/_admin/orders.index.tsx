@@ -1,21 +1,16 @@
-import {
-	CrosshairSimpleIcon,
-	MagnifyingGlassIcon,
-	PlusIcon,
-	XIcon,
-} from "@phosphor-icons/react";
+import { CrosshairSimpleIcon, PlusIcon } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { z } from "zod";
 import { DataTable } from "@/components/data-table";
+import { DebouncedSearchInput } from "@/components/debounced-search-input";
 import { PageHeader } from "@/components/page-header";
 import { TablePagination } from "@/components/table-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import {
 	Select,
 	SelectContent,
@@ -107,7 +102,6 @@ function OrdersPage() {
 	const navigate = useNavigate({ from: Route.fullPath });
 	const currentUser = getCurrentUser();
 	const search = Route.useSearch();
-	const [searchInput, setSearchInput] = useState(search.search ?? "");
 
 	const storesQuery = useQuery(storesQueryOptions());
 	const currentUserDetailQuery = useQuery({
@@ -139,54 +133,18 @@ function OrdersPage() {
 		}
 	}, [currentUser, navigate, search.storeId, userStoreIds]);
 
-	useEffect(() => {
-		setSearchInput(search.search ?? "");
-	}, [search.search]);
-
-	const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-	useEffect(
-		() => () => {
-			if (debounceRef.current) {
-				clearTimeout(debounceRef.current);
-			}
-		},
-		[],
-	);
-
 	const handleSearchChange = useCallback(
-		(value: string) => {
-			setSearchInput(value);
-			if (debounceRef.current) {
-				clearTimeout(debounceRef.current);
-			}
-			debounceRef.current = setTimeout(() => {
-				const nextSearch = value.trim();
-				void navigate({
-					search: (prev) => ({
-						...prev,
-						page: 1,
-						search: nextSearch || undefined,
-					}),
-				});
-			}, 300);
+		(next: string) => {
+			void navigate({
+				search: (prev) => ({
+					...prev,
+					page: 1,
+					search: next || undefined,
+				}),
+			});
 		},
 		[navigate],
 	);
-
-	const handleClearSearch = useCallback(() => {
-		if (debounceRef.current) {
-			clearTimeout(debounceRef.current);
-		}
-		setSearchInput("");
-		void navigate({
-			search: (prev) => ({
-				...prev,
-				page: 1,
-				search: undefined,
-			}),
-		});
-	}, [navigate]);
 
 	const parsedStoreId = search.storeId;
 	const orderQuery =
@@ -367,28 +325,14 @@ function OrdersPage() {
 				<Card>
 					<CardContent className="pt-6">
 						<div className="mb-4 flex flex-wrap items-center gap-2">
-							<div className="relative flex w-full items-center sm:w-72">
-								<MagnifyingGlassIcon className="pointer-events-none absolute left-3 size-4 text-muted-foreground" />
-								<Input
-									id="orders-search"
-									value={searchInput}
-									onChange={(event) => handleSearchChange(event.target.value)}
-									placeholder="Order ID, customer, phone"
-									aria-label="Search orders"
-									className="h-10 w-full min-w-0 pl-9 pr-9"
-								/>
-								{searchInput ? (
-									<Button
-										type="button"
-										variant="ghost"
-										size="icon-sm"
-										aria-label="Clear search"
-										icon={<XIcon className="size-4" />}
-										className="absolute right-1"
-										onClick={handleClearSearch}
-									/>
-								) : null}
-							</div>
+							<DebouncedSearchInput
+								id="orders-search"
+								value={search.search ?? ""}
+								onDebouncedChange={handleSearchChange}
+								placeholder="Order ID, customer, phone"
+								ariaLabel="Search orders"
+								className="w-full sm:w-72"
+							/>
 							<Select
 								items={storeFilterItems}
 								value={

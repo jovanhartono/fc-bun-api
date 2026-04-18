@@ -331,7 +331,15 @@ export function AppShell({ title, children }: AppShellProps) {
 			<SidebarInset>
 				<FloatingSidebarTrigger />
 				{user ? (
-					<div className="sticky top-0 z-10 flex items-center justify-end gap-2 border-b border-sidebar-border/70 bg-background/95 px-3 py-2 pt-[calc(env(safe-area-inset-top)+0.5rem)] backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6 md:px-8 lg:px-10">
+					<div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-sidebar-border/70 bg-background/95 px-3 py-2 pt-[calc(env(safe-area-inset-top)+0.5rem)] backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6 md:px-8 lg:px-10">
+						<div className="ml-10 flex min-w-0 items-center gap-2 md:ml-0">
+							<span className="truncate font-mono text-[11px] text-muted-foreground uppercase tracking-[0.18em]">
+								@{user.username ?? "—"}
+							</span>
+							<span className="border border-border/70 px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.18em]">
+								{role ?? "—"}
+							</span>
+						</div>
 						<ShiftClockCard stores={storesQuery.data ?? []} />
 					</div>
 				) : null}
