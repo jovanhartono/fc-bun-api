@@ -294,7 +294,7 @@ function UsersPage() {
 										storeMap.get(item.store_id)?.code ?? String(item.store_id),
 								)
 								.join(", ")
-						: "-",
+						: "—",
 			},
 			{
 				id: "actions",

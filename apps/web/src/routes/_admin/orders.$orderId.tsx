@@ -1,5 +1,5 @@
 import { ORDER_STATUS_TRANSITIONS } from "@fresclean/api/schema";
-import { CameraIcon } from "@phosphor-icons/react";
+import { CameraIcon, LinkSimpleIcon } from "@phosphor-icons/react";
 import {
 	type UseMutationResult,
 	useMutation,
@@ -547,6 +547,30 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 		(item) => item.reason === "other" && !item.note,
 	);
 
+	const trackingUrl = (() => {
+		const phone = detail.customer?.phone_number ?? "";
+		if (!detail.code || !phone) {
+			return null;
+		}
+		const origin = typeof window !== "undefined" ? window.location.origin : "";
+		const params = new URLSearchParams({ code: detail.code, phone });
+		return `${origin}/track?${params.toString()}`;
+	})();
+
+	const handleCopyTrackingLink = async () => {
+		if (!trackingUrl) {
+			return;
+		}
+		try {
+			await navigator.clipboard.writeText(trackingUrl);
+			toast.success("Tracking link copied", {
+				description: "Paste into WhatsApp to share with the customer.",
+			});
+		} catch {
+			toast.error("Failed to copy tracking link");
+		}
+	};
+
 	return (
 		<>
 			<div className="text-balance mb-4 space-y-1 sm:mb-6">
@@ -556,6 +580,17 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 					description={detail.customer?.name ?? "Unknown customer"}
 					actions={
 						<div className="flex max-w-full flex-wrap justify-end gap-1.5">
+							{trackingUrl ? (
+								<Button
+									type="button"
+									variant="outline"
+									size="sm"
+									icon={<LinkSimpleIcon className="size-4" />}
+									onClick={handleCopyTrackingLink}
+								>
+									Copy tracking link
+								</Button>
+							) : null}
 							<Badge variant={getOrderStatusBadgeVariant(detail.status)}>
 								{formatOrderStatus(detail.status)}
 							</Badge>

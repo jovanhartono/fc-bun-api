@@ -97,14 +97,14 @@ function CustomersPage() {
 				header: "Email",
 				cell: ({ row }) => (
 					<span title={row.original.email ?? undefined} className="truncate">
-						{row.original.email ?? "-"}
+						{row.original.email ?? "—"}
 					</span>
 				),
 			},
 			{
 				id: "origin_store",
 				header: "Origin Store",
-				cell: ({ row }) => row.original.originStore?.name ?? "-",
+				cell: ({ row }) => row.original.originStore?.name ?? "—",
 			},
 			{
 				id: "actions",

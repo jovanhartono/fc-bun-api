@@ -297,7 +297,7 @@ function CampaignsPage() {
 				cell: ({ row }) =>
 					row.original.max_discount
 						? formatIDRCurrency(String(row.original.max_discount))
-						: "-",
+						: "—",
 			},
 			{
 				id: "stores",
@@ -406,6 +406,8 @@ function CampaignsPage() {
 							columns={columns}
 							data={campaigns}
 							isLoading={campaignsQuery.isPending || storesQuery.isPending}
+							sortable
+							cardPrimaryColumnId="name"
 						/>
 					</CardContent>
 				</Card>
