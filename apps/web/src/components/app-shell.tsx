@@ -1,5 +1,7 @@
 import {
 	BuildingsIcon,
+	ChartLineIcon,
+	ClockIcon,
 	CreditCardIcon,
 	HouseIcon,
 	IdentificationCardIcon,
@@ -11,6 +13,7 @@ import {
 	StorefrontIcon,
 	UserGearIcon,
 } from "@phosphor-icons/react";
+import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { type ComponentType, type PropsWithChildren, useEffect } from "react";
 import { ModeToggle } from "@/components/mode-toggle";
@@ -32,6 +35,8 @@ import {
 	SidebarTrigger,
 	useSidebar,
 } from "@/components/ui/sidebar";
+import { ShiftClockCard } from "@/features/shifts/components/shift-clock-card";
+import { storesQueryOptions } from "@/lib/query-options";
 import { cn } from "@/lib/utils";
 import { getCurrentUser, useAuthStore } from "@/stores/auth-store";
 
@@ -91,6 +96,18 @@ const masterDataNavigation: NavItem[] = [
 		to: "/payment-methods",
 		label: "Payment Methods",
 		icon: CreditCardIcon,
+		roles: ["admin"],
+	},
+	{
+		to: "/shifts",
+		label: "Shifts",
+		icon: ClockIcon,
+		roles: ["admin"],
+	},
+	{
+		to: "/reports",
+		label: "Reports",
+		icon: ChartLineIcon,
 		roles: ["admin"],
 	},
 ] as const;
@@ -164,6 +181,10 @@ export function AppShell({ title, children }: AppShellProps) {
 	const clearToken = useAuthStore((state) => state.clearToken);
 	const user = getCurrentUser();
 	const role = user?.role as Role | undefined;
+	const storesQuery = useQuery({
+		...storesQueryOptions(),
+		enabled: !!user,
+	});
 
 	useEffect(() => {
 		document.title = `${title} | Fresclean POS`;
@@ -237,6 +258,7 @@ export function AppShell({ title, children }: AppShellProps) {
 								@{user?.username ?? "-"}
 							</p>
 						</div>
+						{user ? <ShiftClockCard stores={storesQuery.data ?? []} /> : null}
 						<Button
 							variant="outline"
 							className="w-full justify-start"
