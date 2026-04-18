@@ -1,4 +1,5 @@
 import { ORDER_STATUS_TRANSITIONS } from "@fresclean/api/schema";
+import { CameraIcon } from "@phosphor-icons/react";
 import {
 	type UseMutationResult,
 	useMutation,
@@ -957,11 +958,23 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 											Add item photo
 										</p>
 										<div className="grid gap-2">
+											<label
+												htmlFor={`service-photo-${service.id}`}
+												className="inline-flex h-10 w-full cursor-pointer items-center justify-center gap-2 border border-border bg-background px-3 text-sm font-medium shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground"
+											>
+												<CameraIcon className="size-4" />
+												<span className="truncate">
+													{selectedPhotoFile
+														? selectedPhotoFile.name
+														: `Choose photo${service.item_code ? ` for ${service.item_code}` : ""}`}
+												</span>
+											</label>
 											<input
+												id={`service-photo-${service.id}`}
 												type="file"
 												aria-label={`Choose photo file for ${service.item_code ?? `Service #${service.id}`}`}
 												accept="image/jpeg,image/png,image/webp,image/heic"
-												className="text-muted-foreground w-full text-sm"
+												className="sr-only"
 												onChange={(event) =>
 													setPhotoFileByServiceId((prev) => ({
 														...prev,

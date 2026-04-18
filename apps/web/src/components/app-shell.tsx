@@ -324,18 +324,18 @@ export function AppShell({ title, children }: AppShellProps) {
 								{role ?? "—"}
 							</span>
 						</div>
-						{user ? (
-							<div className="border-sidebar-border/70 border-t p-2">
-								<ShiftClockCard stores={storesQuery.data ?? []} />
-							</div>
-						) : null}
 					</div>
 				</SidebarFooter>
 			</Sidebar>
 
 			<SidebarInset>
 				<FloatingSidebarTrigger />
-				<section className="overflow-x-hidden px-3 pt-[calc(env(safe-area-inset-top)+3.5rem)] pb-[calc(env(safe-area-inset-bottom)+1rem)] sm:px-6 sm:py-5 md:px-8 md:py-6 lg:px-10">
+				{user ? (
+					<div className="sticky top-0 z-10 flex items-center justify-end gap-2 border-b border-sidebar-border/70 bg-background/95 px-3 py-2 pt-[calc(env(safe-area-inset-top)+0.5rem)] backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6 md:px-8 lg:px-10">
+						<ShiftClockCard stores={storesQuery.data ?? []} />
+					</div>
+				) : null}
+				<section className="overflow-x-hidden px-3 py-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] sm:px-6 sm:py-5 md:px-8 md:py-6 lg:px-10">
 					{children}
 				</section>
 			</SidebarInset>
