@@ -1,6 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import dayjs from "dayjs";
 import { lazy, Suspense } from "react";
 import { z } from "zod";
 import { PageHeader } from "@/components/page-header";
@@ -8,7 +7,10 @@ import {
 	ReportShell,
 	type ReportTab,
 } from "@/features/reports/components/report-shell";
-import { defaultRange } from "@/features/reports/utils/report-filters";
+import {
+	defaultRange,
+	jakartaToday,
+} from "@/features/reports/utils/report-filters";
 import {
 	campaignEffectivenessQueryOptions,
 	customerAcquisitionQueryOptions,
@@ -104,7 +106,7 @@ function prefetchForTab(queryClient: QueryClient, search: ReportsSearch) {
 		case "overview":
 			return queryClient.ensureQueryData(
 				reportOverviewQueryOptions({
-					date: dayjs().format("YYYY-MM-DD"),
+					date: jakartaToday(),
 					store_id: search.store_id,
 					trend_days: 14,
 				}),
@@ -201,10 +203,7 @@ function ReportsPage() {
 			>
 				<Suspense fallback={<PanelSkeleton />}>
 					{currentTab === "overview" && (
-						<OverviewPanel
-							date={dayjs().format("YYYY-MM-DD")}
-							storeId={search.store_id}
-						/>
+						<OverviewPanel date={jakartaToday()} storeId={search.store_id} />
 					)}
 					{currentTab === "revenue" && (
 						<RevenuePanel

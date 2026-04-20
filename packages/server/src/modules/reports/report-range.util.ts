@@ -63,7 +63,7 @@ export function bucketFormat(granularity: Granularity): string {
 }
 
 export function jakartaBucketExpr(column: PgColumn, granularity: Granularity) {
-  const fmt = bucketFormat(granularity);
+  const fmt = sql.raw(`'${bucketFormat(granularity)}'`);
   return sql<string>`to_char(${column} AT TIME ZONE ${JAKARTA_TZ_SQL}, ${fmt})`;
 }
 

@@ -305,6 +305,7 @@ export async function repeatCustomersInRange({
   const conditions = [
     gte(ordersTable.created_at, range.start),
     lt(ordersTable.created_at, range.end),
+    isNotNull(ordersTable.customer_id),
   ];
   if (storeId !== undefined) {
     conditions.push(eq(ordersTable.store_id, storeId));
@@ -423,20 +424,6 @@ export async function workerProductivityRows({
     completionConditions.push(eq(ordersTable.store_id, storeId));
   }
 
-  const completedRows = await db
-    .select({
-      handler_id: ordersServicesTable.handler_id,
-      completed: sql<number>`COUNT(DISTINCT ${orderServiceStatusLogsTable.order_service_id})::int`,
-    })
-    .from(orderServiceStatusLogsTable)
-    .innerJoin(
-      ordersServicesTable,
-      eq(orderServiceStatusLogsTable.order_service_id, ordersServicesTable.id)
-    )
-    .innerJoin(ordersTable, eq(ordersServicesTable.order_id, ordersTable.id))
-    .where(and(...completionConditions))
-    .groupBy(ordersServicesTable.handler_id);
-
   const refundConditions = [
     gte(orderRefundsTable.created_at, range.start),
     lt(orderRefundsTable.created_at, range.end),
@@ -444,24 +431,6 @@ export async function workerProductivityRows({
   if (storeId !== undefined) {
     refundConditions.push(eq(ordersTable.store_id, storeId));
   }
-
-  const refundRows = await db
-    .select({
-      handler_id: ordersServicesTable.handler_id,
-      refunds: sql<number>`COUNT(DISTINCT ${orderRefundItemsTable.id})::int`,
-    })
-    .from(orderRefundItemsTable)
-    .innerJoin(
-      ordersServicesTable,
-      eq(orderRefundItemsTable.order_service_id, ordersServicesTable.id)
-    )
-    .innerJoin(
-      orderRefundsTable,
-      eq(orderRefundItemsTable.order_refund_id, orderRefundsTable.id)
-    )
-    .innerJoin(ordersTable, eq(orderRefundsTable.order_id, ordersTable.id))
-    .where(and(...refundConditions))
-    .groupBy(ordersServicesTable.handler_id);
 
   const shiftConditions = [
     isNotNull(shiftsTable.clock_out_at),
@@ -472,19 +441,54 @@ export async function workerProductivityRows({
     shiftConditions.push(eq(shiftsTable.store_id, storeId));
   }
 
-  const shiftRows = await db
-    .select({
-      user_id: shiftsTable.user_id,
-      minutes: sql<number>`COALESCE(SUM(EXTRACT(EPOCH FROM (${shiftsTable.clock_out_at} - ${shiftsTable.clock_in_at})) / 60), 0)::int`,
-    })
-    .from(shiftsTable)
-    .where(and(...shiftConditions))
-    .groupBy(shiftsTable.user_id);
-
-  const workers = await db
-    .select({ id: usersTable.id, name: usersTable.name, role: usersTable.role })
-    .from(usersTable)
-    .where(eq(usersTable.role, "worker"));
+  const [completedRows, refundRows, shiftRows, workers] = await Promise.all([
+    db
+      .select({
+        handler_id: ordersServicesTable.handler_id,
+        completed: sql<number>`COUNT(DISTINCT ${orderServiceStatusLogsTable.order_service_id})::int`,
+      })
+      .from(orderServiceStatusLogsTable)
+      .innerJoin(
+        ordersServicesTable,
+        eq(orderServiceStatusLogsTable.order_service_id, ordersServicesTable.id)
+      )
+      .innerJoin(ordersTable, eq(ordersServicesTable.order_id, ordersTable.id))
+      .where(and(...completionConditions))
+      .groupBy(ordersServicesTable.handler_id),
+    db
+      .select({
+        handler_id: ordersServicesTable.handler_id,
+        refunds: sql<number>`COUNT(DISTINCT ${orderRefundItemsTable.id})::int`,
+      })
+      .from(orderRefundItemsTable)
+      .innerJoin(
+        ordersServicesTable,
+        eq(orderRefundItemsTable.order_service_id, ordersServicesTable.id)
+      )
+      .innerJoin(
+        orderRefundsTable,
+        eq(orderRefundItemsTable.order_refund_id, orderRefundsTable.id)
+      )
+      .innerJoin(ordersTable, eq(orderRefundsTable.order_id, ordersTable.id))
+      .where(and(...refundConditions))
+      .groupBy(ordersServicesTable.handler_id),
+    db
+      .select({
+        user_id: shiftsTable.user_id,
+        minutes: sql<number>`COALESCE(SUM(EXTRACT(EPOCH FROM (${shiftsTable.clock_out_at} - ${shiftsTable.clock_in_at})) / 60), 0)::int`,
+      })
+      .from(shiftsTable)
+      .where(and(...shiftConditions))
+      .groupBy(shiftsTable.user_id),
+    db
+      .select({
+        id: usersTable.id,
+        name: usersTable.name,
+        role: usersTable.role,
+      })
+      .from(usersTable)
+      .where(eq(usersTable.role, "worker")),
+  ]);
 
   const completedMap = new Map<number, number>();
   for (const row of completedRows) {
@@ -534,8 +538,9 @@ export async function campaignEffectivenessRows({
   storeId?: number;
 }) {
   const conditions = [
-    gte(ordersTable.created_at, range.start),
-    lt(ordersTable.created_at, range.end),
+    gte(ordersTable.paid_at, range.start),
+    lt(ordersTable.paid_at, range.end),
+    isNotNull(ordersTable.paid_at),
   ];
   if (storeId !== undefined) {
     conditions.push(eq(ordersTable.store_id, storeId));

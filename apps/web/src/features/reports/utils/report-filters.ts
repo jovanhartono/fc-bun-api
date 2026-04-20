@@ -1,5 +1,16 @@
 import dayjs from "dayjs";
 
+const jakartaDateFormatter = new Intl.DateTimeFormat("en-CA", {
+	timeZone: "Asia/Jakarta",
+	year: "numeric",
+	month: "2-digit",
+	day: "2-digit",
+});
+
+export function jakartaToday(): string {
+	return jakartaDateFormatter.format(new Date());
+}
+
 export type DatePreset =
 	| "today"
 	| "yesterday"
@@ -17,13 +28,12 @@ export interface RangePreset {
 }
 
 export function getPresets(): RangePreset[] {
-	const today = dayjs();
+	const todayStr = jakartaToday();
+	const today = dayjs(todayStr);
 	const yesterday = today.subtract(1, "day");
 	const startOfMonth = today.startOf("month");
 	const currentQuarter = Math.floor(today.month() / 3);
-	const startOfQuarter = dayjs()
-		.month(currentQuarter * 3)
-		.startOf("month");
+	const startOfQuarter = today.month(currentQuarter * 3).startOf("month");
 
 	return [
 		{
@@ -80,7 +90,7 @@ export function matchPreset(
 }
 
 export function defaultRange(): { from: string; to: string } {
-	const today = dayjs();
+	const today = dayjs(jakartaToday());
 	return {
 		from: today.subtract(29, "day").format("YYYY-MM-DD"),
 		to: today.format("YYYY-MM-DD"),
