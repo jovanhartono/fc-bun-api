@@ -21,6 +21,7 @@ import {
   paymentMethodsTable,
   productsTable,
   servicesTable,
+  shiftsTable,
   storesTable,
   userStoresTable,
   usersTable,
@@ -513,6 +514,7 @@ async function resetDatabase() {
       "order_campaigns",
       "orders",
       "order_counters",
+      "shifts",
       "campaign_stores",
       "campaigns",
       "payment_methods",
@@ -867,6 +869,54 @@ function seedCustomers(
     id: customersTable.id,
     origin_store_id: customersTable.origin_store_id,
   });
+}
+
+async function seedShifts(
+  stores: StoreRow[],
+  workersByStore: Map<number, number[]>
+) {
+  const shiftRows: Array<{
+    user_id: number;
+    store_id: number;
+    clock_in_at: Date;
+    clock_out_at: Date | null;
+  }> = [];
+
+  for (const store of stores) {
+    const workers = workersByStore.get(store.id) ?? [];
+    for (const workerId of workers) {
+      for (let offset = 1; offset <= 30; offset++) {
+        const day = dayjs().subtract(offset, "day");
+        if (day.day() === 0) {
+          continue;
+        }
+        if (chance(0.1)) {
+          continue;
+        }
+        const clockInHour = randInt(7, 9);
+        const clockInMinute = randInt(0, 59);
+        const shiftHours = randInt(7, 9);
+        const clockIn = day
+          .hour(clockInHour)
+          .minute(clockInMinute)
+          .second(0)
+          .millisecond(0)
+          .subtract(7, "hour")
+          .toDate();
+        const clockOut = dayjs(clockIn).add(shiftHours, "hour").toDate();
+        shiftRows.push({
+          user_id: workerId,
+          store_id: store.id,
+          clock_in_at: clockIn,
+          clock_out_at: clockOut,
+        });
+      }
+    }
+  }
+
+  if (shiftRows.length > 0) {
+    await db.insert(shiftsTable).values(shiftRows);
+  }
 }
 
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: realistic seeded order flow needs multiple transactional branches.
@@ -1493,6 +1543,8 @@ export async function runSeed() {
   }));
 
   const customers = await seedCustomers(stores, cashiersByStore);
+
+  await seedShifts(stores, workersByStore);
 
   await seedOrders({
     stores,

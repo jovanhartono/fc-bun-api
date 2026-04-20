@@ -444,7 +444,7 @@ export async function workerProductivityRows({
   const [completedRows, refundRows, shiftRows, workers] = await Promise.all([
     db
       .select({
-        handler_id: ordersServicesTable.handler_id,
+        user_id: orderServiceStatusLogsTable.changed_by,
         completed: sql<number>`COUNT(DISTINCT ${orderServiceStatusLogsTable.order_service_id})::int`,
       })
       .from(orderServiceStatusLogsTable)
@@ -454,7 +454,7 @@ export async function workerProductivityRows({
       )
       .innerJoin(ordersTable, eq(ordersServicesTable.order_id, ordersTable.id))
       .where(and(...completionConditions))
-      .groupBy(ordersServicesTable.handler_id),
+      .groupBy(orderServiceStatusLogsTable.changed_by),
     db
       .select({
         handler_id: ordersServicesTable.handler_id,
@@ -492,9 +492,7 @@ export async function workerProductivityRows({
 
   const completedMap = new Map<number, number>();
   for (const row of completedRows) {
-    if (row.handler_id !== null) {
-      completedMap.set(row.handler_id, Number(row.completed));
-    }
+    completedMap.set(row.user_id, Number(row.completed));
   }
 
   const refundMap = new Map<number, number>();
