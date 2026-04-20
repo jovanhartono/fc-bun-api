@@ -255,8 +255,8 @@ function TrackOrderPage() {
 		queryKey: ["publicTrackOrder", submitted?.code, submitted?.phone],
 		queryFn: () =>
 			trackPublicOrder({
-				code: submitted!.code,
-				phone_number: submitted!.phone,
+				code: submitted?.code || "",
+				phone_number: submitted?.phone || "",
 			}),
 		enabled: !!submitted,
 		retry: false,
@@ -483,7 +483,8 @@ function TrackOrderPage() {
 						<section className="grid gap-6 border-b border-[#0f1a16]/10 py-10">
 							<div className="flex items-center gap-3">
 								<span className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#2a2922]/60">
-									[ 04 ] Items · {String(sortedServices.length).padStart(2, "0")}
+									[ 04 ] Items ·{" "}
+									{String(sortedServices.length).padStart(2, "0")}
 								</span>
 								<span className="h-px flex-1 bg-[#0f1a16]/15" />
 							</div>
