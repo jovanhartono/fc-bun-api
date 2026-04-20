@@ -14,11 +14,18 @@ import { DetailedError } from "hono/client";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { trackPublicOrder } from "@/lib/api";
 import { formatOrderServiceItemDetails } from "@/lib/order-service-item-details";
+import {
+	formatOrderServiceStatus,
+	formatOrderStatus,
+	getOrderServiceStatusBadgeVariant,
+	getOrderStatusBadgeVariant,
+} from "@/lib/status";
 import { cn } from "@/lib/utils";
 
 const trackSearchSchema = z.object({
@@ -48,26 +55,26 @@ type Stage = {
 const STAGES: readonly Stage[] = [
 	{
 		key: "received",
-		label: "Diterima",
-		caption: "Sneaker kamu sudah kami catat",
+		label: "Received",
+		caption: "Logged at branch",
 		icon: PackageIcon,
 	},
 	{
 		key: "cleaned",
-		label: "Dibersihkan",
-		caption: "Sedang dibersihkan oleh tim",
+		label: "Cleaning",
+		caption: "Team in progress",
 		icon: SparkleIcon,
 	},
 	{
 		key: "qc",
-		label: "Quality Check",
-		caption: "Kami cek hasilnya sekali lagi",
+		label: "Quality check",
+		caption: "Final inspection",
 		icon: SnowflakeIcon,
 	},
 	{
 		key: "ready",
-		label: "Siap Ambil",
-		caption: "Tinggal mampir, tunjukkan kode",
+		label: "Ready",
+		caption: "Pickup at counter",
 		icon: TShirtIcon,
 	},
 ] as const;
@@ -91,22 +98,51 @@ function getStageIndexFromOrderStatus(
 	return 0;
 }
 
-const SERVICE_STATUS_LABELS: Record<string, string> = {
-	queued: "Antri",
-	processing: "Dibersihkan",
-	quality_check: "Quality Check",
-	ready_for_pickup: "Siap Ambil",
-	picked_up: "Sudah Diambil",
-	refunded: "Dikembalikan",
-	cancelled: "Dibatalkan",
-};
-
-const dateTimeFormatter = new Intl.DateTimeFormat("id-ID", {
-	day: "2-digit",
-	month: "short",
-	hour: "2-digit",
-	minute: "2-digit",
-});
+function BrandMark({ className }: { className?: string }) {
+	return (
+		<div className={cn("flex items-center gap-2.5", className)}>
+			<svg
+				width="32"
+				height="32"
+				viewBox="0 0 32 32"
+				aria-hidden="true"
+				className="shrink-0"
+			>
+				<title>Fresclean</title>
+				<rect width="32" height="32" fill="#0f1a16" />
+				<rect
+					x="4"
+					y="4"
+					width="24"
+					height="24"
+					fill="none"
+					stroke="#7bc4a3"
+					strokeWidth="1"
+				/>
+				<text
+					x="16"
+					y="21"
+					textAnchor="middle"
+					fontFamily="ui-monospace, SFMono-Regular, monospace"
+					fontSize="12"
+					fontWeight="700"
+					fill="#ffffff"
+					letterSpacing="-0.5"
+				>
+					FC
+				</text>
+			</svg>
+			<div className="leading-none">
+				<p className="font-bold text-[13px] tracking-[0.28em] text-[#0f1a16]">
+					FRESCLEAN
+				</p>
+				<p className="mt-1 font-mono text-[9px] uppercase tracking-[0.24em] text-[#2a2922]/50">
+					Cleaning & restoration
+				</p>
+			</div>
+		</div>
+	);
+}
 
 function ProgressIndicator({
 	stageIndex,
@@ -115,45 +151,67 @@ function ProgressIndicator({
 	stageIndex: number;
 	isCancelled: boolean;
 }) {
+	const isAllDone = !isCancelled && stageIndex >= STAGES.length;
 	return (
-		<div className="grid gap-4">
-			<div className="grid grid-cols-4 gap-2">
+		<div className="grid gap-5">
+			<div className="relative grid grid-cols-4">
+				<div className="absolute top-6 left-0 right-0 h-px bg-[#2a2922]/15" />
+				<div
+					className="absolute top-6 left-0 h-px bg-emerald-500 transition-all duration-500"
+					style={{
+						width: isCancelled
+							? "0%"
+							: `${Math.min(100, ((stageIndex - 0.5) / (STAGES.length - 1)) * 100)}%`,
+					}}
+				/>
 				{STAGES.map((stage, index) => {
-					const isComplete = !isCancelled && stageIndex > index;
-					const isCurrent = !isCancelled && stageIndex === index;
-					const isDone = !isCancelled && stageIndex >= STAGES.length;
+					const isComplete = !isCancelled && (stageIndex > index || isAllDone);
+					const isCurrent = !isCancelled && stageIndex === index && !isAllDone;
 					const Icon = stage.icon;
 					return (
 						<div
 							key={stage.key}
 							className={cn(
-								"flex flex-col items-center gap-2 text-center",
-								isCancelled && "opacity-40",
+								"relative flex flex-col items-center gap-3 text-center",
+								isCancelled && "opacity-35",
 							)}
 						>
-							<div
+							<span
 								className={cn(
-									"flex size-12 items-center justify-center border transition-all",
-									isComplete || isDone
-										? "border-[#7bc4a3] bg-[#7bc4a3] text-[#0f1a16]"
-										: isCurrent
-											? "border-[#7bc4a3] bg-[#f2f7f4] text-[#0f1a16]"
-											: "border-[#2a2922]/20 bg-white text-[#2a2922]/40",
+									"absolute -top-3 font-mono text-[10px] tracking-[0.18em] tabular-nums",
+									isComplete || isCurrent
+										? "text-[#0f1a16]"
+										: "text-[#2a2922]/35",
 								)}
 							>
-								{isComplete || isDone ? (
+								{String(index + 1).padStart(2, "0")}
+							</span>
+							<div
+								className={cn(
+									"relative z-10 flex size-12 items-center justify-center border-2 bg-white transition-all",
+									isComplete
+										? "border-emerald-600 bg-emerald-600 text-white"
+										: isCurrent
+											? "border-[#0f1a16] bg-white text-[#0f1a16]"
+											: "border-[#2a2922]/20 text-[#2a2922]/35",
+								)}
+							>
+								{isComplete ? (
 									<CheckCircleIcon className="size-5" weight="duotone" />
 								) : (
 									<Icon className="size-5" weight="duotone" />
 								)}
+								{isCurrent ? (
+									<span className="absolute -bottom-1 left-1/2 size-1.5 -translate-x-1/2 bg-[#0f1a16]" />
+								) : null}
 							</div>
 							<div className="grid gap-0.5">
 								<p
 									className={cn(
-										"font-semibold text-xs tracking-[0.02em]",
-										isComplete || isCurrent || isDone
+										"font-semibold text-[11px] uppercase tracking-[0.14em] sm:text-xs",
+										isComplete || isCurrent
 											? "text-[#0f1a16]"
-											: "text-[#2a2922]/50",
+											: "text-[#2a2922]/45",
 									)}
 								>
 									{stage.label}
@@ -161,9 +219,9 @@ function ProgressIndicator({
 								<p
 									className={cn(
 										"hidden text-[11px] leading-snug sm:block",
-										isComplete || isCurrent || isDone
+										isComplete || isCurrent
 											? "text-[#2a2922]/70"
-											: "text-[#2a2922]/40",
+											: "text-[#2a2922]/35",
 									)}
 								>
 									{stage.caption}
@@ -172,16 +230,6 @@ function ProgressIndicator({
 						</div>
 					);
 				})}
-			</div>
-			<div className="relative hidden h-0.5 bg-[#2a2922]/10 sm:block">
-				<div
-					className="absolute left-0 top-0 h-full bg-[#7bc4a3] transition-all"
-					style={{
-						width: isCancelled
-							? "0%"
-							: `${Math.min(100, (stageIndex / STAGES.length) * 100)}%`,
-					}}
-				/>
 			</div>
 		</div>
 	);
@@ -237,7 +285,7 @@ function TrackOrderPage() {
 		const trimmedCode = code.trim();
 		const trimmedPhone = phone.trim();
 		if (!trimmedCode || !trimmedPhone) {
-			setFormError("Kode order dan nomor WhatsApp wajib diisi");
+			setFormError("Order code and WhatsApp number are required");
 			return;
 		}
 		setFormError(null);
@@ -268,75 +316,90 @@ function TrackOrderPage() {
 		);
 	}, [trackData, sortedServices]);
 
-	const isCancelled = trackData?.status === "cancelled";
-	const isReady = trackData?.status === "ready_for_pickup";
+	const orderStatus = trackData?.status as OrderStatus | undefined;
+	const isCancelled = orderStatus === "cancelled";
+	const isReady = orderStatus === "ready_for_pickup";
 
 	const storePhoneE164 = trackData?.store.phone_number?.replace(/\D/g, "");
 
 	return (
-		<div className="min-h-dvh bg-[#f7f4ef] text-[#2a2922]">
-			<header className="flex items-center justify-between gap-3 border-b border-[#2a2922]/10 bg-[#f7f4ef]/90 px-4 py-4 backdrop-blur sm:px-8">
-				<div className="flex items-center gap-2 font-bold text-sm tracking-[0.22em] uppercase text-[#0f1a16]">
-					<SparkleIcon className="size-5" weight="duotone" />
-					Fresclean
+		<div className="flex min-h-dvh flex-col bg-white text-[#2a2922]">
+			<header className="sticky top-0 z-20 border-b border-[#0f1a16]/10 bg-white/95 backdrop-blur">
+				<div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-5 py-4 sm:px-8">
+					<BrandMark />
+					<a
+						href="https://wa.me/6281290033232"
+						target="_blank"
+						rel="noreferrer"
+						className="inline-flex items-center gap-1.5 border border-[#0f1a16]/15 bg-white px-3 py-2 text-xs font-medium uppercase tracking-[0.14em] text-[#0f1a16] transition-colors hover:bg-[#0f1a16] hover:text-white"
+					>
+						<WhatsappLogoIcon className="size-3.5" weight="duotone" />
+						<span className="hidden sm:inline">Help</span>
+					</a>
 				</div>
-				<a
-					href="https://wa.me/6281290033232"
-					target="_blank"
-					rel="noreferrer"
-					className="hidden items-center gap-1.5 border border-[#2a2922]/15 bg-white/70 px-3 py-1.5 text-xs font-medium text-[#0f1a16] hover:bg-white sm:inline-flex"
-				>
-					<WhatsappLogoIcon className="size-4" weight="duotone" />
-					Bantuan
-				</a>
 			</header>
 
-			<main className="mx-auto grid max-w-3xl gap-8 px-4 py-10 sm:px-8 sm:py-16">
-				<section className="grid gap-3 text-center">
-					<p className="font-mono text-[11px] uppercase tracking-[0.32em] text-[#7bc4a3]">
-						Lacak order kamu
-					</p>
-					<h1 className="text-3xl font-bold leading-tight tracking-tight text-[#0f1a16] sm:text-4xl">
-						Sneaker kamu sedang di tangan yang tepat.
+			<main className="mx-auto w-full max-w-5xl flex-1 px-5 py-10 sm:px-8 sm:py-14">
+				<section className="grid gap-5 border-b border-[#0f1a16]/10 pb-10">
+					<div className="flex items-center gap-3">
+						<span className="font-mono text-[10px] uppercase tracking-[0.3em] text-emerald-600">
+							[ 01 ] Order tracking
+						</span>
+						<span className="h-px flex-1 bg-[#0f1a16]/15" />
+					</div>
+					<h1 className="max-w-2xl font-bold text-4xl leading-[1.05] tracking-tight text-[#0f1a16] sm:text-5xl">
+						Your essentials,
+						<br />
+						<span className="italic font-serif font-normal">
+							in good hands.
+						</span>
 					</h1>
-					<p className="mx-auto max-w-lg text-sm text-[#2a2922]/70 sm:text-base">
-						Masukkan kode order yang kami kirim via WhatsApp dan nomor yang kamu
-						pakai waktu drop-off.
+					<p className="max-w-md text-sm leading-relaxed text-[#2a2922]/70">
+						Live status from drop-off to pickup. Pull up your ticket with the
+						order code and the number you used at the counter.
 					</p>
 				</section>
 
-				<section className="border border-[#2a2922]/10 bg-white p-5 sm:p-7">
+				<section className="grid gap-5 border-b border-[#0f1a16]/10 py-10">
+					<div className="flex items-center gap-3">
+						<span className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#2a2922]/60">
+							[ 02 ] Credentials
+						</span>
+						<span className="h-px flex-1 bg-[#0f1a16]/15" />
+					</div>
 					<div className="grid gap-4">
-						<Field data-invalid={!!formError}>
-							<FieldLabel
-								htmlFor="track-code"
-								className="text-xs font-medium uppercase tracking-[0.12em] text-[#2a2922]/70"
-							>
-								Kode Order
-							</FieldLabel>
-							<Input
-								id="track-code"
-								placeholder="contoh: ABC/06032026/1"
-								value={code}
-								onChange={(event) => setCode(event.target.value)}
-								className="h-11 border-[#2a2922]/15 bg-[#f7f4ef] font-mono text-sm focus-visible:border-[#7bc4a3] focus-visible:ring-[#7bc4a3]/30"
-							/>
-						</Field>
-						<Field data-invalid={!!formError}>
-							<FieldLabel
-								htmlFor="track-phone"
-								className="text-xs font-medium uppercase tracking-[0.12em] text-[#2a2922]/70"
-							>
-								Nomor WhatsApp
-							</FieldLabel>
-							<Input
-								id="track-phone"
-								placeholder="contoh: 08123456789"
-								value={phone}
-								onChange={(event) => setPhone(event.target.value)}
-								className="h-11 border-[#2a2922]/15 bg-[#f7f4ef] font-mono text-sm focus-visible:border-[#7bc4a3] focus-visible:ring-[#7bc4a3]/30"
-							/>
-						</Field>
+						<div className="grid gap-4 sm:grid-cols-2">
+							<Field data-invalid={!!formError}>
+								<FieldLabel
+									htmlFor="track-code"
+									className="font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-[#2a2922]/70"
+								>
+									Order code
+								</FieldLabel>
+								<Input
+									id="track-code"
+									placeholder="ABC/06032026/1"
+									value={code}
+									onChange={(event) => setCode(event.target.value)}
+									className="h-11 rounded-none border-[#0f1a16]/15 bg-white font-mono text-sm uppercase focus-visible:border-[#0f1a16] focus-visible:ring-0"
+								/>
+							</Field>
+							<Field data-invalid={!!formError}>
+								<FieldLabel
+									htmlFor="track-phone"
+									className="font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-[#2a2922]/70"
+								>
+									WhatsApp number
+								</FieldLabel>
+								<Input
+									id="track-phone"
+									placeholder="08123456789"
+									value={phone}
+									onChange={(event) => setPhone(event.target.value)}
+									className="h-11 rounded-none border-[#0f1a16]/15 bg-white font-mono text-sm focus-visible:border-[#0f1a16] focus-visible:ring-0"
+								/>
+							</Field>
+						</div>
 						{formError ? (
 							<FieldError errors={[{ message: formError }]} />
 						) : null}
@@ -344,131 +407,133 @@ function TrackOrderPage() {
 							type="button"
 							onClick={handleTrack}
 							disabled={isLoading}
-							className="h-11 bg-[#0f1a16] text-sm font-medium uppercase tracking-[0.14em] text-[#f7f4ef] hover:bg-[#2a2922]"
+							className="h-11 rounded-none bg-[#0f1a16] text-xs font-semibold uppercase tracking-[0.2em] text-white transition-colors hover:bg-[#2a2922] disabled:opacity-60"
 						>
-							{isLoading ? "Mencari..." : "Lacak Order"}
+							{isLoading ? "Searching…" : "Track order →"}
 						</Button>
 					</div>
 				</section>
 
 				{trackData ? (
 					<>
-						<section className="grid gap-5 border border-[#2a2922]/10 bg-white p-5 sm:p-7">
-							<div className="flex flex-wrap items-start justify-between gap-3">
-								<div className="grid gap-1">
-									<p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#2a2922]/60">
-										Kode order
-									</p>
-									<p className="font-mono text-lg font-semibold tracking-tight">
-										{trackData.code}
-									</p>
-								</div>
-								<div className="text-right text-xs text-[#2a2922]/70">
-									<p>{trackData.store.name}</p>
-									<p className="font-mono text-[11px] text-[#2a2922]/50">
-										{trackData.customer.phone_number_masked}
-									</p>
-								</div>
+						<section className="grid gap-6 border-b border-[#0f1a16]/10 py-10">
+							<div className="flex items-center gap-3">
+								<span className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#2a2922]/60">
+									[ 03 ] Status
+								</span>
+								<span className="h-px flex-1 bg-[#0f1a16]/15" />
 							</div>
 
-							<ProgressIndicator
-								stageIndex={stageIndex}
-								isCancelled={isCancelled}
-							/>
-
-							{isCancelled ? (
-								<div className="border border-[#2a2922]/15 bg-[#2a2922]/5 p-4 text-sm text-[#2a2922]/80">
-									Order kamu dibatalkan. Hubungi cabang untuk informasi lebih
-									lanjut.
-								</div>
-							) : null}
-
-							{isReady ? (
-								<div className="border border-[#7bc4a3] bg-[#f2f7f4] p-4 text-sm text-[#0f1a16]">
-									Sneaker siap diambil. Tunjukkan kode order ke kasir.
-								</div>
-							) : null}
-						</section>
-
-						<section className="grid gap-3">
-							<p className="font-mono text-[11px] uppercase tracking-[0.22em] text-[#2a2922]/60">
-								Item kamu ({sortedServices.length})
-							</p>
-							<div className="grid gap-3">
-								{sortedServices.map((item) => (
-									<article
-										key={item.id}
-										className="border border-[#2a2922]/10 bg-white p-4 text-sm"
-									>
-										<div className="flex flex-wrap items-center justify-between gap-2">
-											<div className="min-w-0">
-												<p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[#2a2922]/50">
-													{item.item_code ?? `#${item.id}`}
-												</p>
-												<p className="font-semibold text-sm">
-													{item.service?.name ?? "Service"}
-												</p>
-											</div>
-											<span
-												className={cn(
-													"border px-2 py-0.5 font-mono text-[11px] uppercase tracking-[0.12em]",
-													item.status === "ready_for_pickup"
-														? "border-[#7bc4a3] bg-[#f2f7f4] text-[#0f1a16]"
-														: item.status === "picked_up"
-															? "border-[#2a2922]/15 bg-[#2a2922]/5 text-[#2a2922]/60"
-															: item.status === "cancelled" ||
-																	item.status === "refunded"
-																? "border-destructive/40 bg-destructive/10 text-destructive"
-																: "border-[#2a2922]/15 bg-white text-[#0f1a16]",
-												)}
-											>
-												{SERVICE_STATUS_LABELS[item.status] ?? item.status}
-											</span>
-										</div>
-										<p className="mt-2 text-xs text-[#2a2922]/60">
-											{formatOrderServiceItemDetails(item)}
+							<div className="grid gap-5 sm:gap-7">
+								<div className="grid gap-4 border-b border-[#0f1a16]/10 pb-5 sm:grid-cols-3 sm:gap-6">
+									<div className="grid gap-1 sm:col-span-2">
+										<p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#2a2922]/55">
+											Order code
 										</p>
+										<p className="font-mono text-xl font-semibold tracking-tight text-[#0f1a16]">
+											{trackData.code}
+										</p>
+										<p className="font-mono text-[11px] text-[#2a2922]/55">
+											{trackData.customer.phone_number_masked}
+										</p>
+									</div>
+									<div className="grid gap-1 sm:text-right">
+										<p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#2a2922]/55">
+											Branch
+										</p>
+										<p className="text-sm font-semibold text-[#0f1a16]">
+											{trackData.store.name}
+										</p>
+										<p className="sm:justify-self-end">
+											{orderStatus ? (
+												<Badge
+													variant={getOrderStatusBadgeVariant(orderStatus)}
+													className="font-mono text-[10px] uppercase tracking-[0.14em]"
+												>
+													{formatOrderStatus(orderStatus)}
+												</Badge>
+											) : (
+												<span className="font-mono text-[10px] text-[#2a2922]/55">
+													—
+												</span>
+											)}
+										</p>
+									</div>
+								</div>
 
-										{item.statusLogs.length > 0 ? (
-											<ol className="mt-3 grid gap-1.5 border-t border-[#2a2922]/10 pt-3">
-												{[...item.statusLogs]
-													.sort(
-														(a, b) =>
-															new Date(b.created_at).getTime() -
-															new Date(a.created_at).getTime(),
-													)
-													.slice(0, 3)
-													.map((log) => (
-														<li
-															key={log.id}
-															className="flex items-baseline justify-between gap-3 text-xs text-[#2a2922]/70"
-														>
-															<span>
-																{SERVICE_STATUS_LABELS[log.to_status] ??
-																	log.to_status}
-															</span>
-															<span className="font-mono text-[11px] text-[#2a2922]/50 tabular-nums">
-																{dateTimeFormatter.format(
-																	new Date(log.created_at),
-																)}
-															</span>
-														</li>
-													))}
-											</ol>
-										) : null}
-									</article>
-								))}
+								<ProgressIndicator
+									stageIndex={stageIndex}
+									isCancelled={isCancelled}
+								/>
+
+								{isCancelled ? (
+									<div className="border-l-2 border-destructive bg-destructive/5 px-4 py-3 text-sm text-[#2a2922]">
+										Order cancelled. Contact the branch for details.
+									</div>
+								) : null}
+
+								{isReady ? (
+									<div className="border-l-2 border-emerald-500 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+										Ready for pickup. Show your order code at the counter.
+									</div>
+								) : null}
 							</div>
 						</section>
 
-						<section className="border border-[#2a2922]/10 bg-white p-5 sm:p-7">
-							<div className="grid gap-3">
-								<p className="font-mono text-[11px] uppercase tracking-[0.22em] text-[#2a2922]/60">
-									Ada pertanyaan?
-								</p>
-								<p className="text-sm text-[#2a2922]/80">
-									Hubungi cabang yang mengerjakan sneaker kamu:
-								</p>
+						<section className="grid gap-6 border-b border-[#0f1a16]/10 py-10">
+							<div className="flex items-center gap-3">
+								<span className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#2a2922]/60">
+									[ 04 ] Items · {String(sortedServices.length).padStart(2, "0")}
+								</span>
+								<span className="h-px flex-1 bg-[#0f1a16]/15" />
+							</div>
+							<ul className="grid">
+								{sortedServices.map((item, index) => (
+									<li
+										key={item.id}
+										className="grid gap-3 border-t border-[#0f1a16]/10 py-4 text-sm first:border-t-0 first:pt-0 sm:grid-cols-[auto_1fr_auto] sm:items-start sm:gap-6"
+									>
+										<span className="font-mono text-[11px] font-semibold tracking-[0.18em] text-[#2a2922]/50 tabular-nums">
+											{String(index + 1).padStart(2, "0")}
+										</span>
+										<div className="min-w-0 grid gap-1">
+											<p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[#2a2922]/55">
+												{item.item_code ?? `#${item.id}`}
+											</p>
+											<p className="font-semibold text-[15px] text-[#0f1a16]">
+												{item.service?.name ?? "Service"}
+											</p>
+											<p className="text-xs text-[#2a2922]/65">
+												{formatOrderServiceItemDetails(item)}
+											</p>
+										</div>
+										<Badge
+											variant={getOrderServiceStatusBadgeVariant(item.status)}
+											className="h-fit justify-self-start font-mono text-[10px] uppercase tracking-[0.14em] sm:justify-self-end"
+										>
+											{formatOrderServiceStatus(item.status)}
+										</Badge>
+									</li>
+								))}
+							</ul>
+						</section>
+
+						<section className="grid gap-6 border-b border-[#0f1a16]/10 py-10">
+							<div className="flex items-center gap-3">
+								<span className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#2a2922]/60">
+									[ 05 ] Support
+								</span>
+								<span className="h-px flex-1 bg-[#0f1a16]/15" />
+							</div>
+							<div className="grid gap-5 sm:grid-cols-[1fr_auto] sm:items-center sm:gap-8">
+								<div className="grid gap-1">
+									<p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#2a2922]/55">
+										Questions?
+									</p>
+									<p className="text-sm text-[#2a2922]/80">
+										Reach the branch handling your order directly.
+									</p>
+								</div>
 								<div className="flex flex-wrap gap-2">
 									<a
 										href={
@@ -478,54 +543,57 @@ function TrackOrderPage() {
 										}
 										target="_blank"
 										rel="noreferrer"
-										className="inline-flex items-center gap-2 border border-[#7bc4a3] bg-[#f2f7f4] px-3 py-2 text-sm font-medium text-[#0f1a16] hover:bg-[#e7f1ec]"
+										className="inline-flex items-center gap-2 border border-emerald-600 bg-emerald-600 px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-white transition-colors hover:bg-emerald-700"
 									>
 										<WhatsappLogoIcon className="size-4" weight="duotone" />
-										WhatsApp {trackData.store.name}
+										WhatsApp
 									</a>
 									<a
 										href={`tel:${trackData.store.phone_number ?? ""}`}
-										className="inline-flex items-center gap-2 border border-[#2a2922]/15 bg-white px-3 py-2 text-sm font-medium text-[#0f1a16] hover:bg-[#f7f4ef]"
+										className="inline-flex items-center gap-2 border border-[#0f1a16]/15 bg-white px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#0f1a16] transition-colors hover:bg-[#0f1a16] hover:text-white"
 									>
 										<PhoneIcon className="size-4" weight="duotone" />
-										{trackData.store.phone_number ?? "Telepon"}
+										Call
 									</a>
 								</div>
 							</div>
 						</section>
 
-						<button
-							type="button"
-							onClick={() => {
-								queryClient.removeQueries({
-									queryKey: ["publicTrackOrder"],
-								});
-								setSubmitted(null);
-								setCode("");
-								setPhone("");
-							}}
-							className="inline-flex items-center justify-self-start gap-2 border border-[#2a2922]/15 px-3 py-2 text-xs font-medium uppercase tracking-[0.12em] text-[#0f1a16] hover:bg-[#2a2922]/5"
-						>
-							<ArrowCounterClockwiseIcon
-								className="size-3.5"
-								weight="duotone"
-							/>
-							Lacak order lain
-						</button>
+						<div className="pt-8">
+							<button
+								type="button"
+								onClick={() => {
+									queryClient.removeQueries({
+										queryKey: ["publicTrackOrder"],
+									});
+									setSubmitted(null);
+									setCode("");
+									setPhone("");
+								}}
+								className="inline-flex items-center gap-2 border border-[#0f1a16]/20 bg-transparent px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.16em] text-[#0f1a16] transition-colors hover:bg-[#0f1a16] hover:text-white"
+							>
+								<ArrowCounterClockwiseIcon
+									className="size-3.5"
+									weight="duotone"
+								/>
+								Track another order
+							</button>
+						</div>
 					</>
 				) : (
-					<section className="grid gap-5 border border-dashed border-[#2a2922]/15 bg-white/60 p-5 sm:p-7">
-						<p className="text-center font-mono text-[11px] uppercase tracking-[0.22em] text-[#2a2922]/60">
-							Alur singkat
-						</p>
-						<ProgressIndicator stageIndex={-1} isCancelled={false} />
+					<section className="grid gap-6 py-10">
+						<div className="flex items-center gap-3">
+							<span className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#2a2922]/60">
+								[ 03 ] How it works
+							</span>
+							<span className="h-px flex-1 bg-[#0f1a16]/15" />
+						</div>
+						<div className="py-6 sm:py-8">
+							<ProgressIndicator stageIndex={-1} isCancelled={false} />
+						</div>
 					</section>
 				)}
 			</main>
-
-			<footer className="mt-auto border-t border-[#2a2922]/10 bg-[#f7f4ef] px-4 py-6 text-center text-xs text-[#2a2922]/50 sm:px-8">
-				Fresclean · Sneaker cleaning & restoration
-			</footer>
 		</div>
 	);
 }
