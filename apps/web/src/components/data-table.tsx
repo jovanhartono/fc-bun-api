@@ -21,7 +21,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { useIsDesktop } from "@/hooks/use-is-desktop";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
 interface DataTableProps<TData extends RowData> {
@@ -56,7 +56,7 @@ export function DataTable<TData extends RowData>({
 	cardHiddenColumnIds,
 }: DataTableProps<TData>) {
 	const [sorting, setSorting] = useState<SortingState>([]);
-	const isDesktop = useIsDesktop();
+	const isMobile = useIsMobile();
 
 	const table = useReactTable({
 		data,
@@ -69,7 +69,7 @@ export function DataTable<TData extends RowData>({
 
 	const colSpan = Math.max(columns.length, 1);
 
-	if (!isDesktop) {
+	if (isMobile) {
 		if (isLoading) {
 			return (
 				<div className="grid gap-2 md:hidden">
