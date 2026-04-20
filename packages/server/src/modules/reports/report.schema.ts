@@ -17,3 +17,19 @@ export const GETReportOverviewQuerySchema = z.object({
 export type GetReportOverviewQuery = z.infer<
   typeof GETReportOverviewQuerySchema
 >;
+
+const granularitySchema = z.enum(["day", "week", "month"]).optional();
+
+export const GETReportRangeQuerySchema = z
+  .object({
+    from: dateStringSchema("from"),
+    to: dateStringSchema("to"),
+    store_id: z.coerce.number().int().positive().optional(),
+    granularity: granularitySchema,
+  })
+  .refine((value) => value.from <= value.to, {
+    error: "from must be before or equal to to",
+    path: ["from"],
+  });
+
+export type GetReportRangeQuery = z.infer<typeof GETReportRangeQuerySchema>;
