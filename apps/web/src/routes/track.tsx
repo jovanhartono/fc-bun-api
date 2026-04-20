@@ -8,9 +8,11 @@ import {
 	TShirtIcon,
 	WhatsappLogoIcon,
 } from "@phosphor-icons/react";
-import { useMutation } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { DetailedError } from "hono/client";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
@@ -187,30 +189,51 @@ function ProgressIndicator({
 
 function TrackOrderPage() {
 	const search = Route.useSearch();
+	const queryClient = useQueryClient();
 	const [code, setCode] = useState(search.code ?? "");
 	const [phone, setPhone] = useState(search.phone ?? "");
 	const [formError, setFormError] = useState<string | null>(null);
-
-	const trackMutation = useMutation({
-		mutationFn: trackPublicOrder,
+	const [submitted, setSubmitted] = useState<{
+		code: string;
+		phone: string;
+	} | null>(() => {
+		if (search.code && search.phone) {
+			return { code: search.code, phone: search.phone };
+		}
+		return null;
 	});
-	const didAutoRunRef = useRef(false);
+
+	const trackQuery = useQuery({
+		queryKey: ["publicTrackOrder", submitted?.code, submitted?.phone],
+		queryFn: () =>
+			trackPublicOrder({
+				code: submitted!.code,
+				phone_number: submitted!.phone,
+			}),
+		enabled: !!submitted,
+		retry: false,
+		refetchOnWindowFocus: false,
+		staleTime: 0,
+	});
 
 	useEffect(() => {
-		if (didAutoRunRef.current) {
+		const error = trackQuery.error;
+		if (!error) {
 			return;
 		}
-		if (!search.code || !search.phone) {
+		if (error instanceof DetailedError) {
+			const details = error.detail as
+				| { data?: { message?: string } }
+				| undefined;
+			toast.error(details?.data?.message ?? "Something went wrong");
 			return;
 		}
-		didAutoRunRef.current = true;
-		void trackMutation.mutateAsync({
-			code: search.code,
-			phone_number: search.phone,
-		});
-	}, [search.code, search.phone, trackMutation.mutateAsync]);
+		if (error instanceof Error) {
+			toast.error(error.message);
+		}
+	}, [trackQuery.error]);
 
-	const handleTrack = async () => {
+	const handleTrack = () => {
 		const trimmedCode = code.trim();
 		const trimmedPhone = phone.trim();
 		if (!trimmedCode || !trimmedPhone) {
@@ -218,40 +241,40 @@ function TrackOrderPage() {
 			return;
 		}
 		setFormError(null);
-		try {
-			await trackMutation.mutateAsync({
-				code: trimmedCode,
-				phone_number: trimmedPhone,
-			});
-		} catch {
-			// global toast handles it; ignore
+		if (
+			submitted?.code === trimmedCode &&
+			submitted?.phone === trimmedPhone
+		) {
+			void trackQuery.refetch();
+			return;
 		}
+		setSubmitted({ code: trimmedCode, phone: trimmedPhone });
 	};
 
+	const trackData = trackQuery.data;
+	const isLoading = trackQuery.isFetching;
+
 	const sortedServices = useMemo(() => {
-		if (!trackMutation.data) {
+		if (!trackData) {
 			return [];
 		}
-		return [...trackMutation.data.services].sort((a, b) => a.id - b.id);
-	}, [trackMutation.data]);
+		return [...trackData.services].sort((a, b) => a.id - b.id);
+	}, [trackData]);
 
 	const stageIndex = useMemo(() => {
-		if (!trackMutation.data) {
+		if (!trackData) {
 			return 0;
 		}
 		return getStageIndexFromOrderStatus(
-			trackMutation.data.status as OrderStatus,
+			trackData.status as OrderStatus,
 			sortedServices.map((s) => s.status),
 		);
-	}, [trackMutation.data, sortedServices]);
+	}, [trackData, sortedServices]);
 
-	const isCancelled = trackMutation.data?.status === "cancelled";
-	const isReady = trackMutation.data?.status === "ready_for_pickup";
+	const isCancelled = trackData?.status === "cancelled";
+	const isReady = trackData?.status === "ready_for_pickup";
 
-	const storePhoneE164 = trackMutation.data?.store.phone_number?.replace(
-		/\D/g,
-		"",
-	);
+	const storePhoneE164 = trackData?.store.phone_number?.replace(/\D/g, "");
 
 	return (
 		<div className="min-h-dvh bg-[#f7f4ef] text-[#2a2922]">
@@ -323,15 +346,15 @@ function TrackOrderPage() {
 						<Button
 							type="button"
 							onClick={handleTrack}
-							disabled={trackMutation.isPending}
+							disabled={isLoading}
 							className="h-11 bg-[#0f1a16] text-sm font-medium uppercase tracking-[0.14em] text-[#f7f4ef] hover:bg-[#2a2922]"
 						>
-							{trackMutation.isPending ? "Mencari..." : "Lacak Order"}
+							{isLoading ? "Mencari..." : "Lacak Order"}
 						</Button>
 					</div>
 				</section>
 
-				{trackMutation.data ? (
+				{trackData ? (
 					<>
 						<section className="grid gap-5 border border-[#2a2922]/10 bg-white p-5 sm:p-7">
 							<div className="flex flex-wrap items-start justify-between gap-3">
@@ -340,13 +363,13 @@ function TrackOrderPage() {
 										Kode order
 									</p>
 									<p className="font-mono text-lg font-semibold tracking-tight">
-										{trackMutation.data.code}
+										{trackData.code}
 									</p>
 								</div>
 								<div className="text-right text-xs text-[#2a2922]/70">
-									<p>{trackMutation.data.store.name}</p>
+									<p>{trackData.store.name}</p>
 									<p className="font-mono text-[11px] text-[#2a2922]/50">
-										{trackMutation.data.customer.phone_number_masked}
+										{trackData.customer.phone_number_masked}
 									</p>
 								</div>
 							</div>
@@ -461,14 +484,14 @@ function TrackOrderPage() {
 										className="inline-flex items-center gap-2 border border-[#7bc4a3] bg-[#f2f7f4] px-3 py-2 text-sm font-medium text-[#0f1a16] hover:bg-[#e7f1ec]"
 									>
 										<WhatsappLogoIcon className="size-4" weight="duotone" />
-										WhatsApp {trackMutation.data.store.name}
+										WhatsApp {trackData.store.name}
 									</a>
 									<a
-										href={`tel:${trackMutation.data.store.phone_number ?? ""}`}
+										href={`tel:${trackData.store.phone_number ?? ""}`}
 										className="inline-flex items-center gap-2 border border-[#2a2922]/15 bg-white px-3 py-2 text-sm font-medium text-[#0f1a16] hover:bg-[#f7f4ef]"
 									>
 										<PhoneIcon className="size-4" weight="duotone" />
-										{trackMutation.data.store.phone_number ?? "Telepon"}
+										{trackData.store.phone_number ?? "Telepon"}
 									</a>
 								</div>
 							</div>
@@ -477,7 +500,10 @@ function TrackOrderPage() {
 						<button
 							type="button"
 							onClick={() => {
-								trackMutation.reset();
+								queryClient.removeQueries({
+									queryKey: ["publicTrackOrder"],
+								});
+								setSubmitted(null);
 								setCode("");
 								setPhone("");
 							}}
