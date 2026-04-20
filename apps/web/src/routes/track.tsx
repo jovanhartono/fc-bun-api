@@ -241,10 +241,7 @@ function TrackOrderPage() {
 			return;
 		}
 		setFormError(null);
-		if (
-			submitted?.code === trimmedCode &&
-			submitted?.phone === trimmedPhone
-		) {
+		if (submitted?.code === trimmedCode && submitted?.phone === trimmedPhone) {
 			void trackQuery.refetch();
 			return;
 		}
