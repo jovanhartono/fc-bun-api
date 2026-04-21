@@ -4,25 +4,25 @@ import type {
   KpiDelta,
 } from "@/modules/reports/report.schema";
 import {
-  campaignEffectivenessRows,
-  categoryRevenueSeries,
-  cumulativeCustomersBefore,
-  distinctHandlerCountInRange,
-  newCustomersSeries,
-  ordersInSeries,
-  ordersOutSeries,
-  paymentMixSeries,
-  productsCogsSeries,
-  productsRevenueSeries,
-  refundAmountSeries,
-  refundReasonSeries,
-  repeatCustomersInRange,
-  returningCustomerOrdersSeries,
-  servicesCogsSeries,
-  servicesRevenueSeries,
-  storeRevenueRows,
-  topCustomersInRange,
-  workerProductivityRows,
+  findCumulativeCustomersBefore,
+  findDistinctHandlerCount,
+  findRepeatCustomerStats,
+  listCampaignEffectivenessRows,
+  listCategoryRevenueSeries,
+  listNewCustomersSeries,
+  listOrdersInSeries,
+  listOrdersOutSeries,
+  listPaymentMixSeries,
+  listProductsCogsSeries,
+  listProductsRevenueSeries,
+  listRefundAmountSeries,
+  listRefundReasonSeries,
+  listReturningCustomerOrdersSeries,
+  listServicesCogsSeries,
+  listServicesRevenueSeries,
+  listStoreRevenueRows,
+  listTopCustomers,
+  listWorkerProductivityRows,
 } from "@/modules/reports/report-range.repository";
 import {
   deltaPct,
@@ -118,11 +118,11 @@ async function financialSummaryFor({
 }) {
   const [services, products, servicesCogs, productsCogs, refunds] =
     await Promise.all([
-      servicesRevenueSeries({ range, storeId, granularity }),
-      productsRevenueSeries({ range, storeId, granularity }),
-      servicesCogsSeries({ range, storeId, granularity }),
-      productsCogsSeries({ range, storeId, granularity }),
-      refundAmountSeries({ range, storeId, granularity }),
+      listServicesRevenueSeries({ range, storeId, granularity }),
+      listProductsRevenueSeries({ range, storeId, granularity }),
+      listServicesCogsSeries({ range, storeId, granularity }),
+      listProductsCogsSeries({ range, storeId, granularity }),
+      listRefundAmountSeries({ range, storeId, granularity }),
     ]);
   return {
     services,
@@ -145,8 +145,8 @@ export async function getFinancialReport(query: GetReportRangeQuery) {
       storeId,
       granularity: ctx.granularity,
     }),
-    categoryRevenueSeries({ range, storeId, granularity: ctx.granularity }),
-    storeRevenueRows({ range }),
+    listCategoryRevenueSeries({ range, storeId, granularity: ctx.granularity }),
+    listStoreRevenueRows({ range }),
   ]);
 
   const servicesMap = indexBy(current.services);
@@ -303,20 +303,20 @@ export async function getOrdersFlowReport(query: GetReportRangeQuery) {
 
   const [ordersIn, ordersOut, prevIn, prevOut, handlers, prevHandlers] =
     await Promise.all([
-      ordersInSeries({ range, storeId, granularity: ctx.granularity }),
-      ordersOutSeries({ range, storeId, granularity: ctx.granularity }),
-      ordersInSeries({
+      listOrdersInSeries({ range, storeId, granularity: ctx.granularity }),
+      listOrdersOutSeries({ range, storeId, granularity: ctx.granularity }),
+      listOrdersInSeries({
         range: ctx.previous.range,
         storeId,
         granularity: ctx.granularity,
       }),
-      ordersOutSeries({
+      listOrdersOutSeries({
         range: ctx.previous.range,
         storeId,
         granularity: ctx.granularity,
       }),
-      distinctHandlerCountInRange({ range, storeId }),
-      distinctHandlerCountInRange({ range: ctx.previous.range, storeId }),
+      findDistinctHandlerCount({ range, storeId }),
+      findDistinctHandlerCount({ range: ctx.previous.range, storeId }),
     ]);
 
   const inMap = indexBy(ordersIn);
@@ -368,7 +368,7 @@ export async function getPaymentMixReport(query: GetReportRangeQuery) {
   const range = getJakartaRange(ctx.from, ctx.to);
   const storeId = ctx.store_id ?? undefined;
 
-  const rows = await paymentMixSeries({
+  const rows = await listPaymentMixSeries({
     range,
     storeId,
     granularity: ctx.granularity,
@@ -470,25 +470,25 @@ export async function getCustomerAcquisitionReport(query: GetReportRangeQuery) {
     prevPriorTotal,
     prevRepeat,
   ] = await Promise.all([
-    newCustomersSeries({ range, storeId, granularity: ctx.granularity }),
-    cumulativeCustomersBefore({ before: range.start, storeId }),
-    repeatCustomersInRange({ range, storeId }),
-    returningCustomerOrdersSeries({
+    listNewCustomersSeries({ range, storeId, granularity: ctx.granularity }),
+    findCumulativeCustomersBefore({ before: range.start, storeId }),
+    findRepeatCustomerStats({ range, storeId }),
+    listReturningCustomerOrdersSeries({
       range,
       storeId,
       granularity: ctx.granularity,
     }),
-    topCustomersInRange({ range, storeId, limit: 10 }),
-    newCustomersSeries({
+    listTopCustomers({ range, storeId, limit: 10 }),
+    listNewCustomersSeries({
       range: ctx.previous.range,
       storeId,
       granularity: ctx.granularity,
     }),
-    cumulativeCustomersBefore({
+    findCumulativeCustomersBefore({
       before: ctx.previous.range.start,
       storeId,
     }),
-    repeatCustomersInRange({ range: ctx.previous.range, storeId }),
+    findRepeatCustomerStats({ range: ctx.previous.range, storeId }),
   ]);
 
   const newMap = indexBy(newCustomers);
@@ -580,8 +580,8 @@ export async function getRefundTrendReport(query: GetReportRangeQuery) {
   const storeId = ctx.store_id ?? undefined;
 
   const [amounts, reasons] = await Promise.all([
-    refundAmountSeries({ range, storeId, granularity: ctx.granularity }),
-    refundReasonSeries({ range, storeId, granularity: ctx.granularity }),
+    listRefundAmountSeries({ range, storeId, granularity: ctx.granularity }),
+    listRefundReasonSeries({ range, storeId, granularity: ctx.granularity }),
   ]);
 
   const amountMap = indexBy(amounts);
@@ -654,8 +654,8 @@ export async function getWorkerProductivityReport(query: GetReportRangeQuery) {
   const storeId = ctx.store_id ?? undefined;
 
   const [rows, prevRows] = await Promise.all([
-    workerProductivityRows({ range, storeId }),
-    workerProductivityRows({ range: ctx.previous.range, storeId }),
+    listWorkerProductivityRows({ range, storeId }),
+    listWorkerProductivityRows({ range: ctx.previous.range, storeId }),
   ]);
 
   const current = summariseWorkers(rows);
@@ -677,7 +677,7 @@ export async function getWorkerProductivityReport(query: GetReportRangeQuery) {
 }
 
 function summariseWorkers(
-  rows: Awaited<ReturnType<typeof workerProductivityRows>>
+  rows: Awaited<ReturnType<typeof listWorkerProductivityRows>>
 ): WorkerSummary {
   const active = rows.filter(
     (r) => r.items_completed > 0 || r.shift_minutes > 0 || r.rework_items > 0
@@ -705,7 +705,7 @@ export async function getCampaignEffectivenessReport(
   const range = getJakartaRange(ctx.from, ctx.to);
   const storeId = ctx.store_id ?? undefined;
 
-  const rows = await campaignEffectivenessRows({ range, storeId });
+  const rows = await listCampaignEffectivenessRows({ range, storeId });
 
   const totals = rows.reduce(
     (acc, row) => {

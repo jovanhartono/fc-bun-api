@@ -44,7 +44,7 @@ interface BaseRangeArgs {
 
 // ───────────────────────── Revenue trend (R1) ─────────────────────────
 
-export async function servicesRevenueSeries({
+export async function listServicesRevenueSeries({
   range,
   storeId,
   granularity,
@@ -75,7 +75,7 @@ export async function servicesRevenueSeries({
   }));
 }
 
-export async function productsRevenueSeries({
+export async function listProductsRevenueSeries({
   range,
   storeId,
   granularity,
@@ -108,7 +108,7 @@ export async function productsRevenueSeries({
 
 // ───────────────────────── COGS (Financial) ─────────────────────────
 
-export async function servicesCogsSeries({
+export async function listServicesCogsSeries({
   range,
   storeId,
   granularity,
@@ -139,7 +139,7 @@ export async function servicesCogsSeries({
   }));
 }
 
-export async function productsCogsSeries({
+export async function listProductsCogsSeries({
   range,
   storeId,
   granularity,
@@ -172,7 +172,7 @@ export async function productsCogsSeries({
 
 // ───────────────────────── Store revenue (branch donut) ─────────────────────────
 
-export async function storeRevenueRows({ range }: { range: DateRange }) {
+export async function listStoreRevenueRows({ range }: { range: DateRange }) {
   const conditions = [
     gte(ordersTable.paid_at, range.start),
     lt(ordersTable.paid_at, range.end),
@@ -204,7 +204,7 @@ export async function storeRevenueRows({ range }: { range: DateRange }) {
 
 // ───────────────────────── Category trend (R6) ─────────────────────────
 
-export async function categoryRevenueSeries({
+export async function listCategoryRevenueSeries({
   range,
   storeId,
   granularity,
@@ -249,7 +249,7 @@ export async function categoryRevenueSeries({
 
 // ───────────────────────── Orders flow (R2) ─────────────────────────
 
-export async function ordersInSeries({
+export async function listOrdersInSeries({
   range,
   storeId,
   granularity,
@@ -278,7 +278,7 @@ export async function ordersInSeries({
   }));
 }
 
-export async function ordersOutSeries({
+export async function listOrdersOutSeries({
   range,
   storeId,
   granularity,
@@ -311,7 +311,7 @@ export async function ordersOutSeries({
   }));
 }
 
-export async function distinctHandlerCountInRange({
+export async function findDistinctHandlerCount({
   range,
   storeId,
 }: {
@@ -345,7 +345,7 @@ export async function distinctHandlerCountInRange({
 
 // ───────────────────────── Payment mix (R3) ─────────────────────────
 
-export async function paymentMixSeries({
+export async function listPaymentMixSeries({
   range,
   storeId,
   granularity,
@@ -387,7 +387,7 @@ export async function paymentMixSeries({
 
 // ───────────────────────── Customer acquisition (R4) ─────────────────────────
 
-export async function newCustomersSeries({
+export async function listNewCustomersSeries({
   range,
   storeId,
   granularity,
@@ -416,7 +416,7 @@ export async function newCustomersSeries({
   }));
 }
 
-export async function returningCustomerOrdersSeries({
+export async function listReturningCustomerOrdersSeries({
   range,
   storeId,
   granularity,
@@ -440,7 +440,7 @@ export async function returningCustomerOrdersSeries({
     .from(ordersTable)
     .innerJoin(customersTable, eq(ordersTable.customer_id, customersTable.id))
     .where(and(...conditions))
-    .groupBy(bucket, customersTable.created_at, customersTable.id);
+    .groupBy(bucket, customersTable.id, customersTable.created_at);
 
   return rows.map((row) => ({
     bucket: row.bucket,
@@ -449,7 +449,7 @@ export async function returningCustomerOrdersSeries({
   }));
 }
 
-export async function topCustomersInRange({
+export async function listTopCustomers({
   range,
   storeId,
   limit = 10,
@@ -496,7 +496,7 @@ export async function topCustomersInRange({
   }));
 }
 
-export async function cumulativeCustomersBefore({
+export async function findCumulativeCustomersBefore({
   before,
   storeId,
 }: {
@@ -516,7 +516,7 @@ export async function cumulativeCustomersBefore({
   return Number(row?.total ?? 0);
 }
 
-export async function repeatCustomersInRange({
+export async function findRepeatCustomerStats({
   range,
   storeId,
 }: {
@@ -557,7 +557,7 @@ export async function repeatCustomersInRange({
 
 // ───────────────────────── Refund trend (R5) ─────────────────────────
 
-export async function refundAmountSeries({
+export async function listRefundAmountSeries({
   range,
   storeId,
   granularity,
@@ -589,7 +589,7 @@ export async function refundAmountSeries({
   }));
 }
 
-export async function refundReasonSeries({
+export async function listRefundReasonSeries({
   range,
   storeId,
   granularity,
@@ -671,8 +671,11 @@ function fetchCompletions(range: DateRange, storeId?: number) {
   if (storeId !== undefined) {
     conditions.push(eq(ordersTable.store_id, storeId));
   }
+  // Rework cycles (quality_check → processing → ready_for_pickup) can emit
+  // multiple ready_for_pickup logs per item; DISTINCT keeps items_completed
+  // aligned with physically distinct finished items.
   return db
-    .select({
+    .selectDistinctOn([orderServiceStatusLogsTable.order_service_id], {
       order_service_id: orderServiceStatusLogsTable.order_service_id,
     })
     .from(orderServiceStatusLogsTable)
@@ -681,7 +684,11 @@ function fetchCompletions(range: DateRange, storeId?: number) {
       eq(orderServiceStatusLogsTable.order_service_id, ordersServicesTable.id)
     )
     .innerJoin(ordersTable, eq(ordersServicesTable.order_id, ordersTable.id))
-    .where(and(...conditions));
+    .where(and(...conditions))
+    .orderBy(
+      orderServiceStatusLogsTable.order_service_id,
+      desc(orderServiceStatusLogsTable.created_at)
+    );
 }
 
 function fetchRefundsPerItem(range: DateRange, storeId?: number) {
@@ -808,7 +815,7 @@ function aggregatePerWorker(
   return { completedMap, refundMap, reworkTotals };
 }
 
-export async function workerProductivityRows({
+export async function listWorkerProductivityRows({
   range,
   storeId,
 }: {
@@ -886,7 +893,7 @@ export async function workerProductivityRows({
 
 // ───────────────────────── Campaign effectiveness (R8) ─────────────────────────
 
-export async function campaignEffectivenessRows({
+export async function listCampaignEffectivenessRows({
   range,
   storeId,
 }: {

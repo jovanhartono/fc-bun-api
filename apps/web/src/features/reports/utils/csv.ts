@@ -1,10 +1,16 @@
+const FORMULA_PREFIX = /^[=+\-@\t\r]/;
+const QUOTE_REQUIRED = /[",\n]/;
+
 export function escapeCsv(value: string | number | null | undefined): string {
 	if (value === null || value === undefined) {
 		return "";
 	}
 	const str = String(value);
-	if (/[",\n]/.test(str)) {
-		return `"${str.replace(/"/g, '""')}"`;
+	const needsFormulaGuard = FORMULA_PREFIX.test(str);
+	const needsQuote = QUOTE_REQUIRED.test(str) || needsFormulaGuard;
+	if (needsQuote) {
+		const escaped = str.replace(/"/g, '""');
+		return needsFormulaGuard ? `"'${escaped}"` : `"${escaped}"`;
 	}
 	return str;
 }
