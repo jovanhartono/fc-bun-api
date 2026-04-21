@@ -1,15 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-	KpiTile,
-	ReportKpiRow,
-} from "@/features/reports/components/report-kpi-row";
-import { ExportButton } from "@/features/reports/components/report-shell";
+import { ExportButton } from "@/features/reports/components/export-button";
+import { KpiCard, KpiRow } from "@/features/reports/components/kpi-card";
 import {
 	csvFilename,
 	downloadCsv,
 	escapeCsv,
 } from "@/features/reports/utils/csv";
+import {
+	numberFormatter,
+	percentFormatter,
+} from "@/features/reports/utils/format";
+import type { ReportGranularity } from "@/lib/api";
 import { campaignEffectivenessQueryOptions } from "@/lib/query-options";
 import { formatIDRCurrency } from "@/shared/utils";
 
@@ -17,17 +19,22 @@ interface CampaignsPanelProps {
 	from: string;
 	to: string;
 	storeId?: number;
+	granularity?: ReportGranularity;
 }
 
-const numberFormatter = new Intl.NumberFormat("en-ID");
-const percentFormatter = new Intl.NumberFormat("en-ID", {
-	style: "percent",
-	maximumFractionDigits: 1,
-});
-
-export const CampaignsPanel = ({ from, to, storeId }: CampaignsPanelProps) => {
+export const CampaignsPanel = ({
+	from,
+	to,
+	storeId,
+	granularity,
+}: CampaignsPanelProps) => {
 	const query = useQuery(
-		campaignEffectivenessQueryOptions({ from, to, store_id: storeId }),
+		campaignEffectivenessQueryOptions({
+			from,
+			to,
+			store_id: storeId,
+			granularity,
+		}),
 	);
 	const data = query.data;
 	const campaigns = data?.campaigns ?? [];
@@ -57,26 +64,26 @@ export const CampaignsPanel = ({ from, to, storeId }: CampaignsPanelProps) => {
 
 	return (
 		<div className="grid gap-6">
-			<div className="flex items-start justify-between gap-3">
-				<ReportKpiRow>
-					<KpiTile
+			<div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+				<KpiRow>
+					<KpiCard
 						label="Campaigns used"
 						value={numberFormatter.format(campaigns.length)}
 					/>
-					<KpiTile
+					<KpiCard
 						label="Orders w/ campaign"
 						value={numberFormatter.format(data?.summary.orders ?? 0)}
 					/>
-					<KpiTile
+					<KpiCard
 						label="Revenue attributed"
 						value={formatIDRCurrency(String(totalRevenue))}
 					/>
-					<KpiTile
+					<KpiCard
 						label="Discount cost"
 						value={formatIDRCurrency(String(totalDiscount))}
 						helper={`ROI ${roi.toFixed(2)}×`}
 					/>
-				</ReportKpiRow>
+				</KpiRow>
 				<ExportButton disabled={!data} onClick={handleExport} />
 			</div>
 
@@ -97,6 +104,8 @@ export const CampaignsPanel = ({ from, to, storeId }: CampaignsPanelProps) => {
 								const pct = maxOrders === 0 ? 0 : (c.orders / maxOrders) * 100;
 								const discountRate =
 									c.revenue > 0 ? c.discount_cost / c.revenue : 0;
+								const campaignRoi =
+									c.discount_cost > 0 ? c.revenue / c.discount_cost : 0;
 								return (
 									<div key={c.campaign_id} className="grid gap-1">
 										<div className="flex items-center justify-between gap-2">
@@ -106,8 +115,11 @@ export const CampaignsPanel = ({ from, to, storeId }: CampaignsPanelProps) => {
 												</span>
 												<span className="truncate">{c.campaign_name}</span>
 											</span>
-											<span className="font-mono text-sm tabular-nums">
-												{`${numberFormatter.format(c.orders)} orders`}
+											<span className="flex items-center gap-3 font-mono text-sm tabular-nums">
+												<span className="text-muted-foreground">
+													{`${numberFormatter.format(c.orders)} orders`}
+												</span>
+												<span>{`${campaignRoi.toFixed(2)}×`}</span>
 											</span>
 										</div>
 										<div className="h-1.5 w-full bg-muted">

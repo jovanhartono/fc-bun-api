@@ -10,6 +10,14 @@ import type {
 	PUTCustomerSchema,
 	PUTUserSchema,
 } from "@fresclean/api/schema";
+import type {
+	ComparableSummary,
+	KpiDelta,
+	ReportGranularity,
+} from "@fresclean/api/types";
+
+export type { ComparableSummary, KpiDelta, ReportGranularity };
+
 import { type InferResponseType, parseResponse } from "hono/client";
 import type { z } from "zod";
 import { rpc, rpcWithAuth } from "@/lib/rpc";
@@ -63,7 +71,7 @@ const shiftsRoute = rpc.api.admin.shifts.$get;
 const shiftCurrentRoute = rpc.api.admin.shifts.current.$get;
 const dailyReportRoute = rpc.api.admin.reports.daily.$get;
 const reportOverviewRoute = rpc.api.admin.reports.overview.$get;
-const revenueTrendRoute = rpc.api.admin.reports["revenue-trend"].$get;
+const financialRoute = rpc.api.admin.reports.financial.$get;
 const ordersFlowRoute = rpc.api.admin.reports["orders-flow"].$get;
 const paymentMixRoute = rpc.api.admin.reports["payment-mix"].$get;
 const customerAcquisitionRoute =
@@ -165,8 +173,6 @@ export type FetchReportOverviewQuery = {
 	trend_days?: number;
 };
 
-export type ReportGranularity = "day" | "week" | "month";
-
 export type FetchReportRangeQuery = {
 	from: string;
 	to: string;
@@ -174,8 +180,8 @@ export type FetchReportRangeQuery = {
 	granularity?: ReportGranularity;
 };
 
-export type RevenueTrendReport = Extract<
-	InferResponseType<typeof revenueTrendRoute>,
+export type FinancialReport = Extract<
+	InferResponseType<typeof financialRoute>,
 	{ success: true }
 >["data"];
 
@@ -407,8 +413,8 @@ export const queryKeys = {
 		["daily-report", query] as const,
 	reportOverview: (query: FetchReportOverviewQuery) =>
 		["report-overview", query] as const,
-	revenueTrend: (query: FetchReportRangeQuery) =>
-		["report-revenue-trend", query] as const,
+	financial: (query: FetchReportRangeQuery) =>
+		["report-financial", query] as const,
 	ordersFlow: (query: FetchReportRangeQuery) =>
 		["report-orders-flow", query] as const,
 	paymentMix: (query: FetchReportRangeQuery) =>
@@ -1129,9 +1135,9 @@ function toRangeQuery(query: FetchReportRangeQuery) {
 	};
 }
 
-export async function fetchRevenueTrendReport(query: FetchReportRangeQuery) {
-	return parseSuccessData<RevenueTrendReport>(
-		rpcWithAuth().api.admin.reports["revenue-trend"].$get({
+export async function fetchFinancialReport(query: FetchReportRangeQuery) {
+	return parseSuccessData<FinancialReport>(
+		rpcWithAuth().api.admin.reports.financial.$get({
 			query: toRangeQuery(query),
 		}),
 	);

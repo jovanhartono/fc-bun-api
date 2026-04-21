@@ -13,7 +13,10 @@ export function pickGranularity(from: string, to: string): ReportGranularity {
 	if (days <= 120) {
 		return "week";
 	}
-	return "month";
+	if (days <= 730) {
+		return "month";
+	}
+	return "year";
 }
 
 const monthLabelFormatter = new Intl.DateTimeFormat("en-ID", {
@@ -35,6 +38,9 @@ export function bucketToLabel(
 	}
 	if (granularity === "month") {
 		return monthLabelFormatter.format(new Date(`${bucket}-01T00:00:00+07:00`));
+	}
+	if (granularity === "year") {
+		return bucket;
 	}
 	const [, week] = bucket.split("-");
 	return `W${week}`;
@@ -58,6 +64,9 @@ export function bucketToTooltipLabel(
 			month: "long",
 			year: "numeric",
 		});
+	}
+	if (granularity === "year") {
+		return `Year ${bucket}`;
 	}
 	const [year, week] = bucket.split("-");
 	return `Week ${week}, ${year}`;

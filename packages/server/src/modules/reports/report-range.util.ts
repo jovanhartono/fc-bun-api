@@ -6,7 +6,7 @@ const DAY_MS = 86_400_000;
 
 export const JAKARTA_TZ_SQL = sql.raw(`'Asia/Jakarta'`);
 
-export type Granularity = "day" | "week" | "month";
+export type Granularity = "day" | "week" | "month" | "year";
 
 export interface DateRange {
   start: Date;
@@ -41,6 +41,17 @@ export function daysBetween(from: string, to: string): number {
   return Math.round(diff / DAY_MS) + 1;
 }
 
+export function derivePreviousRange(
+  from: string,
+  to: string
+): { from: string; to: string } {
+  const span = daysBetween(from, to);
+  return {
+    from: shiftDate(from, -span),
+    to: shiftDate(to, -span),
+  };
+}
+
 export function pickGranularity(from: string, to: string): Granularity {
   const days = daysBetween(from, to);
   if (days <= 31) {
@@ -49,7 +60,10 @@ export function pickGranularity(from: string, to: string): Granularity {
   if (days <= 120) {
     return "week";
   }
-  return "month";
+  if (days <= 730) {
+    return "month";
+  }
+  return "year";
 }
 
 export function bucketFormat(granularity: Granularity): string {
@@ -59,7 +73,10 @@ export function bucketFormat(granularity: Granularity): string {
   if (granularity === "week") {
     return "IYYY-IW";
   }
-  return "YYYY-MM";
+  if (granularity === "month") {
+    return "YYYY-MM";
+  }
+  return "YYYY";
 }
 
 export function jakartaBucketExpr(column: PgColumn, granularity: Granularity) {
@@ -107,7 +124,25 @@ export function dayToBucket(day: string, granularity: Granularity): string {
   if (granularity === "month") {
     return day.slice(0, 7);
   }
+  if (granularity === "year") {
+    return day.slice(0, 4);
+  }
   return toIsoWeekString(day);
+}
+
+export function indexBy<T extends { bucket: string }>(rows: T[]) {
+  const map = new Map<string, T>();
+  for (const row of rows) {
+    map.set(row.bucket, row);
+  }
+  return map;
+}
+
+export function deltaPct(current: number, previous: number): number | null {
+  if (previous === 0) {
+    return null;
+  }
+  return (current - previous) / previous;
 }
 
 function toIsoWeekString(ymd: string): string {

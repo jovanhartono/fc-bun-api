@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { lazy, Suspense } from "react";
 import { z } from "zod";
 import { PageHeader } from "@/components/page-header";
+import { ReportFilters } from "@/features/reports/components/report-filters";
 import {
 	ReportShell,
 	type ReportTab,
@@ -11,14 +12,15 @@ import {
 	defaultRange,
 	jakartaToday,
 } from "@/features/reports/utils/report-filters";
+import type { ReportGranularity } from "@/lib/api";
 import {
 	campaignEffectivenessQueryOptions,
 	customerAcquisitionQueryOptions,
+	financialQueryOptions,
 	ordersFlowQueryOptions,
 	paymentMixQueryOptions,
 	refundTrendQueryOptions,
 	reportOverviewQueryOptions,
-	revenueTrendQueryOptions,
 	storesQueryOptions,
 	workerProductivityQueryOptions,
 } from "@/lib/query-options";
@@ -26,8 +28,8 @@ import {
 const OverviewPanel = lazy(
 	() => import("@/features/reports/panels/overview-panel"),
 );
-const RevenuePanel = lazy(
-	() => import("@/features/reports/panels/revenue-panel"),
+const FinancialPanel = lazy(
+	() => import("@/features/reports/panels/financial-panel"),
 );
 const OperationsPanel = lazy(
 	() => import("@/features/reports/panels/operations-panel"),
@@ -50,7 +52,7 @@ const CampaignsPanel = lazy(
 
 const tabs: ReportTab[] = [
 	{ id: "overview", label: "Overview" },
-	{ id: "revenue", label: "Revenue" },
+	{ id: "financial", label: "Financial" },
 	{ id: "operations", label: "Operations" },
 	{ id: "payments", label: "Payments" },
 	{ id: "customers", label: "Customers" },
@@ -61,7 +63,7 @@ const tabs: ReportTab[] = [
 
 const tabSchema = z.enum([
 	"overview",
-	"revenue",
+	"financial",
 	"operations",
 	"payments",
 	"customers",
@@ -71,6 +73,8 @@ const tabSchema = z.enum([
 ]);
 
 type Tab = z.infer<typeof tabSchema>;
+
+const granularitySchema = z.enum(["day", "week", "month", "year"]).optional();
 
 const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -86,6 +90,7 @@ const reportsSearchSchema = z
 			.regex(dateRegex)
 			.catch(() => defaultRange().to),
 		store_id: z.coerce.number().int().positive().optional().catch(undefined),
+		granularity: granularitySchema.catch(() => undefined),
 	})
 	.transform((value) => {
 		if (value.from > value.to) {
@@ -101,6 +106,7 @@ function prefetchForTab(queryClient: QueryClient, search: ReportsSearch) {
 		from: search.from,
 		to: search.to,
 		store_id: search.store_id,
+		granularity: search.granularity,
 	};
 	switch (search.tab) {
 		case "overview":
@@ -111,8 +117,8 @@ function prefetchForTab(queryClient: QueryClient, search: ReportsSearch) {
 					trend_days: 14,
 				}),
 			);
-		case "revenue":
-			return queryClient.ensureQueryData(revenueTrendQueryOptions(range));
+		case "financial":
+			return queryClient.ensureQueryData(financialQueryOptions(range));
 		case "operations":
 			return queryClient.ensureQueryData(ordersFlowQueryOptions(range));
 		case "payments":
@@ -160,7 +166,7 @@ const PanelSkeleton = () => (
 
 const descriptions: Record<Tab, string> = {
 	overview: "Today's revenue, throughput, and order flow.",
-	revenue: "Services vs products and category mix.",
+	financial: "Revenue, COGS, margin and branch performance.",
 	operations: "Dropoff and pickup volume over time.",
 	payments: "Revenue share per payment method.",
 	customers: "Acquisition and retention trends.",
@@ -175,9 +181,46 @@ function ReportsPage() {
 
 	const currentTab = search.tab as Tab;
 
+	const showRangeFilters = currentTab !== "overview";
+	const showGranularity = currentTab !== "overview";
+
 	return (
 		<>
-			<PageHeader title="Reports" description={descriptions[currentTab]} />
+			<PageHeader
+				title="Reports"
+				description={descriptions[currentTab]}
+				actions={
+					<ReportFilters
+						from={search.from}
+						to={search.to}
+						onRangeChange={(range) => {
+							void navigate({
+								search: (prev) => ({
+									...prev,
+									from: range.from,
+									to: range.to,
+								}),
+							});
+						}}
+						storeId={search.store_id}
+						onStoreChange={(storeId) => {
+							void navigate({
+								search: (prev) => ({ ...prev, store_id: storeId }),
+							});
+						}}
+						granularity={search.granularity}
+						onGranularityChange={(
+							granularity: ReportGranularity | undefined,
+						) => {
+							void navigate({
+								search: (prev) => ({ ...prev, granularity }),
+							});
+						}}
+						showRangeFilters={showRangeFilters}
+						showGranularity={showGranularity}
+					/>
+				}
+			/>
 			<ReportShell
 				tabs={tabs}
 				activeTab={currentTab}
@@ -186,30 +229,17 @@ function ReportsPage() {
 						search: (prev) => ({ ...prev, tab: tab as Tab }),
 					});
 				}}
-				from={search.from}
-				to={search.to}
-				onRangeChange={(range) => {
-					void navigate({
-						search: (prev) => ({ ...prev, from: range.from, to: range.to }),
-					});
-				}}
-				storeId={search.store_id}
-				onStoreChange={(storeId) => {
-					void navigate({
-						search: (prev) => ({ ...prev, store_id: storeId }),
-					});
-				}}
-				showRangeFilters={currentTab !== "overview"}
 			>
 				<Suspense fallback={<PanelSkeleton />}>
 					{currentTab === "overview" && (
 						<OverviewPanel date={jakartaToday()} storeId={search.store_id} />
 					)}
-					{currentTab === "revenue" && (
-						<RevenuePanel
+					{currentTab === "financial" && (
+						<FinancialPanel
 							from={search.from}
 							to={search.to}
 							storeId={search.store_id}
+							granularity={search.granularity}
 						/>
 					)}
 					{currentTab === "operations" && (
@@ -217,6 +247,7 @@ function ReportsPage() {
 							from={search.from}
 							to={search.to}
 							storeId={search.store_id}
+							granularity={search.granularity}
 						/>
 					)}
 					{currentTab === "payments" && (
@@ -224,6 +255,7 @@ function ReportsPage() {
 							from={search.from}
 							to={search.to}
 							storeId={search.store_id}
+							granularity={search.granularity}
 						/>
 					)}
 					{currentTab === "customers" && (
@@ -231,6 +263,7 @@ function ReportsPage() {
 							from={search.from}
 							to={search.to}
 							storeId={search.store_id}
+							granularity={search.granularity}
 						/>
 					)}
 					{currentTab === "quality" && (
@@ -238,6 +271,7 @@ function ReportsPage() {
 							from={search.from}
 							to={search.to}
 							storeId={search.store_id}
+							granularity={search.granularity}
 						/>
 					)}
 					{currentTab === "workers" && (
@@ -245,6 +279,7 @@ function ReportsPage() {
 							from={search.from}
 							to={search.to}
 							storeId={search.store_id}
+							granularity={search.granularity}
 						/>
 					)}
 					{currentTab === "campaigns" && (
@@ -252,6 +287,7 @@ function ReportsPage() {
 							from={search.from}
 							to={search.to}
 							storeId={search.store_id}
+							granularity={search.granularity}
 						/>
 					)}
 				</Suspense>

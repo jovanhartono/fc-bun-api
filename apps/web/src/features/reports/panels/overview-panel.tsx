@@ -1,11 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import dayjs from "dayjs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AreaChartCard } from "@/features/reports/components/area-chart-card";
+import { ChartCard } from "@/features/reports/components/chart-card";
+import { KpiCard, KpiRow } from "@/features/reports/components/kpi-card";
 import {
-	KpiTile,
-	ReportKpiRow,
-} from "@/features/reports/components/report-kpi-row";
+	numberFormatter,
+	percentFormatter,
+} from "@/features/reports/utils/format";
+import { CHART_PALETTE } from "@/features/reports/utils/palette";
 import type { ReportOverview } from "@/lib/api";
 import { reportOverviewQueryOptions } from "@/lib/query-options";
 import { formatIDRCurrency } from "@/shared/utils";
@@ -14,13 +16,6 @@ interface OverviewPanelProps {
 	date: string;
 	storeId?: number;
 }
-
-const numberFormatter = new Intl.NumberFormat("en-ID");
-const currencyCompact = new Intl.NumberFormat("en-ID", {
-	notation: "compact",
-	compactDisplay: "short",
-	maximumFractionDigits: 1,
-});
 
 const CategoryBars = ({
 	categories,
@@ -93,42 +88,47 @@ const TopServicesList = ({
 	);
 };
 
-const PerStoreGrid = ({
+const BranchBreakdown = ({
 	perStore,
 }: {
 	perStore: ReportOverview["per_store"];
 }) => {
-	const max = perStore.reduce((m, row) => Math.max(m, row.revenue), 0);
+	const total = perStore.reduce((s, r) => s + r.revenue, 0);
+	const max = perStore.reduce((m, r) => Math.max(m, r.revenue), 0);
+	if (perStore.length === 0) {
+		return (
+			<p className="text-sm text-muted-foreground">No branch activity today.</p>
+		);
+	}
 	return (
-		<div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+		<div className="grid gap-3">
 			{perStore.map((row) => {
 				const pct = max === 0 ? 0 : (row.revenue / max) * 100;
+				const share = total === 0 ? 0 : row.revenue / total;
 				return (
-					<Card key={row.store_id} className="border-border/70">
-						<CardContent className="grid gap-2 p-4">
-							<div className="flex items-center justify-between gap-2">
-								<span className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+					<div key={row.store_id} className="grid gap-1">
+						<div className="flex items-center justify-between gap-2">
+							<span className="flex items-center gap-2 truncate text-sm font-medium">
+								<span className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
 									{row.store_code}
 								</span>
-								<span className="truncate text-xs text-muted-foreground">
-									{row.store_name}
-								</span>
-							</div>
-							<p className="font-mono text-lg font-semibold tabular-nums">
+								<span className="truncate">{row.store_name}</span>
+							</span>
+							<span className="font-mono text-sm tabular-nums">
 								{formatIDRCurrency(String(row.revenue))}
-							</p>
-							<div className="h-1.5 w-full bg-muted">
-								<div
-									className="h-full bg-foreground"
-									style={{ width: `${pct}%` }}
-								/>
-							</div>
-							<div className="flex items-center justify-between font-mono text-[11px] tabular-nums text-muted-foreground">
-								<span>{`${row.orders_in} in`}</span>
-								<span>{`${row.orders_out} out`}</span>
-							</div>
-						</CardContent>
-					</Card>
+							</span>
+						</div>
+						<div className="h-1.5 w-full bg-muted">
+							<div
+								className="h-full bg-foreground"
+								style={{ width: `${pct}%` }}
+							/>
+						</div>
+						<div className="flex items-center justify-between font-mono text-[11px] tabular-nums text-muted-foreground">
+							<span>{`${row.orders_in} in · ${row.orders_out} out`}</span>
+							<span>{percentFormatter.format(share)}</span>
+						</div>
+					</div>
 				);
 			})}
 		</div>
@@ -155,44 +155,37 @@ export const OverviewPanel = ({ date, storeId }: OverviewPanelProps) => {
 				</p>
 			</div>
 
-			<ReportKpiRow>
-				<KpiTile
+			<KpiRow>
+				<KpiCard
 					label="Revenue"
 					value={formatIDRCurrency(String(overview?.daily.revenue ?? 0))}
 					helper="Paid minus refunded"
 				/>
-				<KpiTile
+				<KpiCard
 					label="Items processed"
 					value={numberFormatter.format(overview?.daily.items_processed ?? 0)}
 					helper="Moved to QC or ready"
 				/>
-				<KpiTile
+				<KpiCard
 					label="Orders in"
 					value={numberFormatter.format(overview?.daily.orders_in ?? 0)}
 					helper="Created today"
 				/>
-				<KpiTile
+				<KpiCard
 					label="Orders out"
 					value={numberFormatter.format(overview?.daily.orders_out ?? 0)}
 					helper="Picked up today"
 				/>
-			</ReportKpiRow>
+			</KpiRow>
 
-			<AreaChartCard
+			<ChartCard
+				variant="area"
 				title={`Orders in vs out · last ${overview?.trend_days ?? 14} days`}
 				data={trendData}
 				granularity="day"
 				series={[
-					{
-						key: "orders_in",
-						label: "Orders in",
-						color: "var(--chart-1)",
-					},
-					{
-						key: "orders_out",
-						label: "Orders out",
-						color: "var(--chart-2)",
-					},
+					{ key: "orders_in", label: "Orders in", color: CHART_PALETTE[0] },
+					{ key: "orders_out", label: "Orders out", color: CHART_PALETTE[1] },
 				]}
 				valueFormatter={(v) => numberFormatter.format(v)}
 			/>
@@ -220,17 +213,16 @@ export const OverviewPanel = ({ date, storeId }: OverviewPanelProps) => {
 				</Card>
 			</div>
 
-			<div className="grid gap-3">
-				<p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-					Per store · today
-				</p>
-				<PerStoreGrid perStore={overview?.per_store ?? []} />
-			</div>
-
-			<p className="font-mono text-[11px] text-muted-foreground">
-				{`Overview uses the latest date (${dayjs().format("MMM D, YYYY")}). Switch to other tabs for ranged reports.`}
-				{` · ${currencyCompact.format(overview?.daily.revenue ?? 0)}`}
-			</p>
+			<Card className="border-border/70">
+				<CardHeader>
+					<CardTitle className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+						Revenue by branch
+					</CardTitle>
+				</CardHeader>
+				<CardContent className="p-4 pt-0">
+					<BranchBreakdown perStore={overview?.per_store ?? []} />
+				</CardContent>
+			</Card>
 		</div>
 	);
 };

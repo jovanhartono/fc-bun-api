@@ -19,6 +19,7 @@ import {
 	fetchDailyReport,
 	fetchDashboardCounts,
 	fetchDashboardOverview,
+	fetchFinancialReport,
 	fetchMyOrderServices,
 	fetchOrderDetail,
 	fetchOrdersFlowReport,
@@ -28,7 +29,6 @@ import {
 	fetchProducts,
 	fetchRefundTrendReport,
 	fetchReportOverview,
-	fetchRevenueTrendReport,
 	fetchServices,
 	fetchShifts,
 	fetchStores,
@@ -154,10 +154,10 @@ export const reportOverviewQueryOptions = (query: FetchReportOverviewQuery) =>
 		queryFn: () => fetchReportOverview(query),
 	});
 
-export const revenueTrendQueryOptions = (query: FetchReportRangeQuery) =>
+export const financialQueryOptions = (query: FetchReportRangeQuery) =>
 	queryOptions({
-		queryKey: queryKeys.revenueTrend(query),
-		queryFn: () => fetchRevenueTrendReport(query),
+		queryKey: queryKeys.financial(query),
+		queryFn: () => fetchFinancialReport(query),
 	});
 
 export const ordersFlowQueryOptions = (query: FetchReportRangeQuery) =>

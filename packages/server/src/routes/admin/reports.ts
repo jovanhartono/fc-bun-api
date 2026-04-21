@@ -12,10 +12,10 @@ import {
 import {
   getCampaignEffectivenessReport,
   getCustomerAcquisitionReport,
+  getFinancialReport,
   getOrdersFlowReport,
   getPaymentMixReport,
   getRefundTrendReport,
-  getRevenueTrendReport,
   getWorkerProductivityReport,
 } from "@/modules/reports/report-range.service";
 import type { JWTPayload } from "@/types";
@@ -63,7 +63,7 @@ const app = new Hono()
     }
   )
   .get(
-    "/revenue-trend",
+    "/financial",
     zodValidator("query", GETReportRangeQuerySchema),
     async (c) => {
       const user = c.get("jwtPayload") as JWTPayload;
@@ -72,7 +72,7 @@ const app = new Hono()
       if (query.store_id !== undefined) {
         await assertStoreAccess(user, query.store_id);
       }
-      const data = await getRevenueTrendReport(query);
+      const data = await getFinancialReport(query);
       return c.json(success(data));
     }
   )

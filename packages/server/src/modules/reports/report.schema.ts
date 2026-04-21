@@ -18,7 +18,10 @@ export type GetReportOverviewQuery = z.infer<
   typeof GETReportOverviewQuerySchema
 >;
 
-const granularitySchema = z.enum(["day", "week", "month"]).optional();
+export const granularitySchema = z
+  .enum(["day", "week", "month", "year"])
+  .optional();
+export type ReportGranularity = NonNullable<z.infer<typeof granularitySchema>>;
 
 export const GETReportRangeQuerySchema = z
   .object({
@@ -33,3 +36,15 @@ export const GETReportRangeQuerySchema = z
   });
 
 export type GetReportRangeQuery = z.infer<typeof GETReportRangeQuerySchema>;
+
+export interface KpiDelta<T = number> {
+  current: T;
+  previous: T;
+  delta_pct: number | null;
+}
+
+export interface ComparableSummary<T> {
+  current: T;
+  previous: T;
+  deltas: { [K in keyof T]?: KpiDelta<T[K] extends number ? number : never> };
+}

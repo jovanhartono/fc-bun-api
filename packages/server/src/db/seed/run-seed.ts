@@ -184,6 +184,7 @@ interface DraftServiceLine {
   item_code: string;
   service_id: number;
   price: number;
+  cogs: number;
   status: OrderServiceStatus;
   handler_id: number | null;
   brand: string;
@@ -203,6 +204,7 @@ interface DraftServiceLine {
 interface DraftProductLine {
   product_id: number;
   price: number;
+  cogs: number;
   qty: number;
   notes: string | null;
 }
@@ -325,15 +327,26 @@ function buildStatusPath(
   finalStatus: OrderServiceStatus
 ): OrderServiceStatus[] {
   const fixed = STATUS_PATHS[finalStatus];
-  if (fixed) {
-    return fixed;
-  }
+  const base: OrderServiceStatus[] = fixed
+    ? [...fixed]
+    : [
+        ...faker.helpers.arrayElement<OrderServiceStatus[]>([
+          ["cancelled"],
+          ["processing", "cancelled"],
+          ["processing", "quality_check", "cancelled"],
+        ]),
+      ];
 
-  return faker.helpers.arrayElement([
-    ["cancelled"],
-    ["processing", "cancelled"],
-    ["processing", "quality_check", "cancelled"],
-  ]);
+  const qcIdx = base.indexOf("quality_check");
+  if (qcIdx !== -1 && chance(0.15)) {
+    const loopCount = chance(0.25) ? 2 : 1;
+    const loop: OrderServiceStatus[] = [];
+    for (let i = 0; i < loopCount; i++) {
+      loop.push("processing", "quality_check");
+    }
+    base.splice(qcIdx + 1, 0, ...loop);
+  }
+  return base;
 }
 
 function pickScenario(): ServiceScenario {
@@ -674,6 +687,7 @@ async function seedCatalog(adminId: number) {
       id: servicesTable.id,
       code: servicesTable.code,
       price: servicesTable.price,
+      cogs: servicesTable.cogs,
       is_active: servicesTable.is_active,
     });
 
@@ -707,6 +721,7 @@ async function seedCatalog(adminId: number) {
       id: productsTable.id,
       sku: productsTable.sku,
       price: productsTable.price,
+      cogs: productsTable.cogs,
       is_active: productsTable.is_active,
     });
 
@@ -923,8 +938,18 @@ async function seedShifts(
 async function seedOrders(params: {
   stores: StoreRow[];
   customers: Array<{ id: number; origin_store_id: number }>;
-  services: Array<{ id: number; price: string; is_active: boolean }>;
-  products: Array<{ id: number; price: string; is_active: boolean }>;
+  services: Array<{
+    id: number;
+    price: string;
+    cogs: string;
+    is_active: boolean;
+  }>;
+  products: Array<{
+    id: number;
+    price: string;
+    cogs: string;
+    is_active: boolean;
+  }>;
   paymentMethods: Array<{ id: number; is_active: boolean }>;
   campaigns: CampaignRow[];
   cashiersByStore: Map<number, number[]>;
@@ -1067,6 +1092,7 @@ async function seedOrders(params: {
         item_code: itemCode,
         service_id: service.id,
         price: Number(service.price),
+        cogs: Number(service.cogs),
         status: finalStatus,
         handler_id: handlerId,
         brand: faker.helpers.arrayElement(BRANDS),
@@ -1096,6 +1122,7 @@ async function seedOrders(params: {
         return {
           product_id: product.id,
           price: Number(product.price),
+          cogs: Number(product.cogs),
           qty,
           notes: chance(0.2) ? faker.commerce.productDescription() : null,
         };
@@ -1238,6 +1265,7 @@ async function seedOrders(params: {
               service_id: line.service_id,
               item_code: line.item_code,
               price: asMoney(line.price),
+              cogs_snapshot: asMoney(line.cogs),
               discount: "0",
               notes: line.notes,
               brand: line.brand,
@@ -1315,6 +1343,7 @@ async function seedOrders(params: {
           order_id: order.id,
           product_id: line.product_id,
           price: asMoney(line.price),
+          cogs_snapshot: asMoney(line.cogs * line.qty),
           qty: line.qty,
           discount: "0",
           notes: line.notes,

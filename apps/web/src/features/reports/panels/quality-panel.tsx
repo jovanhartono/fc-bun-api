@@ -1,15 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
-import { AreaChartCard } from "@/features/reports/components/area-chart-card";
-import {
-	KpiTile,
-	ReportKpiRow,
-} from "@/features/reports/components/report-kpi-row";
-import { ExportButton } from "@/features/reports/components/report-shell";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChartCard } from "@/features/reports/components/chart-card";
+import { ExportButton } from "@/features/reports/components/export-button";
+import { KpiCard, KpiRow } from "@/features/reports/components/kpi-card";
 import {
 	csvFilename,
 	downloadCsv,
 	escapeCsv,
 } from "@/features/reports/utils/csv";
+import {
+	numberFormatter,
+	percentFormatter,
+} from "@/features/reports/utils/format";
+import { CHART_PALETTE } from "@/features/reports/utils/palette";
+import type { ReportGranularity } from "@/lib/api";
 import { refundTrendQueryOptions } from "@/lib/query-options";
 import { formatIDRCurrency } from "@/shared/utils";
 
@@ -17,9 +21,8 @@ interface QualityPanelProps {
 	from: string;
 	to: string;
 	storeId?: number;
+	granularity?: ReportGranularity;
 }
-
-const numberFormatter = new Intl.NumberFormat("en-ID");
 
 const REASON_LABELS: Record<string, string> = {
 	damaged: "Damaged",
@@ -28,24 +31,20 @@ const REASON_LABELS: Record<string, string> = {
 	other: "Other",
 };
 
-const REASON_COLORS: Record<string, string> = {
-	damaged: "var(--chart-1)",
-	cannot_process: "var(--chart-2)",
-	lost: "var(--chart-3)",
-	other: "var(--chart-4)",
-};
+const REASON_ORDER = ["damaged", "cannot_process", "lost", "other"] as const;
 
-export const QualityPanel = ({ from, to, storeId }: QualityPanelProps) => {
+export const QualityPanel = ({
+	from,
+	to,
+	storeId,
+	granularity,
+}: QualityPanelProps) => {
 	const query = useQuery(
-		refundTrendQueryOptions({ from, to, store_id: storeId }),
+		refundTrendQueryOptions({ from, to, store_id: storeId, granularity }),
 	);
 	const data = query.data;
-
-	const reasonSeries = (data?.reason_keys ?? []).map((r) => ({
-		key: r.key,
-		label: REASON_LABELS[r.key] ?? r.label,
-		color: REASON_COLORS[r.key] ?? "var(--chart-5)",
-	}));
+	const reasonTotals = data?.summary.reason_totals;
+	const totalAmount = data?.summary.total_amount ?? 0;
 
 	const handleExport = () => {
 		if (!data) {
@@ -58,13 +57,14 @@ export const QualityPanel = ({ from, to, storeId }: QualityPanelProps) => {
 			);
 		}
 		lines.push("");
-		lines.push(
-			`Refund reasons,Bucket,${reasonSeries.map((r) => escapeCsv(r.label)).join(",")}`,
-		);
-		for (const row of data.reason_series) {
-			lines.push(
-				`Refund reasons,${escapeCsv(row.bucket as string)},${reasonSeries.map((r) => row[r.key] ?? 0).join(",")}`,
-			);
+		lines.push("Refund reasons,Reason,Amount,Items");
+		for (const reason of REASON_ORDER) {
+			const totals = reasonTotals?.[reason];
+			if (totals) {
+				lines.push(
+					`Refund reasons,${escapeCsv(REASON_LABELS[reason] ?? reason)},${totals.amount},${totals.items}`,
+				);
+			}
 		}
 		downloadCsv(
 			csvFilename("refund-trend", data.from, data.to, data.store_id),
@@ -74,52 +74,83 @@ export const QualityPanel = ({ from, to, storeId }: QualityPanelProps) => {
 
 	return (
 		<div className="grid gap-6">
-			<div className="flex items-start justify-between gap-3">
-				<ReportKpiRow>
-					<KpiTile
+			<div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+				<KpiRow>
+					<KpiCard
 						label="Refund amount"
-						value={formatIDRCurrency(String(data?.summary.total_amount ?? 0))}
+						value={formatIDRCurrency(String(totalAmount))}
 					/>
-					<KpiTile
+					<KpiCard
 						label="Refund events"
 						value={numberFormatter.format(data?.summary.total_refunds ?? 0)}
 					/>
-					<KpiTile
+					<KpiCard
 						label="Damaged items"
-						value={numberFormatter.format(
-							data?.summary.reason_totals.damaged.items ?? 0,
-						)}
+						value={numberFormatter.format(reasonTotals?.damaged.items ?? 0)}
 					/>
-					<KpiTile
+					<KpiCard
 						label="Lost items"
-						value={numberFormatter.format(
-							data?.summary.reason_totals.lost.items ?? 0,
-						)}
+						value={numberFormatter.format(reasonTotals?.lost.items ?? 0)}
 					/>
-				</ReportKpiRow>
+				</KpiRow>
 				<ExportButton disabled={!data} onClick={handleExport} />
 			</div>
 
-			<AreaChartCard
+			<ChartCard
+				variant="area"
 				title="Refund amount trend"
 				description="Total refunded value over the range."
 				data={data?.series ?? []}
 				granularity={data?.granularity ?? "day"}
 				series={[
-					{ key: "amount", label: "Refund amount", color: "var(--chart-1)" },
+					{ key: "amount", label: "Refund amount", color: CHART_PALETTE[3] },
 				]}
 				valueFormatter={(v) => formatIDRCurrency(String(v))}
 			/>
 
-			<AreaChartCard
-				title="Refund reason breakdown"
-				description="Amounts by reason, stacked."
-				data={data?.reason_series ?? []}
-				granularity={data?.granularity ?? "day"}
-				stacked
-				series={reasonSeries}
-				valueFormatter={(v) => formatIDRCurrency(String(v))}
-			/>
+			<Card className="border-border/70">
+				<CardHeader>
+					<CardTitle className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+						Reason breakdown
+					</CardTitle>
+				</CardHeader>
+				<CardContent className="p-4 pt-0">
+					{reasonTotals ? (
+						<div className="grid gap-3">
+							{REASON_ORDER.map((reason) => {
+								const totals = reasonTotals[reason];
+								const share = totalAmount > 0 ? totals.amount / totalAmount : 0;
+								return (
+									<div key={reason} className="grid gap-1">
+										<div className="flex items-center justify-between gap-2">
+											<span className="truncate text-sm font-medium">
+												{REASON_LABELS[reason]}
+											</span>
+											<span className="font-mono text-sm tabular-nums">
+												{formatIDRCurrency(String(totals.amount))}
+											</span>
+										</div>
+										<div className="h-1.5 w-full bg-muted">
+											<div
+												className="h-full bg-foreground"
+												style={{ width: `${share * 100}%` }}
+											/>
+										</div>
+										<div className="flex items-center justify-between font-mono text-[11px] tabular-nums text-muted-foreground">
+											<span>{`${numberFormatter.format(totals.items)} items`}</span>
+											<span>{percentFormatter.format(share)}</span>
+										</div>
+									</div>
+								);
+							})}
+						</div>
+					) : (
+						<p className="text-sm text-muted-foreground">
+							No refunds in range.
+						</p>
+					)}
+				</CardContent>
+			</Card>
 		</div>
 	);
 };

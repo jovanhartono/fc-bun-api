@@ -1,16 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AreaChartCard } from "@/features/reports/components/area-chart-card";
-import {
-	KpiTile,
-	ReportKpiRow,
-} from "@/features/reports/components/report-kpi-row";
-import { ExportButton } from "@/features/reports/components/report-shell";
+import { ChartCard } from "@/features/reports/components/chart-card";
+import { ExportButton } from "@/features/reports/components/export-button";
+import { KpiCard, KpiRow } from "@/features/reports/components/kpi-card";
 import {
 	csvFilename,
 	downloadCsv,
 	escapeCsv,
 } from "@/features/reports/utils/csv";
+import {
+	numberFormatter,
+	percentFormatter,
+} from "@/features/reports/utils/format";
+import { CHART_PALETTE } from "@/features/reports/utils/palette";
+import type { ReportGranularity } from "@/lib/api";
 import { paymentMixQueryOptions } from "@/lib/query-options";
 import { formatIDRCurrency } from "@/shared/utils";
 
@@ -18,31 +21,24 @@ interface PaymentsPanelProps {
 	from: string;
 	to: string;
 	storeId?: number;
+	granularity?: ReportGranularity;
 }
 
-const PALETTE = [
-	"var(--chart-1)",
-	"var(--chart-2)",
-	"var(--chart-3)",
-	"var(--chart-4)",
-	"var(--chart-5)",
-];
-
-const PAYMENT_RATIO_FORMATTER = new Intl.NumberFormat("en-ID", {
-	style: "percent",
-	maximumFractionDigits: 1,
-});
-
-export const PaymentsPanel = ({ from, to, storeId }: PaymentsPanelProps) => {
+export const PaymentsPanel = ({
+	from,
+	to,
+	storeId,
+	granularity,
+}: PaymentsPanelProps) => {
 	const query = useQuery(
-		paymentMixQueryOptions({ from, to, store_id: storeId }),
+		paymentMixQueryOptions({ from, to, store_id: storeId, granularity }),
 	);
 	const data = query.data;
 
 	const series = (data?.method_keys ?? []).map((m, idx) => ({
 		key: m.key,
 		label: m.label,
-		color: PALETTE[idx % PALETTE.length],
+		color: CHART_PALETTE[idx % CHART_PALETTE.length],
 	}));
 
 	const handleExport = () => {
@@ -73,30 +69,28 @@ export const PaymentsPanel = ({ from, to, storeId }: PaymentsPanelProps) => {
 
 	return (
 		<div className="grid gap-6">
-			<div className="flex items-start justify-between gap-3">
-				<ReportKpiRow>
-					<KpiTile
+			<div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+				<KpiRow>
+					<KpiCard
 						label="Paid revenue"
 						value={formatIDRCurrency(String(data?.summary.grand_total ?? 0))}
 					/>
-					<KpiTile
+					<KpiCard
 						label="Paid orders"
-						value={new Intl.NumberFormat("en-ID").format(
-							data?.summary.total_orders ?? 0,
-						)}
+						value={numberFormatter.format(data?.summary.total_orders ?? 0)}
 					/>
-					<KpiTile label="Methods" value={data?.summary.methods.length ?? 0} />
-					<KpiTile label="Granularity" value={data?.granularity ?? "—"} />
-				</ReportKpiRow>
+					<KpiCard label="Methods" value={data?.summary.methods.length ?? 0} />
+					<KpiCard label="Granularity" value={data?.granularity ?? "—"} />
+				</KpiRow>
 				<ExportButton disabled={!data} onClick={handleExport} />
 			</div>
 
-			<AreaChartCard
+			<ChartCard
+				variant="stacked-bar"
 				title="Revenue by payment method"
-				description="Stacked revenue over time."
+				description="Stacked bars over time."
 				data={data?.series ?? []}
 				granularity={data?.granularity ?? "day"}
-				stacked
 				series={series}
 				valueFormatter={(v) => formatIDRCurrency(String(v))}
 			/>
@@ -111,7 +105,7 @@ export const PaymentsPanel = ({ from, to, storeId }: PaymentsPanelProps) => {
 					{(data?.summary.methods ?? []).length === 0 ? (
 						<p className="text-sm text-muted-foreground">No paid orders.</p>
 					) : (
-						<div className="grid gap-2">
+						<div className="grid gap-3">
 							{data?.summary.methods.map((m) => (
 								<div key={m.payment_method_id} className="grid gap-1">
 									<div className="flex items-center justify-between gap-2">
@@ -130,7 +124,7 @@ export const PaymentsPanel = ({ from, to, storeId }: PaymentsPanelProps) => {
 									</div>
 									<div className="flex items-center justify-between font-mono text-[11px] tabular-nums text-muted-foreground">
 										<span>{`${m.orders} orders`}</span>
-										<span>{PAYMENT_RATIO_FORMATTER.format(m.share)}</span>
+										<span>{percentFormatter.format(m.share)}</span>
 									</div>
 								</div>
 							))}
