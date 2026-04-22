@@ -27,32 +27,38 @@ Principles: simplify (delete > add), Vercel React composition (small typed units
 
 ## Core scope — grouped by risk
 
-### Group A — Schema + migration (do first, one PR)
+### Group A — Schema + migration (do first, one PR) ✅ DONE
 
-1. **A-1. Add `orders.pickup_code` (6-digit)**
+Shipped: 2026-04-22 · PR [#26](https://github.com/jovanhartono/fc-bun-api/pull/26) · branch `feat/group-a-schema-foundations`
+
+1. **A-1. Add `orders.pickup_code` (6-digit)** ✅
    - Column: `pickup_code varchar(6) NOT NULL DEFAULT lpad(floor(random()*1000000)::text, 6, '0')` — or generate in service with `crypto.randomInt(0, 1_000_000)` then pad.
    - Unique per order; does NOT need global uniqueness (scoped to order_id).
    - Rotation: never. One code per order lifetime.
 
-2. **A-2. Add `order_service_status_enum.qc_reject`**
+2. **A-2. Add `order_service_status_enum.qc_reject`** ✅
    - Transition from `qc_check` → `qc_reject` → back to `processing` (same worker re-handles).
    - Update derived order status logic: `qc_reject` counts as active, not terminal.
    - Update seed to produce qc_reject samples.
 
-3. **A-3. Customer phone unique constraint**
+3. **A-3. Customer phone unique constraint** ✅
    - `customers.phone_number` → UNIQUE.
    - Migration: dedupe existing data first (none in prod → trivial).
    - Service layer: return existing customer on duplicate phone instead of creating new; surface "customer exists" UX.
 
-4. **A-4. Timezone fix (bug 1.1)**
+4. **A-4. Timezone fix (bug 1.1)** ✅
    - Bootstrap `dayjs` with `utc` + `timezone` plugins globally at server entry.
    - Wrap occurrences in `order.service.ts:328`, `order-admin.service.ts:440,449`, `order.repository.ts:91,97` with `.tz("Asia/Jakarta")`.
    - Add shared helper: `jakartaNow()`, `jakartaDayStart(date)`, `jakartaDayEnd(date)` in `src/utils/date.ts`.
 
-5. **A-5. Validate `products.is_active` on order create (bug 1.5)**
+5. **A-5. Validate `products.is_active` on order create (bug 1.5)** ✅
    - `order.service.ts:300-358`: add check in productMap lookup.
 
 Commit: `feat(orders): pickup code + qc_reject status + timezone + is_active guard`
+
+Follow-ups (not blocking merge):
+- Wrap seed-internal `dayjs()` boundary calls (seedCatalog/seedShifts/seedOrders) with `.tz(JAKARTA_TZ)` — plugins now load, change is trivial.
+- Web POS customer-create flow may need to surface "already exists" branch (route now returns 200 + `existed:true`).
 
 ---
 
