@@ -34,6 +34,7 @@ import { OrderPickupEventDialog } from "@/features/orders/components/order-picku
 import { QueueServiceDetail } from "@/features/orders/components/queue-service-detail";
 import { StatusTimeline } from "@/features/orders/components/status-timeline";
 import {
+	cancelOrder,
 	createOrderRefund,
 	type OrderDetail,
 	presignOrderServicePhoto,
@@ -143,36 +144,36 @@ function OrderDetailMessage({
 	);
 }
 
+type UpdateStatusMutation = UseMutationResult<
+	unknown,
+	Error,
+	{ serviceId: number; payload: UpdateOrderServiceStatusPayload },
+	unknown
+>;
+
+type NonCancelServiceStatus = Exclude<
+	UpdateOrderServiceStatusPayload["status"],
+	"cancelled"
+>;
+
 function ServiceStatusUpdateButton({
 	serviceId,
 	nextStatus,
-	isCancel,
 	updateStatusMutation,
 }: {
 	serviceId: number;
-	nextStatus: UpdateOrderServiceStatusPayload["status"];
-	isCancel: boolean;
-	updateStatusMutation: UseMutationResult<
-		unknown,
-		Error,
-		{ serviceId: number; payload: UpdateOrderServiceStatusPayload },
-		unknown
-	>;
+	nextStatus: NonCancelServiceStatus;
+	updateStatusMutation: UpdateStatusMutation;
 }) {
 	const openDialog = useDialog((s) => s.openDialog);
 	const closeDialog = useDialog((s) => s.closeDialog);
 
 	const handleClick = () => {
 		openDialog({
-			title: isCancel
-				? "Cancel Service"
-				: `Update Status to ${STATUS_ACTION_LABELS[nextStatus]}`,
-			description: isCancel
-				? "Please provide a reason for cancelling this service."
-				: `Are you sure you want to change the status to ${STATUS_ACTION_LABELS[nextStatus]}?`,
+			title: `Update Status to ${STATUS_ACTION_LABELS[nextStatus]}`,
+			description: `Are you sure you want to change the status to ${STATUS_ACTION_LABELS[nextStatus]}?`,
 			content: () => (
-				<DialogForm
-					isCancel={isCancel}
+				<ServiceStatusConfirmForm
 					serviceId={serviceId}
 					nextStatus={nextStatus}
 					updateStatusMutation={updateStatusMutation}
@@ -183,32 +184,52 @@ function ServiceStatusUpdateButton({
 	};
 
 	return (
-		<Button
-			variant={isCancel ? "destructive" : "secondary"}
-			size="sm"
-			onClick={handleClick}
-		>
+		<Button variant="secondary" size="sm" onClick={handleClick}>
 			{STATUS_ACTION_LABELS[nextStatus]}
 		</Button>
 	);
 }
 
-function DialogForm({
-	isCancel,
+function ServiceCancelButton({
+	serviceId,
+	updateStatusMutation,
+}: {
+	serviceId: number;
+	updateStatusMutation: UpdateStatusMutation;
+}) {
+	const openDialog = useDialog((s) => s.openDialog);
+	const closeDialog = useDialog((s) => s.closeDialog);
+
+	const handleClick = () => {
+		openDialog({
+			title: "Cancel Service",
+			description: "Please provide a reason for cancelling this service.",
+			content: () => (
+				<ServiceCancelForm
+					serviceId={serviceId}
+					updateStatusMutation={updateStatusMutation}
+					closeDialog={closeDialog}
+				/>
+			),
+		});
+	};
+
+	return (
+		<Button variant="destructive" size="sm" onClick={handleClick}>
+			{STATUS_ACTION_LABELS.cancelled}
+		</Button>
+	);
+}
+
+function ServiceStatusConfirmForm({
 	serviceId,
 	nextStatus,
 	updateStatusMutation,
 	closeDialog,
 }: {
-	isCancel: boolean;
 	serviceId: number;
-	nextStatus: UpdateOrderServiceStatusPayload["status"];
-	updateStatusMutation: UseMutationResult<
-		unknown,
-		Error,
-		{ serviceId: number; payload: UpdateOrderServiceStatusPayload },
-		unknown
-	>;
+	nextStatus: NonCancelServiceStatus;
+	updateStatusMutation: UpdateStatusMutation;
 	closeDialog: () => void;
 }) {
 	const [note, setNote] = useState("");
@@ -220,11 +241,7 @@ function DialogForm({
 			serviceId,
 			payload: {
 				status: nextStatus,
-				...(isCancel
-					? { cancel_reason: trimmed }
-					: trimmed
-						? { note: trimmed }
-						: {}),
+				...(trimmed ? { note: trimmed } : {}),
 			},
 		});
 		closeDialog();
@@ -233,26 +250,99 @@ function DialogForm({
 	return (
 		<div className="flex flex-col gap-4">
 			<Textarea
-				placeholder={
-					isCancel ? "Cancel reason (required)" : "Optional status note"
-				}
+				placeholder="Optional status note"
 				value={note}
-				onChange={(e) => setNote(e.target.value)}
+				onChange={(event) => setNote(event.target.value)}
+			/>
+			<div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+				<Button variant="outline" onClick={closeDialog}>
+					Go back
+				</Button>
+				<Button disabled={isPending} onClick={handleConfirm}>
+					{isPending ? "Saving…" : "Confirm Update"}
+				</Button>
+			</div>
+		</div>
+	);
+}
+
+function ServiceCancelForm({
+	serviceId,
+	updateStatusMutation,
+	closeDialog,
+}: {
+	serviceId: number;
+	updateStatusMutation: UpdateStatusMutation;
+	closeDialog: () => void;
+}) {
+	const [reason, setReason] = useState("");
+	const trimmed = reason.trim();
+	const isPending = updateStatusMutation.isPending;
+
+	const handleConfirm = async () => {
+		await updateStatusMutation.mutateAsync({
+			serviceId,
+			payload: { status: "cancelled", cancel_reason: trimmed },
+		});
+		closeDialog();
+	};
+
+	return (
+		<div className="flex flex-col gap-4">
+			<Textarea
+				placeholder="Cancel reason (required)"
+				value={reason}
+				onChange={(event) => setReason(event.target.value)}
 			/>
 			<div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
 				<Button variant="outline" onClick={closeDialog}>
 					Go back
 				</Button>
 				<Button
-					variant={isCancel ? "destructive" : "default"}
-					disabled={isPending || (isCancel && !note.trim())}
+					variant="destructive"
+					disabled={isPending || !trimmed}
 					onClick={handleConfirm}
 				>
-					{isPending
-						? "Saving…"
-						: isCancel
-							? "Confirm Cancel"
-							: "Confirm Update"}
+					{isPending ? "Saving…" : "Confirm Cancel"}
+				</Button>
+			</div>
+		</div>
+	);
+}
+
+function CancelOrderForm({
+	closeDialog,
+	cancelOrderMutation,
+}: {
+	closeDialog: () => void;
+	cancelOrderMutation: UseMutationResult<unknown, Error, string, unknown>;
+}) {
+	const [reason, setReason] = useState("");
+	const trimmed = reason.trim();
+	const isPending = cancelOrderMutation.isPending;
+
+	const handleConfirm = async () => {
+		await cancelOrderMutation.mutateAsync(trimmed);
+		closeDialog();
+	};
+
+	return (
+		<div className="flex flex-col gap-4">
+			<Textarea
+				placeholder="Cancel reason (required)"
+				value={reason}
+				onChange={(event) => setReason(event.target.value)}
+			/>
+			<div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+				<Button variant="outline" onClick={closeDialog}>
+					Go back
+				</Button>
+				<Button
+					variant="destructive"
+					disabled={isPending || !trimmed}
+					onClick={handleConfirm}
+				>
+					{isPending ? "Cancelling…" : "Confirm Cancel Order"}
 				</Button>
 			</div>
 		</div>
@@ -342,7 +432,7 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 		user?.role === "admin" ||
 		user?.role === "cashier" ||
 		user?.can_process_pickup === true;
-	const isRefundAllowed = isPaymentAllowed;
+	const isAdmin = user?.role === "admin";
 	const openDialog = useDialog((s) => s.openDialog);
 	const closeDialog = useDialog((s) => s.closeDialog);
 
@@ -370,10 +460,10 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 	const paymentMethodsQuery = useQuery(paymentMethodsQueryOptions());
 
 	const refreshOrderData = async () => {
-		await queryClient.invalidateQueries({
-			queryKey: queryKeys.orderDetail(id),
-		});
-		await queryClient.invalidateQueries({ queryKey: ["orders"] });
+		await Promise.all([
+			queryClient.invalidateQueries({ queryKey: queryKeys.orderDetail(id) }),
+			queryClient.invalidateQueries({ queryKey: ["orders"] }),
+		]);
 	};
 
 	const updateStatusMutation = useMutation({
@@ -385,7 +475,6 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 			payload: UpdateOrderServiceStatusPayload;
 		}) => updateOrderServiceStatus(id, serviceId, payload),
 		onSuccess: async () => {
-			toast.success("Service status updated");
 			await refreshOrderData();
 		},
 	});
@@ -394,11 +483,7 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 		mutationFn: (paymentMethodId: number) =>
 			updateOrderPayment(id, { payment_method_id: paymentMethodId }),
 		onSuccess: async () => {
-			toast.success("Payment updated");
 			await refreshOrderData();
-		},
-		onError: (error: Error) => {
-			toast.error(error.message || "Failed to update payment");
 		},
 	});
 
@@ -436,7 +521,6 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 			});
 		},
 		onSuccess: async (_, variables) => {
-			toast.success("Photo uploaded");
 			setPhotoFileByServiceId((prev) => ({
 				...prev,
 				[variables.serviceId]: null,
@@ -458,11 +542,17 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 			payload: Parameters<typeof createOrderRefund>[1];
 		}) => createOrderRefund(targetOrderId, payload),
 		onSuccess: async () => {
-			toast.success("Refund processed");
 			setRefundServiceIds([]);
 			setRefundReasonByServiceId({});
 			setRefundItemNoteByServiceId({});
 			setRefundNote("");
+			await refreshOrderData();
+		},
+	});
+
+	const cancelOrderMutation = useMutation({
+		mutationFn: (cancel_reason: string) => cancelOrder(id, { cancel_reason }),
+		onSuccess: async () => {
 			await refreshOrderData();
 		},
 	});
@@ -525,9 +615,31 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 	};
 
 	const refundableServices = orderServices.filter(
+		(service) => !["refunded", "cancelled"].includes(service.status),
+	);
+
+	const hasCancellableServices = orderServices.some(
 		(service) =>
 			!["picked_up", "refunded", "cancelled"].includes(service.status),
 	);
+	const canCancelOrder =
+		isAdmin && detail.status !== "cancelled" && hasCancellableServices;
+
+	const openCancelOrderDialog = () => {
+		openDialog({
+			title: "Cancel order",
+			description:
+				detail.payment_status === "paid"
+					? "All remaining items will be cancelled and a refund will be issued."
+					: "All remaining items will be cancelled.",
+			content: () => (
+				<CancelOrderForm
+					closeDialog={closeDialog}
+					cancelOrderMutation={cancelOrderMutation}
+				/>
+			),
+		});
+	};
 
 	const selectedRefundItems = refundServiceIds.map((serviceId) => ({
 		order_service_id: serviceId,
@@ -581,6 +693,17 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 									onClick={handleCopyTrackingLink}
 								>
 									Copy tracking link
+								</Button>
+							) : null}
+							{canCancelOrder ? (
+								<Button
+									type="button"
+									variant="destructive"
+									size="sm"
+									disabled={cancelOrderMutation.isPending}
+									onClick={openCancelOrderDialog}
+								>
+									Cancel order
 								</Button>
 							) : null}
 							<Badge variant={getOrderStatusBadgeVariant(detail.status)}>
@@ -743,7 +866,7 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 						</Card>
 					) : null}
 
-					{isRefundAllowed ? (
+					{isAdmin ? (
 						<Card>
 							<CardHeader>
 								<CardTitle>Refund</CardTitle>
@@ -964,19 +1087,21 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 
 									<div className="flex flex-wrap gap-2 border-t pt-4">
 										{(ORDER_STATUS_TRANSITIONS[service.status] || []).map(
-											(nextStatus) => {
-												const isCancel = nextStatus === "cancelled";
-
-												return (
+											(nextStatus) =>
+												nextStatus === "cancelled" ? (
+													<ServiceCancelButton
+														key={nextStatus}
+														serviceId={service.id}
+														updateStatusMutation={updateStatusMutation}
+													/>
+												) : (
 													<ServiceStatusUpdateButton
 														key={nextStatus}
 														serviceId={service.id}
 														nextStatus={nextStatus}
-														isCancel={isCancel}
 														updateStatusMutation={updateStatusMutation}
 													/>
-												);
-											},
+												),
 										)}
 									</div>
 
