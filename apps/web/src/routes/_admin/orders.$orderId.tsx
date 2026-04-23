@@ -513,6 +513,7 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 		openDialog({
 			title: "Record pickup",
 			description: "Select the items being collected and attach a photo.",
+			contentClassName: "sm:max-w-xl",
 			content: () => (
 				<OrderPickupEventDialog
 					closeDialog={closeDialog}
