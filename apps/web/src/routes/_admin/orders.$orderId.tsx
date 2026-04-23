@@ -97,13 +97,6 @@ const STATUS_ACTION_LABELS: Record<
 	cancelled: "Cancel",
 };
 
-const IN_PROGRESS_SERVICE_STATUSES = new Set([
-	"queued",
-	"processing",
-	"quality_check",
-	"qc_reject",
-]);
-
 const REFUND_REASONS = ["damaged", "cannot_process", "lost", "other"] as const;
 
 function OrderDetailSkeleton() {
@@ -514,11 +507,7 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 		? detail.pickup_events
 		: [];
 	const hasAnyOpenPickup = readyForPickupServices.length > 0;
-	const hasInProgressWork = orderServices.some((service) =>
-		IN_PROGRESS_SERVICE_STATUSES.has(service.status),
-	);
-	const canOpenPickupDialog =
-		isPickupAllowed && hasAnyOpenPickup && !hasInProgressWork;
+	const canOpenPickupDialog = isPickupAllowed && hasAnyOpenPickup;
 
 	const openPickupDialog = () => {
 		openDialog({
