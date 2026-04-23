@@ -1,11 +1,6 @@
 import { ORDER_STATUS_TRANSITIONS } from "@fresclean/api/schema";
 import { CameraIcon, LinkSimpleIcon } from "@phosphor-icons/react";
-import {
-	type UseMutationResult,
-	useMutation,
-	useQuery,
-	useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -27,11 +22,14 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { CancelOrderForm } from "@/features/orders/components/cancel-order-form";
 import { OrderDropoffPhotoCard } from "@/features/orders/components/order-dropoff-photo-card";
 import { OrderFulfillmentOverview } from "@/features/orders/components/order-fulfillment-overview";
 import { OrderPhotoGallery } from "@/features/orders/components/order-photo-gallery";
 import { OrderPickupEventDialog } from "@/features/orders/components/order-pickup-event-dialog";
 import { QueueServiceDetail } from "@/features/orders/components/queue-service-detail";
+import { ServiceCancelButton } from "@/features/orders/components/service-cancel-button";
+import { ServiceStatusUpdateButton } from "@/features/orders/components/service-status-update-button";
 import { StatusTimeline } from "@/features/orders/components/status-timeline";
 import {
 	cancelOrder,
@@ -84,20 +82,6 @@ export const Route = createFileRoute("/_admin/orders/$orderId")({
 	component: OrderDetailPage,
 });
 
-const STATUS_ACTION_LABELS: Record<
-	UpdateOrderServiceStatusPayload["status"],
-	string
-> = {
-	queued: "Queue",
-	processing: "Process",
-	quality_check: "Quality Check",
-	qc_reject: "Reject at QC",
-	ready_for_pickup: "Ready for Pickup",
-	picked_up: "Pick Up",
-	refunded: "Refund",
-	cancelled: "Cancel",
-};
-
 const REFUND_REASONS = ["damaged", "cannot_process", "lost", "other"] as const;
 
 function OrderDetailSkeleton() {
@@ -140,211 +124,6 @@ function OrderDetailMessage({
 		>
 			<p className="font-medium">{title}</p>
 			<p className="text-muted-foreground">{description}</p>
-		</div>
-	);
-}
-
-type UpdateStatusMutation = UseMutationResult<
-	unknown,
-	Error,
-	{ serviceId: number; payload: UpdateOrderServiceStatusPayload },
-	unknown
->;
-
-type NonCancelServiceStatus = Exclude<
-	UpdateOrderServiceStatusPayload["status"],
-	"cancelled"
->;
-
-function ServiceStatusUpdateButton({
-	serviceId,
-	nextStatus,
-	updateStatusMutation,
-}: {
-	serviceId: number;
-	nextStatus: NonCancelServiceStatus;
-	updateStatusMutation: UpdateStatusMutation;
-}) {
-	const openDialog = useDialog((s) => s.openDialog);
-	const closeDialog = useDialog((s) => s.closeDialog);
-
-	const handleClick = () => {
-		openDialog({
-			title: `Update Status to ${STATUS_ACTION_LABELS[nextStatus]}`,
-			description: `Are you sure you want to change the status to ${STATUS_ACTION_LABELS[nextStatus]}?`,
-			content: () => (
-				<ServiceStatusConfirmForm
-					serviceId={serviceId}
-					nextStatus={nextStatus}
-					updateStatusMutation={updateStatusMutation}
-					closeDialog={closeDialog}
-				/>
-			),
-		});
-	};
-
-	return (
-		<Button variant="secondary" size="sm" onClick={handleClick}>
-			{STATUS_ACTION_LABELS[nextStatus]}
-		</Button>
-	);
-}
-
-function ServiceCancelButton({
-	serviceId,
-	updateStatusMutation,
-}: {
-	serviceId: number;
-	updateStatusMutation: UpdateStatusMutation;
-}) {
-	const openDialog = useDialog((s) => s.openDialog);
-	const closeDialog = useDialog((s) => s.closeDialog);
-
-	const handleClick = () => {
-		openDialog({
-			title: "Cancel Service",
-			description: "Please provide a reason for cancelling this service.",
-			content: () => (
-				<ServiceCancelForm
-					serviceId={serviceId}
-					updateStatusMutation={updateStatusMutation}
-					closeDialog={closeDialog}
-				/>
-			),
-		});
-	};
-
-	return (
-		<Button variant="destructive" size="sm" onClick={handleClick}>
-			{STATUS_ACTION_LABELS.cancelled}
-		</Button>
-	);
-}
-
-function ServiceStatusConfirmForm({
-	serviceId,
-	nextStatus,
-	updateStatusMutation,
-	closeDialog,
-}: {
-	serviceId: number;
-	nextStatus: NonCancelServiceStatus;
-	updateStatusMutation: UpdateStatusMutation;
-	closeDialog: () => void;
-}) {
-	const [note, setNote] = useState("");
-	const isPending = updateStatusMutation.isPending;
-
-	const handleConfirm = async () => {
-		const trimmed = note.trim();
-		await updateStatusMutation.mutateAsync({
-			serviceId,
-			payload: {
-				status: nextStatus,
-				...(trimmed ? { note: trimmed } : {}),
-			},
-		});
-		closeDialog();
-	};
-
-	return (
-		<div className="flex flex-col gap-4">
-			<Textarea
-				placeholder="Optional status note"
-				value={note}
-				onChange={(event) => setNote(event.target.value)}
-			/>
-			<div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-				<Button variant="outline" onClick={closeDialog}>
-					Go back
-				</Button>
-				<Button disabled={isPending} onClick={handleConfirm}>
-					{isPending ? "Saving…" : "Confirm Update"}
-				</Button>
-			</div>
-		</div>
-	);
-}
-
-function ServiceCancelForm({
-	serviceId,
-	updateStatusMutation,
-	closeDialog,
-}: {
-	serviceId: number;
-	updateStatusMutation: UpdateStatusMutation;
-	closeDialog: () => void;
-}) {
-	const [reason, setReason] = useState("");
-	const trimmed = reason.trim();
-	const isPending = updateStatusMutation.isPending;
-
-	const handleConfirm = async () => {
-		await updateStatusMutation.mutateAsync({
-			serviceId,
-			payload: { status: "cancelled", cancel_reason: trimmed },
-		});
-		closeDialog();
-	};
-
-	return (
-		<div className="flex flex-col gap-4">
-			<Textarea
-				placeholder="Cancel reason (required)"
-				value={reason}
-				onChange={(event) => setReason(event.target.value)}
-			/>
-			<div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-				<Button variant="outline" onClick={closeDialog}>
-					Go back
-				</Button>
-				<Button
-					variant="destructive"
-					disabled={isPending || !trimmed}
-					onClick={handleConfirm}
-				>
-					{isPending ? "Saving…" : "Confirm Cancel"}
-				</Button>
-			</div>
-		</div>
-	);
-}
-
-function CancelOrderForm({
-	closeDialog,
-	cancelOrderMutation,
-}: {
-	closeDialog: () => void;
-	cancelOrderMutation: UseMutationResult<unknown, Error, string, unknown>;
-}) {
-	const [reason, setReason] = useState("");
-	const trimmed = reason.trim();
-	const isPending = cancelOrderMutation.isPending;
-
-	const handleConfirm = async () => {
-		await cancelOrderMutation.mutateAsync(trimmed);
-		closeDialog();
-	};
-
-	return (
-		<div className="flex flex-col gap-4">
-			<Textarea
-				placeholder="Cancel reason (required)"
-				value={reason}
-				onChange={(event) => setReason(event.target.value)}
-			/>
-			<div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-				<Button variant="outline" onClick={closeDialog}>
-					Go back
-				</Button>
-				<Button
-					variant="destructive"
-					disabled={isPending || !trimmed}
-					onClick={handleConfirm}
-				>
-					{isPending ? "Cancelling…" : "Confirm Cancel Order"}
-				</Button>
-			</div>
 		</div>
 	);
 }
@@ -695,7 +474,7 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 									Copy tracking link
 								</Button>
 							) : null}
-							{canCancelOrder ? (
+							{canCancelOrder && (
 								<Button
 									type="button"
 									variant="destructive"
@@ -705,7 +484,7 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 								>
 									Cancel order
 								</Button>
-							) : null}
+							)}
 							<Badge variant={getOrderStatusBadgeVariant(detail.status)}>
 								{formatOrderStatus(detail.status)}
 							</Badge>
@@ -866,7 +645,7 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 						</Card>
 					) : null}
 
-					{isAdmin ? (
+					{isAdmin && (
 						<Card>
 							<CardHeader>
 								<CardTitle>Refund</CardTitle>
@@ -997,7 +776,7 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 								</Button>
 							</CardContent>
 						</Card>
-					) : null}
+					)}
 				</div>
 
 				<div className="grid gap-3 sm:gap-4 lg:col-span-8">
