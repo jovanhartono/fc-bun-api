@@ -552,6 +552,28 @@ export const orderPickupEventsTable = pgTable(
   ]
 );
 
+export const orderPickupAttemptsLogTable = pgTable(
+  "order_pickup_attempts_log",
+  {
+    attempted_code: varchar("attempted_code", { length: 6 }).notNull(),
+    created_at: timestamp("created_at").defaultNow().notNull(),
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    ip: varchar("ip", { length: 45 }),
+    order_id: integer("order_id")
+      .references(() => ordersTable.id, { onDelete: "cascade" })
+      .notNull(),
+    user_id: integer("user_id")
+      .references(() => usersTable.id)
+      .notNull(),
+  },
+  (table) => [
+    index("order_pickup_attempts_log_order_created_idx").on(
+      table.order_id,
+      table.created_at
+    ),
+  ]
+);
+
 export const orderServicesImagesTable = pgTable("order_services_images", {
   created_at: timestamp("created_at").defaultNow().notNull(),
   id: integer().primaryKey().generatedAlwaysAsIdentity(),

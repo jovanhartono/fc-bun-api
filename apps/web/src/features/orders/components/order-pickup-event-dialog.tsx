@@ -14,6 +14,11 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+	InputOTP,
+	InputOTPGroup,
+	InputOTPSlot,
+} from "@/components/ui/input-otp";
+import {
 	ACCEPTED_IMAGE_TYPES,
 	isAcceptedImage,
 } from "@/features/orders/utils/photo-upload";
@@ -38,6 +43,8 @@ type PickupDialogContextValue = {
 	file: File | null;
 	previewUrl: string | null;
 	setFile: (file: File | null) => void;
+	pickupCode: string;
+	setPickupCode: (value: string) => void;
 	submit: () => Promise<void>;
 	isPending: boolean;
 };
@@ -73,6 +80,7 @@ export const OrderPickupEventDialog = ({
 	);
 	const [file, setFileState] = useState<File | null>(null);
 	const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+	const [pickupCode, setPickupCode] = useState("");
 
 	useEffect(() => {
 		return () => {
@@ -120,6 +128,9 @@ export const OrderPickupEventDialog = ({
 			if (!isAcceptedImage(file.type)) {
 				throw new Error("Unsupported image type");
 			}
+			if (!/^\d{6}$/.test(pickupCode)) {
+				throw new Error("Enter the 6-digit pickup code");
+			}
 			const serviceIds = Array.from(selectedIds);
 			if (serviceIds.length === 0) {
 				throw new Error("Select at least one item to pick up");
@@ -131,6 +142,7 @@ export const OrderPickupEventDialog = ({
 			await uploadFileToPresignedUrl(presigned.upload_url, file, file.type);
 			return createOrderPickupEvent(orderId, {
 				image_path: presigned.key,
+				pickup_code: pickupCode,
 				service_ids: serviceIds,
 			});
 		},
@@ -157,11 +169,13 @@ export const OrderPickupEventDialog = ({
 			file,
 			isPending: pickupMutation.isPending,
 			orderId,
+			pickupCode,
 			previewUrl,
 			readyServices,
 			selectAll,
 			selectedIds,
 			setFile,
+			setPickupCode,
 			submit,
 			toggleService,
 		}),
@@ -169,6 +183,7 @@ export const OrderPickupEventDialog = ({
 			clearSelection,
 			file,
 			orderId,
+			pickupCode,
 			pickupMutation.isPending,
 			previewUrl,
 			readyServices,
@@ -184,12 +199,42 @@ export const OrderPickupEventDialog = ({
 		<PickupDialogContext.Provider value={contextValue}>
 			<div className="flex flex-col gap-5">
 				<PickupServiceList />
+				<PickupCodeField />
 				<PickupPhotoField />
 				<PickupActions onCancel={closeDialog} />
 			</div>
 		</PickupDialogContext.Provider>
 	);
 };
+
+const PickupCodeField = memo(() => {
+	const { pickupCode, setPickupCode } = usePickupDialog();
+
+	return (
+		<div className="space-y-2">
+			<p className="text-sm font-medium">
+				Pickup code{" "}
+				<span className="text-muted-foreground">(6 digits, from customer)</span>
+			</p>
+			<InputOTP
+				maxLength={6}
+				value={pickupCode}
+				onChange={setPickupCode}
+				containerClassName="justify-start"
+			>
+				<InputOTPGroup>
+					<InputOTPSlot index={0} className="size-11 text-base" />
+					<InputOTPSlot index={1} className="size-11 text-base" />
+					<InputOTPSlot index={2} className="size-11 text-base" />
+					<InputOTPSlot index={3} className="size-11 text-base" />
+					<InputOTPSlot index={4} className="size-11 text-base" />
+					<InputOTPSlot index={5} className="size-11 text-base" />
+				</InputOTPGroup>
+			</InputOTP>
+		</div>
+	);
+});
+PickupCodeField.displayName = "PickupCodeField";
 
 const PickupServiceList = memo(() => {
 	const {
@@ -334,8 +379,10 @@ const PickupPhotoField = memo(() => {
 PickupPhotoField.displayName = "PickupPhotoField";
 
 const PickupActions = memo(({ onCancel }: { onCancel: () => void }) => {
-	const { file, isPending, selectedIds, submit } = usePickupDialog();
-	const isSubmitDisabled = !file || selectedIds.size === 0 || isPending;
+	const { file, isPending, pickupCode, selectedIds, submit } =
+		usePickupDialog();
+	const isSubmitDisabled =
+		!file || selectedIds.size === 0 || pickupCode.length !== 6 || isPending;
 
 	return (
 		<div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">

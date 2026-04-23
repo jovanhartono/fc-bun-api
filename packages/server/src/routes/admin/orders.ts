@@ -208,6 +208,10 @@ const app = new Hono()
       const user = c.get("jwtPayload") as JWTPayload;
       const { id } = c.req.valid("param");
       const body = c.req.valid("json");
+      const ip =
+        c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ||
+        c.req.header("x-real-ip") ||
+        null;
 
       await assertOrderAccess(user, id);
 
@@ -215,6 +219,7 @@ const app = new Hono()
         orderId: id,
         body,
         user,
+        ip,
       });
 
       return c.json(

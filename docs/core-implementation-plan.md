@@ -62,25 +62,30 @@ Follow-ups (not blocking merge):
 
 ---
 
-### Group B — Pickup flow rewrite
+### Group B — Pickup flow rewrite ✅ DONE
 
-6. **B-1. Server: block pickup without code match**
-   - `createOrderPickupEvent` accepts `pickup_code` in body. Compare against `orders.pickup_code`. Reject on mismatch. Rate-limit (5 attempts → lockout 5 min) via a small in-memory guard or `order_pickup_events_attempts` log.
-   - Decision for audit: log failed attempts to `order_pickup_attempts_log` table or accept as transient signal only? **Recommend**: log (small table, audit value high).
+Shipped: 2026-04-23 · branch `feat/group-b-pickup-flow`
 
-7. **B-2. Web: pickup dialog adds code input**
-   - `apps/web/src/features/orders/components/order-pickup-event-dialog.tsx` → add `<OTPInput length={6} />` primitive (shadcn has `input-otp`).
-   - Compound API: `<PickupDialog><PickupDialog.Services /><PickupDialog.CodeInput /><PickupDialog.Photos /></PickupDialog>`.
-   - Submit disabled until 6 digits + at least one photo uploaded.
+6. **B-1. Server: block pickup without code match** ✅
+   - `createOrderPickupEvent` now requires `pickup_code` in body, compared against `orders.pickup_code`; mismatches throw 400 and log to `order_pickup_attempts_log`.
+   - Rate limit: 5 failed attempts / 5 min window per order → 429. Attempts table columns: `order_id, attempted_code, ip, user_id, created_at` (per locked decision).
+   - New `TooManyRequestsException` for 429 mapping.
 
-8. **B-3. Track page shows pickup code to customer**
-   - Public `/track` returns `pickup_code` only when `order.status === 'ready_for_pickup'` (not before, so customer can't abuse early).
-   - Customer reads code to cashier at counter. No phone photo needed.
+7. **B-2. Web: pickup dialog adds code input** ✅
+   - Added `<InputOTP maxLength={6}>` (shadcn `input-otp`) as `PickupCodeField` in the existing compound pickup dialog (via context).
+   - Submit disabled until 6 digits + ≥1 photo + ≥1 service selected.
 
-9. **B-4. Remove any "mark as picked_up" shortcut from status dropdown**
-   - Audit `apps/web/src/features/orders/components/queue-service-detail.tsx` and status picker. Confirm already hidden.
+8. **B-3. Track page shows pickup code to customer** ✅
+   - Public `/track` returns `pickup_code` only when `order.status === 'ready_for_pickup'`; otherwise `null`.
+   - Track page renders the code in the "Ready for pickup" banner. Admin `getOrderDetailById` strips `pickup_code` so cashiers cannot peek.
+
+9. **B-4. Picked-up shortcut audit** ✅
+   - Confirmed `ORDER_STATUS_TRANSITIONS` never offers `picked_up` as a next status; the only entry path is the pickup dialog.
 
 Commit: `feat(pickup): 6-digit code auth + compound dialog + track-page display`
+
+Follow-ups (not blocking merge):
+- Run `bun run push:dev` + `bun run seed:dev` to create `order_pickup_attempts_log` and refresh demo data.
 
 ---
 

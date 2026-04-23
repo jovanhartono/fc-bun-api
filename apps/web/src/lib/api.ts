@@ -363,6 +363,7 @@ export type PresignOrderPickupEventPayload = {
 
 export type CreateOrderPickupEventPayload = {
 	image_path: string;
+	pickup_code: string;
 	service_ids: number[];
 };
 
