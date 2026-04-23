@@ -1,7 +1,6 @@
-import { and, asc, count, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
-  orderPickupAttemptsLogTable,
   orderPickupEventsTable,
   orderRefundItemsTable,
   orderRefundsTable,
@@ -16,11 +15,7 @@ import {
   storesTable,
   usersTable,
 } from "@/db/schema";
-import {
-  BadRequestException,
-  ForbiddenException,
-  TooManyRequestsException,
-} from "@/errors";
+import { BadRequestException, ForbiddenException } from "@/errors";
 import type { OrderTx } from "@/modules/orders/order.repository";
 import type {
   GetMyOrderServicesQuery,
@@ -1046,19 +1041,14 @@ export async function saveOrderDropoffPhoto({
   };
 }
 
-const PICKUP_ATTEMPT_WINDOW_MS = 5 * 60 * 1000;
-const PICKUP_ATTEMPT_MAX = 5;
-
 export async function createOrderPickupEvent({
   orderId,
   body,
   user,
-  ip,
 }: {
   orderId: number;
   body: PostOrderPickupEventInput;
   user: JWTPayload;
-  ip?: string | null;
 }) {
   assertCanProcessPickup(user);
 
@@ -1076,30 +1066,7 @@ export async function createOrderPickupEvent({
     throw new BadRequestException("Order not found");
   }
 
-  const windowStart = new Date(Date.now() - PICKUP_ATTEMPT_WINDOW_MS);
-  const [recentAttempts] = await db
-    .select({ value: count() })
-    .from(orderPickupAttemptsLogTable)
-    .where(
-      and(
-        eq(orderPickupAttemptsLogTable.order_id, orderId),
-        gte(orderPickupAttemptsLogTable.created_at, windowStart)
-      )
-    );
-
-  if (recentAttempts && recentAttempts.value >= PICKUP_ATTEMPT_MAX) {
-    throw new TooManyRequestsException(
-      "Too many invalid pickup code attempts. Try again in 5 minutes."
-    );
-  }
-
   if (body.pickup_code !== order.pickup_code) {
-    await db.insert(orderPickupAttemptsLogTable).values({
-      attempted_code: body.pickup_code,
-      ip: ip ?? null,
-      order_id: orderId,
-      user_id: user.id,
-    });
     throw new BadRequestException("Invalid pickup code");
   }
 

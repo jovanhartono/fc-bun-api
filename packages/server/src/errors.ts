@@ -30,9 +30,3 @@ export class ConflictException extends HTTPException {
     super(StatusCodes.CONFLICT, { message });
   }
 }
-
-export class TooManyRequestsException extends HTTPException {
-  constructor(message = "Too Many Requests") {
-    super(StatusCodes.TOO_MANY_REQUESTS, { message });
-  }
-}

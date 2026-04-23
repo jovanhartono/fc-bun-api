@@ -37,7 +37,6 @@ export const relations = defineRelations(schema, (r) => ({
       from: r.usersTable.id,
       to: r.ordersTable.created_by,
     }),
-    pickupAttemptsLog: r.many.orderPickupAttemptsLogTable(),
     pickupEventsPickedUp: r.many.orderPickupEventsTable(),
     shifts: r.many.shiftsTable(),
     userStores: r.many.userStoresTable(),
@@ -151,7 +150,6 @@ export const relations = defineRelations(schema, (r) => ({
       from: r.ordersTable.payment_method_id,
       to: r.paymentMethodsTable.id,
     }),
-    pickupAttemptsLog: r.many.orderPickupAttemptsLogTable(),
     pickupEvents: r.many.orderPickupEventsTable(),
     refunds: r.many.orderRefundsTable(),
     products: r.many.ordersProductsTable(),
@@ -203,19 +201,6 @@ export const relations = defineRelations(schema, (r) => ({
       optional: false,
     }),
     services: r.many.ordersServicesTable(),
-  },
-
-  orderPickupAttemptsLogTable: {
-    order: r.one.ordersTable({
-      from: r.orderPickupAttemptsLogTable.order_id,
-      to: r.ordersTable.id,
-      optional: false,
-    }),
-    user: r.one.usersTable({
-      from: r.orderPickupAttemptsLogTable.user_id,
-      to: r.usersTable.id,
-      optional: false,
-    }),
   },
 
   orderServicesImagesTable: {

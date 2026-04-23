@@ -67,9 +67,8 @@ Follow-ups (not blocking merge):
 Shipped: 2026-04-23 · branch `feat/group-b-pickup-flow`
 
 6. **B-1. Server: block pickup without code match** ✅
-   - `createOrderPickupEvent` now requires `pickup_code` in body, compared against `orders.pickup_code`; mismatches throw 400 and log to `order_pickup_attempts_log`.
-   - Rate limit: 5 failed attempts / 5 min window per order → 429. Attempts table columns: `order_id, attempted_code, ip, user_id, created_at` (per locked decision).
-   - New `TooManyRequestsException` for 429 mapping.
+   - `createOrderPickupEvent` requires `pickup_code` in body, compared against `orders.pickup_code`; mismatches throw 400.
+   - Rate limiting + attempts log deferred — kept simple for v1.
 
 7. **B-2. Web: pickup dialog adds code input** ✅
    - Added `<InputOTP maxLength={6}>` (shadcn `input-otp`) as `PickupCodeField` in the existing compound pickup dialog (via context).
@@ -179,7 +178,7 @@ Each group = one PR. Each PR independently shippable.
 
 ## Locked decisions (2026-04-22)
 
-1. **B-1 attempt logging:** new `order_pickup_attempts_log` table. Columns: `order_id, attempted_code, ip, user_id, created_at`. Rate-limit: 5 attempts / 5 min window → soft lock.
+1. **B-1 attempt logging:** ~~attempts table + rate-limit~~ — reverted 2026-04-23, kept simple for v1. No throttle; mismatched code just returns 400.
 2. **C-2 auto-refund:** automatic on cancel-paid. Single toast "Order cancelled + refund issued". Refund item `reason='other'`, `note=cancel_reason`.
 3. **C-3 admin-only refund:** `assertCanProcessPaymentOrRefund` tightened to `role==='admin'` for refund endpoint. Payment collection remains cashier+admin.
 4. **D-1 auto-close trigger:** Upstash Schedule → HTTP POST to `/admin/cron/shifts/auto-close` (internal shared-secret header). Runs at 00:05 Jakarta daily (cushion for clock drift).
