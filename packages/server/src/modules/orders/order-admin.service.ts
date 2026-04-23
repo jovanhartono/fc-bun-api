@@ -597,7 +597,7 @@ export async function getOrderDetailById(id: number) {
     return null;
   }
 
-  const { pickup_code, ...detailWithoutPickupCode } = detail;
+  const { pickup_code: _pickup_code, ...detailWithoutPickupCode } = detail;
 
   return {
     ...detailWithoutPickupCode,
@@ -1057,10 +1057,23 @@ export async function createOrderPickupEvent({
     throw new BadRequestException("At least one service must be picked up");
   }
 
-  const order = await db.query.ordersTable.findFirst({
-    where: { id: orderId },
-    columns: { id: true, pickup_code: true },
-  });
+  const [order, candidateServices] = await Promise.all([
+    db.query.ordersTable.findFirst({
+      where: { id: orderId },
+      columns: { id: true, pickup_code: true },
+    }),
+    db.query.ordersServicesTable.findMany({
+      where: {
+        order_id: orderId,
+        id: { in: uniqueServiceIds },
+      },
+      columns: {
+        id: true,
+        item_code: true,
+        status: true,
+      },
+    }),
+  ]);
 
   if (!order) {
     throw new BadRequestException("Order not found");
@@ -1069,18 +1082,6 @@ export async function createOrderPickupEvent({
   if (body.pickup_code !== order.pickup_code) {
     throw new BadRequestException("Invalid pickup code");
   }
-
-  const candidateServices = await db.query.ordersServicesTable.findMany({
-    where: {
-      order_id: orderId,
-      id: { in: uniqueServiceIds },
-    },
-    columns: {
-      id: true,
-      item_code: true,
-      status: true,
-    },
-  });
 
   if (candidateServices.length !== uniqueServiceIds.length) {
     throw new BadRequestException(

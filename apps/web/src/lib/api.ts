@@ -1,6 +1,8 @@
 import type {
 	POSTCategorySchema,
 	POSTCustomerSchema,
+	POSTOrderPickupEventPresignSchema,
+	POSTOrderPickupEventSchema,
 	POSTOrderSchema,
 	POSTPaymentMethodSchema,
 	POSTProductSchema,
@@ -357,15 +359,13 @@ export type SaveOrderDropoffPhotoPayload = {
 	image_path: string;
 };
 
-export type PresignOrderPickupEventPayload = {
-	content_type: PhotoContentType;
-};
+export type PresignOrderPickupEventPayload = z.infer<
+	typeof POSTOrderPickupEventPresignSchema
+>;
 
-export type CreateOrderPickupEventPayload = {
-	image_path: string;
-	pickup_code: string;
-	service_ids: number[];
-};
+export type CreateOrderPickupEventPayload = z.infer<
+	typeof POSTOrderPickupEventSchema
+>;
 
 export type OrderRefundReason = "damaged" | "cannot_process" | "lost" | "other";
 

@@ -3,8 +3,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
 	createContext,
 	memo,
+	use,
 	useCallback,
-	useContext,
 	useEffect,
 	useMemo,
 	useRef,
@@ -43,22 +43,35 @@ type PickupDialogContextValue = {
 	file: File | null;
 	previewUrl: string | null;
 	setFile: (file: File | null) => void;
-	pickupCode: string;
-	setPickupCode: (value: string) => void;
 	submit: () => Promise<void>;
 	isPending: boolean;
+};
+
+type PickupCodeContextValue = {
+	pickupCode: string;
+	setPickupCode: (value: string) => void;
 };
 
 const PickupDialogContext = createContext<PickupDialogContextValue | null>(
 	null,
 );
 
+const PickupCodeContext = createContext<PickupCodeContextValue | null>(null);
+
 const usePickupDialog = () => {
-	const context = useContext(PickupDialogContext);
+	const context = use(PickupDialogContext);
 	if (!context) {
 		throw new Error(
 			"usePickupDialog must be used within OrderPickupEventDialog",
 		);
+	}
+	return context;
+};
+
+const usePickupCode = () => {
+	const context = use(PickupCodeContext);
+	if (!context) {
+		throw new Error("usePickupCode must be used within OrderPickupEventDialog");
 	}
 	return context;
 };
@@ -159,32 +172,30 @@ export const OrderPickupEventDialog = ({
 		},
 	});
 
+	const { mutateAsync: mutatePickup, isPending } = pickupMutation;
 	const submit = useCallback(async () => {
-		await pickupMutation.mutateAsync();
-	}, [pickupMutation]);
+		await mutatePickup();
+	}, [mutatePickup]);
 
-	const contextValue = useMemo<PickupDialogContextValue>(
+	const dialogValue = useMemo<PickupDialogContextValue>(
 		() => ({
 			clearSelection,
 			file,
-			isPending: pickupMutation.isPending,
+			isPending,
 			orderId,
-			pickupCode,
 			previewUrl,
 			readyServices,
 			selectAll,
 			selectedIds,
 			setFile,
-			setPickupCode,
 			submit,
 			toggleService,
 		}),
 		[
 			clearSelection,
 			file,
+			isPending,
 			orderId,
-			pickupCode,
-			pickupMutation.isPending,
 			previewUrl,
 			readyServices,
 			selectAll,
@@ -195,20 +206,27 @@ export const OrderPickupEventDialog = ({
 		],
 	);
 
+	const codeValue = useMemo<PickupCodeContextValue>(
+		() => ({ pickupCode, setPickupCode }),
+		[pickupCode],
+	);
+
 	return (
-		<PickupDialogContext.Provider value={contextValue}>
-			<div className="flex flex-col gap-5">
-				<PickupServiceList />
-				<PickupCodeField />
-				<PickupPhotoField />
-				<PickupActions onCancel={closeDialog} />
-			</div>
+		<PickupDialogContext.Provider value={dialogValue}>
+			<PickupCodeContext.Provider value={codeValue}>
+				<div className="flex flex-col gap-5">
+					<PickupServiceList />
+					<PickupCodeField />
+					<PickupPhotoField />
+					<PickupActions onCancel={closeDialog} />
+				</div>
+			</PickupCodeContext.Provider>
 		</PickupDialogContext.Provider>
 	);
 };
 
 const PickupCodeField = memo(() => {
-	const { pickupCode, setPickupCode } = usePickupDialog();
+	const { pickupCode, setPickupCode } = usePickupCode();
 
 	return (
 		<div className="space-y-2">
@@ -220,6 +238,9 @@ const PickupCodeField = memo(() => {
 				maxLength={6}
 				value={pickupCode}
 				onChange={setPickupCode}
+				autoComplete="one-time-code"
+				inputMode="numeric"
+				pattern="[0-9]*"
 				containerClassName="justify-start"
 			>
 				<InputOTPGroup>
@@ -379,8 +400,8 @@ const PickupPhotoField = memo(() => {
 PickupPhotoField.displayName = "PickupPhotoField";
 
 const PickupActions = memo(({ onCancel }: { onCancel: () => void }) => {
-	const { file, isPending, pickupCode, selectedIds, submit } =
-		usePickupDialog();
+	const { file, isPending, selectedIds, submit } = usePickupDialog();
+	const { pickupCode } = usePickupCode();
 	const isSubmitDisabled =
 		!file || selectedIds.size === 0 || pickupCode.length !== 6 || isPending;
 
