@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { orderServiceStatusEnum } from "@/db/schema";
+import { orderServiceStatusEnum, refundReasonEnum } from "@/db/schema";
 import { MAX_PAGE_SIZE } from "@/modules/orders/order.schema";
 import { dateStringSchema } from "@/schema/common";
 import { normalizePagination } from "@/utils/pagination";
@@ -99,7 +99,7 @@ export const POSTOrderRefundSchema = z.object({
         .object({
           note: z.string().trim().optional(),
           order_service_id: z.coerce.number().int().positive(),
-          reason: z.enum(["damaged", "cannot_process", "lost", "other"]),
+          reason: z.enum(refundReasonEnum.enumValues),
         })
         .superRefine((value, ctx) => {
           if (value.reason === "other" && !value.note?.trim()) {

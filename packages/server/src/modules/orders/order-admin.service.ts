@@ -851,6 +851,18 @@ export async function updateOrderServiceStatus({
       );
     }
 
+    if (body.status === "cancelled") {
+      const parentOrder = await tx.query.ordersTable.findFirst({
+        where: { id: orderId },
+        columns: { payment_status: true },
+      });
+      if (parentOrder?.payment_status === "paid") {
+        throw new BadRequestException(
+          "Paid orders cannot cancel individual services. Refund the service instead."
+        );
+      }
+    }
+
     const isClaimTransition =
       (locked.status === "queued" || locked.status === "qc_reject") &&
       body.status === "processing";
@@ -1364,8 +1376,6 @@ export async function cancelOrder({
       id: true,
       status: true,
       payment_status: true,
-      paid_amount: true,
-      refunded_amount: true,
     },
   });
 
@@ -1375,6 +1385,12 @@ export async function cancelOrder({
 
   if (order.status === "cancelled") {
     throw new BadRequestException("Order is already cancelled");
+  }
+
+  if (order.payment_status === "paid") {
+    throw new BadRequestException(
+      "Paid orders cannot be cancelled. Issue a refund instead."
+    );
   }
 
   const allServices = await db.query.ordersServicesTable.findMany({
@@ -1392,57 +1408,12 @@ export async function cancelOrder({
 
   const cancelReason = body.cancel_reason.trim();
   const cancellableIds = cancellableServices.map((service) => service.id);
-  const isPaid = order.payment_status === "paid";
-
-  let refundPlan: {
-    items: ReturnType<typeof buildRefundItems>;
-    totalRefundAmount: number;
-  } | null = null;
-
-  if (isPaid) {
-    const refundCaps = await getOrderLineRefundCaps(orderId);
-    const capsByServiceId = new Map(
-      refundCaps
-        .filter(
-          (cap) =>
-            cancellableIds.includes(cap.order_service_id) &&
-            cap.maxRefundable > 0
-        )
-        .map((cap) => [cap.order_service_id, cap.maxRefundable])
-    );
-
-    if (capsByServiceId.size > 0) {
-      const items = buildRefundItems({
-        capsByServiceId,
-        items: Array.from(capsByServiceId.keys()).map((id) => ({
-          order_service_id: id,
-          reason: "other" as const,
-          note: cancelReason,
-        })),
-      });
-
-      const totalRefundAmount = items.reduce(
-        (sum, item) => sum + item.amount,
-        0
-      );
-
-      const refundablePaidAmount =
-        Number(order.paid_amount) - Number(order.refunded_amount);
-      if (totalRefundAmount > refundablePaidAmount) {
-        throw new BadRequestException(
-          "Refund exceeds remaining paid amount for this order"
-        );
-      }
-
-      refundPlan = { items, totalRefundAmount };
-    }
-  }
 
   const cancellableStatusById = new Map(
     cancellableServices.map((service) => [service.id, service.status])
   );
 
-  const createdRefund = await db.transaction(async (tx) => {
+  await db.transaction(async (tx) => {
     const updatedServices = await tx
       .update(ordersServicesTable)
       .set({ status: "cancelled", cancel_reason: cancelReason })
@@ -1471,53 +1442,19 @@ export async function cancelOrder({
       }))
     );
 
-    let refundRow: typeof orderRefundsTable.$inferSelect | null = null;
-
-    if (refundPlan) {
-      const [created] = await tx
-        .insert(orderRefundsTable)
-        .values({
-          order_id: orderId,
-          refunded_by: user.id,
-          total_amount: refundPlan.totalRefundAmount.toString(),
-          note: cancelReason,
-        })
-        .returning();
-      refundRow = created;
-
-      await tx.insert(orderRefundItemsTable).values(
-        refundPlan.items.map((item) => ({
-          order_refund_id: created.id,
-          order_service_id: item.order_service_id,
-          amount: item.amount.toString(),
-          reason: item.reason,
-          note: item.note,
-        }))
-      );
-    }
-
     await tx
       .update(ordersTable)
       .set({
         cancelled_at: new Date(),
         updated_by: user.id,
-        ...(refundPlan
-          ? {
-              refunded_amount: sql`${ordersTable.refunded_amount} + ${refundPlan.totalRefundAmount}`,
-            }
-          : {}),
       })
       .where(eq(ordersTable.id, orderId));
 
     await recalculateOrderStatus(tx, orderId, user.id);
-
-    return refundRow;
   });
 
   return {
     cancelled_service_ids: cancellableIds,
     order_id: orderId,
-    refund: createdRefund,
-    total_refund_amount: refundPlan?.totalRefundAmount ?? 0,
   };
 }

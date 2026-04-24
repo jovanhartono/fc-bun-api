@@ -28,6 +28,7 @@ import { OrderFulfillmentOverview } from "@/features/orders/components/order-ful
 import { OrderPhotoGallery } from "@/features/orders/components/order-photo-gallery";
 import { OrderPickupEventDialog } from "@/features/orders/components/order-pickup-event-dialog";
 import { QueueServiceDetail } from "@/features/orders/components/queue-service-detail";
+import { RefundOrderForm } from "@/features/orders/components/refund-order-form";
 import { ServiceCancelButton } from "@/features/orders/components/service-cancel-button";
 import { ServiceStatusUpdateButton } from "@/features/orders/components/service-status-update-button";
 import { StatusTimeline } from "@/features/orders/components/status-timeline";
@@ -82,7 +83,13 @@ export const Route = createFileRoute("/_admin/orders/$orderId")({
 	component: OrderDetailPage,
 });
 
-const REFUND_REASONS = ["damaged", "cannot_process", "lost", "other"] as const;
+const REFUND_REASONS = [
+	"damaged",
+	"cannot_process",
+	"lost",
+	"other",
+	"customer_cancelled",
+] as const;
 
 function OrderDetailSkeleton() {
 	return (
@@ -401,20 +408,42 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 		(service) =>
 			!["picked_up", "refunded", "cancelled"].includes(service.status),
 	);
+	const isPaid = detail.payment_status === "paid";
 	const canCancelOrder =
-		isAdmin && detail.status !== "cancelled" && hasCancellableServices;
+		isAdmin &&
+		detail.status !== "cancelled" &&
+		!isPaid &&
+		hasCancellableServices;
+	const canRefundWholeOrder =
+		isAdmin &&
+		detail.status !== "cancelled" &&
+		isPaid &&
+		refundableServices.length > 0;
 
 	const openCancelOrderDialog = () => {
 		openDialog({
 			title: "Cancel order",
-			description:
-				detail.payment_status === "paid"
-					? "All remaining items will be cancelled and a refund will be issued."
-					: "All remaining items will be cancelled.",
+			description: "All remaining items will be cancelled.",
 			content: () => (
 				<CancelOrderForm
 					closeDialog={closeDialog}
 					cancelOrderMutation={cancelOrderMutation}
+				/>
+			),
+		});
+	};
+
+	const openRefundOrderDialog = () => {
+		openDialog({
+			title: "Refund order",
+			description:
+				"All remaining items will be refunded as customer cancelled.",
+			content: () => (
+				<RefundOrderForm
+					closeDialog={closeDialog}
+					orderId={id}
+					refundServiceIds={refundableServices.map((service) => service.id)}
+					refundMutation={refundMutation}
 				/>
 			),
 		});
@@ -483,6 +512,17 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 									onClick={openCancelOrderDialog}
 								>
 									Cancel order
+								</Button>
+							)}
+							{canRefundWholeOrder && (
+								<Button
+									type="button"
+									variant="destructive"
+									size="sm"
+									disabled={refundMutation.isPending}
+									onClick={openRefundOrderDialog}
+								>
+									Refund order
 								</Button>
 							)}
 							<Badge variant={getOrderStatusBadgeVariant(detail.status)}>
@@ -865,8 +905,11 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 									) : null}
 
 									<div className="flex flex-wrap gap-2 border-t pt-4">
-										{(ORDER_STATUS_TRANSITIONS[service.status] || []).map(
-											(nextStatus) =>
+										{(ORDER_STATUS_TRANSITIONS[service.status] || [])
+											.filter(
+												(nextStatus) => !(nextStatus === "cancelled" && isPaid),
+											)
+											.map((nextStatus) =>
 												nextStatus === "cancelled" ? (
 													<ServiceCancelButton
 														key={nextStatus}
@@ -881,7 +924,7 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 														updateStatusMutation={updateStatusMutation}
 													/>
 												),
-										)}
+											)}
 									</div>
 
 									<div className="border-t pt-4">

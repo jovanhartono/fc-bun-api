@@ -367,7 +367,12 @@ export type CreateOrderPickupEventPayload = z.infer<
 	typeof POSTOrderPickupEventSchema
 >;
 
-export type OrderRefundReason = "damaged" | "cannot_process" | "lost" | "other";
+export type OrderRefundReason =
+	| "damaged"
+	| "cannot_process"
+	| "lost"
+	| "other"
+	| "customer_cancelled";
 
 export type CreateOrderRefundPayload = {
 	note?: string;

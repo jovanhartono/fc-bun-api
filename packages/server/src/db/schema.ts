@@ -191,6 +191,7 @@ export const refundReasonEnum = pgEnum("refund_reason_enum", [
   "cannot_process",
   "lost",
   "other",
+  "customer_cancelled",
 ]);
 
 export const campaignsTable = pgTable(

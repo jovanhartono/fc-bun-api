@@ -407,12 +407,7 @@ const app = new Hono()
         user,
       });
 
-      const message =
-        result.total_refund_amount > 0
-          ? "Order cancelled + refund issued"
-          : "Order cancelled";
-
-      return c.json(success(result, message));
+      return c.json(success(result, "Order cancelled"));
     }
   );
 
