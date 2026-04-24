@@ -91,6 +91,9 @@ const REFUND_REASONS = [
 	"customer_cancelled",
 ] as const;
 
+const formatRefundReason = (reason: string) =>
+	reason.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
+
 function OrderDetailSkeleton() {
 	return (
 		<div className="grid gap-6">
@@ -901,6 +904,30 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 												Cancel reason
 											</p>
 											<p className="mt-1 text-sm">{service.cancel_reason}</p>
+										</div>
+									) : null}
+
+									{service.status === "refunded" &&
+									service.refundItems.length > 0 ? (
+										<div className="border-destructive/40 bg-destructive/5 border p-3">
+											<p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+												Refund reason
+											</p>
+											<ul className="mt-1 grid gap-1 text-sm">
+												{service.refundItems.map((item) => (
+													<li key={item.id}>
+														<span className="font-medium">
+															{formatRefundReason(item.reason)}
+														</span>
+														{item.note ? (
+															<span className="text-muted-foreground">
+																{" "}
+																— {item.note}
+															</span>
+														) : null}
+													</li>
+												))}
+											</ul>
 										</div>
 									) : null}
 
