@@ -9,8 +9,6 @@ import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
 	Select,
@@ -21,7 +19,6 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Textarea } from "@/components/ui/textarea";
 import { CancelOrderForm } from "@/features/orders/components/cancel-order-form";
 import { OrderDropoffPhotoCard } from "@/features/orders/components/order-dropoff-photo-card";
 import { OrderFulfillmentOverview } from "@/features/orders/components/order-fulfillment-overview";
@@ -82,14 +79,6 @@ export const Route = createFileRoute("/_admin/orders/$orderId")({
 	},
 	component: OrderDetailPage,
 });
-
-const REFUND_REASONS = [
-	"damaged",
-	"cannot_process",
-	"lost",
-	"other",
-	"customer_cancelled",
-] as const;
 
 const formatRefundReason = (reason: string) =>
 	reason.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
@@ -235,15 +224,6 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 	>({});
 	const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState("");
 
-	const [refundServiceIds, setRefundServiceIds] = useState<number[]>([]);
-	const [refundReasonByServiceId, setRefundReasonByServiceId] = useState<
-		Record<number, (typeof REFUND_REASONS)[number]>
-	>({});
-	const [refundItemNoteByServiceId, setRefundItemNoteByServiceId] = useState<
-		Record<number, string>
-	>({});
-	const [refundNote, setRefundNote] = useState("");
-
 	const detailQuery = useQuery(orderDetailQueryOptions(id));
 
 	const paymentMethodsQuery = useQuery(paymentMethodsQueryOptions());
@@ -331,10 +311,6 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 			payload: Parameters<typeof createOrderRefund>[1];
 		}) => createOrderRefund(targetOrderId, payload),
 		onSuccess: async () => {
-			setRefundServiceIds([]);
-			setRefundReasonByServiceId({});
-			setRefundItemNoteByServiceId({});
-			setRefundNote("");
 			await refreshOrderData();
 		},
 	});
@@ -439,28 +415,21 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 	const openRefundOrderDialog = () => {
 		openDialog({
 			title: "Refund order",
-			description:
-				"All remaining items will be refunded as customer cancelled.",
+			description: "Select items to refund and provide reasons.",
+			contentClassName: "sm:max-w-xl",
 			content: () => (
 				<RefundOrderForm
 					closeDialog={closeDialog}
 					orderId={id}
-					refundServiceIds={refundableServices.map((service) => service.id)}
+					refundableServices={refundableServices.map((service) => ({
+						id: service.id,
+						item_code: service.item_code ?? null,
+					}))}
 					refundMutation={refundMutation}
 				/>
 			),
 		});
 	};
-
-	const selectedRefundItems = refundServiceIds.map((serviceId) => ({
-		order_service_id: serviceId,
-		reason: refundReasonByServiceId[serviceId] ?? "damaged",
-		note: refundItemNoteByServiceId[serviceId]?.trim() || undefined,
-	}));
-
-	const refundValidationError = selectedRefundItems.find(
-		(item) => item.reason === "other" && !item.note,
-	);
 
 	const trackingUrl = (() => {
 		const phone = detail.customer?.phone_number ?? "";
@@ -687,139 +656,6 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 							</CardContent>
 						</Card>
 					) : null}
-
-					{isAdmin && (
-						<Card>
-							<CardHeader>
-								<CardTitle>Refund</CardTitle>
-							</CardHeader>
-							<CardContent className="grid gap-3">
-								<div className="flex gap-2">
-									<Button
-										variant="outline"
-										onClick={() =>
-											setRefundServiceIds(
-												refundableServices.map((service) => service.id),
-											)
-										}
-									>
-										Select all refundable
-									</Button>
-									<Button
-										variant="outline"
-										onClick={() => setRefundServiceIds([])}
-									>
-										Clear
-									</Button>
-								</div>
-
-								{refundableServices.map((service) => {
-									const selected = refundServiceIds.includes(service.id);
-									const reason =
-										refundReasonByServiceId[service.id] ?? "damaged";
-									return (
-										<div key={service.id} className="grid gap-2 border p-3">
-											<Field orientation="horizontal">
-												<Checkbox
-													id={`refund-service-${service.id}`}
-													checked={selected}
-													onCheckedChange={(value) => {
-														if (value) {
-															setRefundServiceIds((prev) =>
-																prev.includes(service.id)
-																	? prev
-																	: [...prev, service.id],
-															);
-															return;
-														}
-														setRefundServiceIds((prev) =>
-															prev.filter((id) => id !== service.id),
-														);
-													}}
-												/>
-												<FieldLabel htmlFor={`refund-service-${service.id}`}>
-													{service.item_code ?? `Service #${service.id}`}
-												</FieldLabel>
-											</Field>
-
-											<Select
-												value={reason}
-												onValueChange={(value) =>
-													setRefundReasonByServiceId((prev) => ({
-														...prev,
-														[service.id]: (value ??
-															"damaged") as (typeof REFUND_REASONS)[number],
-													}))
-												}
-												disabled={!selected}
-											>
-												<SelectTrigger size="md" className="w-full">
-													<SelectValue placeholder="Select reason" />
-												</SelectTrigger>
-												<SelectContent>
-													{REFUND_REASONS.map((refundReason) => (
-														<SelectItem key={refundReason} value={refundReason}>
-															{refundReason}
-														</SelectItem>
-													))}
-												</SelectContent>
-											</Select>
-
-											<Textarea
-												placeholder="Reason note"
-												value={refundItemNoteByServiceId[service.id] ?? ""}
-												onChange={(event) =>
-													setRefundItemNoteByServiceId((prev) => ({
-														...prev,
-														[service.id]: event.target.value,
-													}))
-												}
-												disabled={!selected}
-											/>
-										</div>
-									);
-								})}
-
-								<Field>
-									<FieldLabel htmlFor="refund-note">
-										Refund note (optional)
-									</FieldLabel>
-									<Textarea
-										id="refund-note"
-										placeholder="General refund note"
-										value={refundNote}
-										onChange={(event) => setRefundNote(event.target.value)}
-									/>
-								</Field>
-
-								<Button
-									disabled={
-										refundMutation.isPending ||
-										refundServiceIds.length === 0 ||
-										!!refundValidationError
-									}
-									onClick={async () => {
-										if (refundValidationError) {
-											toast.error(
-												"Refund note is required when reason is other",
-											);
-											return;
-										}
-
-										await refundMutation.mutateAsync({
-											orderId: id,
-											payload: {
-												items: selectedRefundItems,
-												note: refundNote.trim() || undefined,
-											},
-										});
-									}}
-								>
-									Process refund
-								</Button>
-							</CardContent>
-						</Card>
-					)}
 				</div>
 
 				<div className="grid gap-3 sm:gap-4 lg:col-span-8">
@@ -857,30 +693,55 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 					{orderServices.map((service) => {
 						const selectedPhotoFile = photoFileByServiceId[service.id] ?? null;
 						const selectedPhotoNote = photoNoteByServiceId[service.id] ?? "";
+						const availableTransitions = (
+							ORDER_STATUS_TRANSITIONS[service.status] || []
+						).filter((nextStatus) => !(nextStatus === "cancelled" && isPaid));
 
 						return (
 							<Card key={service.id}>
-								<CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-3">
-									<div className="min-w-0 space-y-1">
-										<CardTitle className="text-base leading-snug">
-											{service.item_code ?? `Service #${service.id}`}
-										</CardTitle>
-										<p className="text-muted-foreground text-sm">
-											{service.service?.name ?? "Service"}
-										</p>
+								<CardHeader className="space-y-3 pb-3">
+									<div className="flex flex-row items-start justify-between gap-3">
+										<div className="min-w-0 space-y-1">
+											<CardTitle className="text-base leading-snug">
+												{service.item_code ?? `Service #${service.id}`}
+											</CardTitle>
+											<p className="text-muted-foreground text-sm">
+												{service.service?.name ?? "Service"}
+											</p>
+										</div>
+										<div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+											{service.is_priority ? (
+												<Badge variant="warning">Priority</Badge>
+											) : null}
+											<Badge
+												variant={getOrderServiceStatusBadgeVariant(
+													service.status,
+												)}
+											>
+												{formatOrderServiceStatus(service.status)}
+											</Badge>
+										</div>
 									</div>
-									<div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
-										{service.is_priority ? (
-											<Badge variant="warning">Priority</Badge>
-										) : null}
-										<Badge
-											variant={getOrderServiceStatusBadgeVariant(
-												service.status,
+									{availableTransitions.length > 0 ? (
+										<div className="flex flex-wrap gap-2">
+											{availableTransitions.map((nextStatus) =>
+												nextStatus === "cancelled" ? (
+													<ServiceCancelButton
+														key={nextStatus}
+														serviceId={service.id}
+														updateStatusMutation={updateStatusMutation}
+													/>
+												) : (
+													<ServiceStatusUpdateButton
+														key={nextStatus}
+														serviceId={service.id}
+														nextStatus={nextStatus}
+														updateStatusMutation={updateStatusMutation}
+													/>
+												),
 											)}
-										>
-											{formatOrderServiceStatus(service.status)}
-										</Badge>
-									</div>
+										</div>
+									) : null}
 								</CardHeader>
 								<CardContent className="space-y-5 text-sm">
 									<dl className="grid gap-3 sm:grid-cols-2">
@@ -930,29 +791,6 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 											</ul>
 										</div>
 									) : null}
-
-									<div className="flex flex-wrap gap-2 border-t pt-4">
-										{(ORDER_STATUS_TRANSITIONS[service.status] || [])
-											.filter(
-												(nextStatus) => !(nextStatus === "cancelled" && isPaid),
-											)
-											.map((nextStatus) =>
-												nextStatus === "cancelled" ? (
-													<ServiceCancelButton
-														key={nextStatus}
-														serviceId={service.id}
-														updateStatusMutation={updateStatusMutation}
-													/>
-												) : (
-													<ServiceStatusUpdateButton
-														key={nextStatus}
-														serviceId={service.id}
-														nextStatus={nextStatus}
-														updateStatusMutation={updateStatusMutation}
-													/>
-												),
-											)}
-									</div>
 
 									<div className="border-t pt-4">
 										<p className="text-muted-foreground mb-2 text-xs font-medium uppercase tracking-wide">
@@ -1016,7 +854,7 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 										</div>
 									</div>
 
-									<div className="space-y-2">
+									<div className="@container space-y-2">
 										<p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
 											Photos ({service.images.length})
 										</p>
@@ -1028,7 +866,7 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 														image.note ??
 														`Photo for ${service.item_code ?? `service-${service.id}`}`,
 												}))}
-												gridClassName="sm:grid-cols-2"
+												gridClassName="@md:grid-cols-2 @2xl:grid-cols-3 @4xl:grid-cols-4"
 												thumbnailClassName="bg-muted/30"
 												title={`Photos for ${service.item_code ?? `service-${service.id}`}`}
 											/>
