@@ -1,5 +1,5 @@
 import type { InferInsertModel } from "drizzle-orm";
-import { count, eq } from "drizzle-orm";
+import { and, count, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { orderServicesImagesTable } from "@/db/schema";
 
@@ -18,9 +18,10 @@ export function listOrderServiceImages({
 }) {
   return db.query.orderServicesImagesTable.findMany({
     orderBy: { id: "asc" },
-    where: filters.order_service_id
-      ? { order_service_id: filters.order_service_id }
-      : undefined,
+    where: {
+      deleted_at: { isNull: true },
+      order_service_id: filters.order_service_id,
+    },
     limit,
     offset,
     with: {
@@ -38,21 +39,24 @@ export function listOrderServiceImages({
 export async function countOrderServiceImages(
   filters: OrderServiceImageFilters
 ) {
-  const whereClause = filters.order_service_id
-    ? eq(orderServicesImagesTable.order_service_id, filters.order_service_id)
-    : undefined;
+  const conditions = [isNull(orderServicesImagesTable.deleted_at)];
+  if (filters.order_service_id !== undefined) {
+    conditions.push(
+      eq(orderServicesImagesTable.order_service_id, filters.order_service_id)
+    );
+  }
 
   const rows = await db
     .select({ total: count() })
     .from(orderServicesImagesTable)
-    .where(whereClause);
+    .where(and(...conditions));
 
   return Number(rows[0]?.total ?? 0);
 }
 
 export function findOrderServiceImageById(id: number) {
   return db.query.orderServicesImagesTable.findFirst({
-    where: { id },
+    where: { id, deleted_at: { isNull: true } },
     with: {
       orderService: true,
     },
@@ -74,6 +78,19 @@ export function updateOrderServiceImageById(
     .set(values)
     .where(eq(orderServicesImagesTable.id, id))
     .returning();
+}
+
+export function softDeleteOrderServiceImageById(id: number, userId: number) {
+  return db
+    .update(orderServicesImagesTable)
+    .set({ deleted_at: new Date(), deleted_by: userId })
+    .where(
+      and(
+        eq(orderServicesImagesTable.id, id),
+        isNull(orderServicesImagesTable.deleted_at)
+      )
+    )
+    .returning({ id: orderServicesImagesTable.id });
 }
 
 export function deleteOrderServiceImageById(id: number) {

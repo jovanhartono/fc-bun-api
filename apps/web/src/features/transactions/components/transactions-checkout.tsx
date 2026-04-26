@@ -302,6 +302,7 @@ export function TransactionsCheckout({
 											type="button"
 											variant="outline"
 											size="icon-xs"
+											className="size-11"
 											onClick={() => removeProductFromCart(line.id)}
 											icon={<XIcon className="size-4" />}
 										/>
@@ -312,6 +313,7 @@ export function TransactionsCheckout({
 												type="button"
 												variant="outline"
 												size="icon-xs"
+												className="size-11"
 												onClick={() =>
 													updateProductQty(
 														line.id,
@@ -329,6 +331,7 @@ export function TransactionsCheckout({
 												type="button"
 												variant="outline"
 												size="icon-xs"
+												className="size-11"
 												onClick={() =>
 													updateProductQty(
 														line.id,
@@ -369,6 +372,7 @@ export function TransactionsCheckout({
 											type="button"
 											variant="outline"
 											size="icon-xs"
+											className="size-11"
 											onClick={() => removeServiceFromCart(line.line_id)}
 											icon={<XIcon className="size-4" />}
 										/>
@@ -542,6 +546,7 @@ export function TransactionsCheckout({
 							<Button
 								type="button"
 								size="lg"
+								className="h-11"
 								onClick={() => setPaymentSheetOpen(true)}
 								disabled={cartCount === 0}
 								icon={<CreditCardIcon className="size-4" />}
@@ -594,7 +599,7 @@ export function TransactionsCheckout({
 									</FieldLabel>
 									<Combobox
 										id="transaction-payment-method"
-										triggerClassName="h-10 w-full text-sm"
+										triggerClassName="h-11 w-full text-sm"
 										options={paymentMethodOptions}
 										value={field.value || "none"}
 										onValueChange={(value) =>
@@ -620,6 +625,7 @@ export function TransactionsCheckout({
 										<Button
 											type="button"
 											variant={field.value === "unpaid" ? "default" : "outline"}
+											className="h-11"
 											onClick={() => field.onChange("unpaid")}
 										>
 											Unpaid
@@ -627,6 +633,7 @@ export function TransactionsCheckout({
 										<Button
 											type="button"
 											variant={field.value === "paid" ? "default" : "outline"}
+											className="h-11"
 											onClick={() => field.onChange("paid")}
 										>
 											Paid
@@ -727,12 +734,14 @@ export function TransactionsCheckout({
 						<Button
 							type="button"
 							variant="outline"
+							className="h-11"
 							onClick={() => setPaymentSheetOpen(false)}
 						>
 							Back to Cart
 						</Button>
 						<Button
 							type="button"
+							className="h-11"
 							onClick={submit}
 							loading={isSubmitting}
 							loadingText="Creating order..."

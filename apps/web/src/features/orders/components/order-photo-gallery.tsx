@@ -3,6 +3,7 @@ import {
 	ArrowRightIcon,
 	DownloadSimpleIcon,
 	ImageSquareIcon,
+	TrashIcon,
 } from "@phosphor-icons/react";
 import type * as React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -24,6 +25,7 @@ const dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
 
 export type OrderPhotoGalleryItem = {
 	alt: string;
+	canDelete?: boolean;
 	created_at: string;
 	id: number;
 	image_url: string;
@@ -34,6 +36,8 @@ type OrderPhotoGalleryProps = {
 	emptyState?: React.ReactNode;
 	gridClassName?: string;
 	items: OrderPhotoGalleryItem[];
+	onDelete?: (id: number) => void;
+	deletingId?: number | null;
 	thumbnailClassName?: string;
 	thumbnailImageClassName?: string;
 	title?: string;
@@ -65,6 +69,8 @@ export function OrderPhotoGallery({
 	emptyState,
 	gridClassName,
 	items,
+	onDelete,
+	deletingId,
 	thumbnailClassName,
 	thumbnailImageClassName,
 	title = "Attachment Viewer",
@@ -257,6 +263,20 @@ export function OrderPhotoGallery({
 						>
 							<DownloadSimpleIcon className="size-4" aria-hidden="true" />
 						</a>
+						{onDelete && item.canDelete ? (
+							<Button
+								type="button"
+								variant="outline"
+								size="icon-sm"
+								className="absolute top-3 right-13 border-black/10 bg-background/92 text-destructive shadow-sm backdrop-blur-xs hover:border-destructive/40 hover:bg-destructive/10"
+								onClick={() => onDelete(item.id)}
+								disabled={deletingId === item.id}
+								aria-label={`Delete ${getPhotoPrimaryLabel(item)} image`}
+								title="Delete photo"
+								icon={<TrashIcon className="size-4" aria-hidden="true" />}
+								loading={deletingId === item.id}
+							/>
+						) : null}
 					</div>
 				))}
 			</div>
