@@ -223,11 +223,11 @@ export type AgingQueueItem = Extract<
 	{ success: true }
 >["data"][number];
 
-export type FetchAgingQueueQuery = {
+export interface FetchAgingQueueQuery {
 	store_id?: number;
 	limit?: number;
 	offset?: number;
-};
+}
 
 export type LoginPayload = {
 	username: string;

@@ -204,6 +204,59 @@ function OrderPickupHistoryCard({
 	);
 }
 
+const DeletePhotoConfirmDialog = ({
+	orderId,
+	serviceId,
+	photoId,
+}: {
+	orderId: number;
+	serviceId: number;
+	photoId: number;
+}) => {
+	const queryClient = useQueryClient();
+	const closeDialog = useDialog((s) => s.closeDialog);
+
+	const deletePhotoMutation = useMutation({
+		mutationFn: () => deleteOrderServicePhoto(orderId, serviceId, photoId),
+		onSuccess: async () => {
+			await Promise.all([
+				queryClient.invalidateQueries({
+					queryKey: queryKeys.orderDetail(orderId),
+				}),
+				queryClient.invalidateQueries({ queryKey: ["orders"] }),
+			]);
+			toast.success("Photo deleted");
+			closeDialog();
+		},
+		onError: (error) => {
+			toast.error(
+				error instanceof Error ? error.message : "Failed to delete photo",
+			);
+		},
+	});
+
+	return (
+		<div className="grid gap-4">
+			<p className="text-sm text-muted-foreground">
+				You can re-upload a replacement if needed.
+			</p>
+			<div className="flex justify-end gap-2">
+				<Button type="button" variant="outline" onClick={closeDialog}>
+					Cancel
+				</Button>
+				<Button
+					type="button"
+					variant="destructive"
+					loading={deletePhotoMutation.isPending}
+					onClick={() => deletePhotoMutation.mutate()}
+				>
+					Delete photo
+				</Button>
+			</div>
+		</div>
+	);
+};
+
 function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 	const user = getCurrentUser();
 	const isPaymentAllowed = user?.role === "admin" || user?.role === "cashier";
@@ -299,19 +352,6 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 				...prev,
 				[variables.serviceId]: "",
 			}));
-			await refreshOrderData();
-		},
-	});
-
-	const deletePhotoMutation = useMutation({
-		mutationFn: ({
-			serviceId,
-			photoId,
-		}: {
-			serviceId: number;
-			photoId: number;
-		}) => deleteOrderServicePhoto(id, serviceId, photoId),
-		onSuccess: async () => {
 			await refreshOrderData();
 		},
 	});
@@ -884,54 +924,17 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 												gridClassName="@md:grid-cols-2 @2xl:grid-cols-3 @4xl:grid-cols-4"
 												thumbnailClassName="bg-muted/30"
 												title={`Photos for ${service.item_code ?? `service-${service.id}`}`}
-												deletingId={
-													deletePhotoMutation.isPending
-														? deletePhotoMutation.variables?.photoId
-														: null
-												}
 												onDelete={(photoId) => {
 													openDialog({
 														title: "Delete photo?",
 														description:
 															"This hides the photo from the order detail. The image file is retained for audit.",
 														content: () => (
-															<div className="grid gap-4">
-																<p className="text-sm text-muted-foreground">
-																	You can re-upload a replacement if needed.
-																</p>
-																<div className="flex justify-end gap-2">
-																	<Button
-																		type="button"
-																		variant="outline"
-																		onClick={closeDialog}
-																	>
-																		Cancel
-																	</Button>
-																	<Button
-																		type="button"
-																		variant="destructive"
-																		loading={deletePhotoMutation.isPending}
-																		onClick={async () => {
-																			try {
-																				await deletePhotoMutation.mutateAsync({
-																					serviceId: service.id,
-																					photoId,
-																				});
-																				toast.success("Photo deleted");
-																				closeDialog();
-																			} catch (error) {
-																				toast.error(
-																					error instanceof Error
-																						? error.message
-																						: "Failed to delete photo",
-																				);
-																			}
-																		}}
-																	>
-																		Delete photo
-																	</Button>
-																</div>
-															</div>
+															<DeletePhotoConfirmDialog
+																orderId={id}
+																serviceId={service.id}
+																photoId={photoId}
+															/>
 														),
 													});
 												}}
