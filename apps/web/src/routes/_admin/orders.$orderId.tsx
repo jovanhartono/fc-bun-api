@@ -48,9 +48,11 @@ import {
 	paymentMethodsQueryOptions,
 } from "@/lib/query-options";
 import {
+	formatCancelReason,
 	formatOrderServiceStatus,
 	formatOrderStatus,
 	formatPaymentStatus,
+	formatRefundReason,
 	getOrderServiceStatusBadgeVariant,
 	getOrderStatusBadgeVariant,
 	getPaymentStatusBadgeVariant,
@@ -80,9 +82,6 @@ export const Route = createFileRoute("/_admin/orders/$orderId")({
 	},
 	component: OrderDetailPage,
 });
-
-const formatRefundReason = (reason: string) =>
-	reason.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
 
 function OrderDetailSkeleton() {
 	return (
@@ -370,7 +369,8 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 	});
 
 	const cancelOrderMutation = useMutation({
-		mutationFn: (cancel_reason: string) => cancelOrder(id, { cancel_reason }),
+		mutationFn: (payload: Parameters<typeof cancelOrder>[1]) =>
+			cancelOrder(id, payload),
 		onSuccess: async () => {
 			await refreshOrderData();
 		},
@@ -818,7 +818,14 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 											<p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
 												Cancel reason
 											</p>
-											<p className="mt-1 text-sm">{service.cancel_reason}</p>
+											<p className="mt-1 text-sm font-medium">
+												{formatCancelReason(service.cancel_reason)}
+											</p>
+											{service.cancel_note ? (
+												<p className="text-muted-foreground mt-1 text-sm">
+													{service.cancel_note}
+												</p>
+											) : null}
 										</div>
 									) : null}
 
