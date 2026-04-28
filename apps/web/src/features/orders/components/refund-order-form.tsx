@@ -29,7 +29,7 @@ const refundFormSchema = z
 			z.object({
 				order_service_id: z.number(),
 				selected: z.boolean(),
-				reason: z.enum(REFUND_REASONS as readonly [OrderRefundReason]),
+				reason: z.enum(REFUND_REASONS),
 				note: z.string().optional(),
 			}),
 		),
