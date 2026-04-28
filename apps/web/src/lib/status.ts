@@ -1,3 +1,5 @@
+import type { OrderCancelReason, OrderRefundReason } from "@/lib/api";
+
 type BadgeVariant =
 	| "secondary"
 	| "success"
@@ -7,6 +9,46 @@ type BadgeVariant =
 	| "outline"
 	| "outline-success"
 	| "outline-danger";
+
+const cancelReasonLabels: Record<OrderCancelReason, string> = {
+	customer_request: "Customer Request",
+	cannot_process: "Cannot Process",
+	damaged_intake: "Damaged at Intake",
+	duplicate_order: "Duplicate Order",
+	other: "Other",
+};
+
+export function formatCancelReason(reason: OrderCancelReason) {
+	return cancelReasonLabels[reason];
+}
+
+const refundReasonLabels: Record<OrderRefundReason, string> = {
+	damaged: "Damaged",
+	cannot_process: "Cannot Process",
+	lost: "Lost",
+	other: "Other",
+	customer_cancelled: "Customer Cancelled",
+};
+
+export function formatRefundReason(reason: OrderRefundReason) {
+	return refundReasonLabels[reason];
+}
+
+export const CANCEL_REASONS = [
+	"customer_request",
+	"cannot_process",
+	"damaged_intake",
+	"duplicate_order",
+	"other",
+] as const satisfies readonly OrderCancelReason[];
+
+export const REFUND_REASONS = [
+	"damaged",
+	"cannot_process",
+	"lost",
+	"other",
+	"customer_cancelled",
+] as const satisfies readonly OrderRefundReason[];
 
 const paymentStatusLabels = {
 	paid: "Paid",
