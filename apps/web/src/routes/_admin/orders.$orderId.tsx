@@ -53,9 +53,11 @@ import {
 	formatOrderStatus,
 	formatPaymentStatus,
 	formatRefundReason,
+	formatRefundStatus,
 	getOrderServiceStatusBadgeVariant,
 	getOrderStatusBadgeVariant,
 	getPaymentStatusBadgeVariant,
+	getRefundStatusBadgeVariant,
 } from "@/lib/status";
 import { formatIDRCurrency } from "@/shared/utils";
 import { getCurrentUser } from "@/stores/auth-store";
@@ -566,6 +568,14 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 								>
 									{formatPaymentStatus(detail.payment_status)}
 								</Badge>
+								{detail.refund_status !== "none" && (
+									<Badge
+										className="h-7"
+										variant={getRefundStatusBadgeVariant(detail.refund_status)}
+									>
+										{formatRefundStatus(detail.refund_status)}
+									</Badge>
+								)}
 							</div>
 						</div>
 					}

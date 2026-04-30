@@ -29,8 +29,10 @@ import {
 import {
 	formatOrderStatus,
 	formatPaymentStatus,
+	formatRefundStatus,
 	getOrderStatusBadgeVariant,
 	getPaymentStatusBadgeVariant,
+	getRefundStatusBadgeVariant,
 } from "@/lib/status";
 import { formatIDRCurrency } from "@/shared/utils";
 import { getCurrentUser } from "@/stores/auth-store";
@@ -251,11 +253,24 @@ function OrdersPage() {
 				accessorKey: "payment_status",
 				header: "Payment",
 				cell: ({ row }) => (
-					<Badge
-						variant={getPaymentStatusBadgeVariant(row.original.payment_status)}
-					>
-						{formatPaymentStatus(row.original.payment_status)}
-					</Badge>
+					<div className="flex flex-wrap gap-1">
+						<Badge
+							variant={getPaymentStatusBadgeVariant(
+								row.original.payment_status,
+							)}
+						>
+							{formatPaymentStatus(row.original.payment_status)}
+						</Badge>
+						{row.original.refund_status !== "none" && (
+							<Badge
+								variant={getRefundStatusBadgeVariant(
+									row.original.refund_status,
+								)}
+							>
+								{formatRefundStatus(row.original.refund_status)}
+							</Badge>
+						)}
+					</div>
 				),
 			},
 			{

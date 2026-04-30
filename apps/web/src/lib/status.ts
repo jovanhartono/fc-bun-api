@@ -55,6 +55,12 @@ const paymentStatusLabels = {
 	unpaid: "Unpaid",
 } as const;
 
+const refundStatusLabels = {
+	full: "Fully Refunded",
+	none: "No Refund",
+	partial: "Partially Refunded",
+} as const;
+
 const orderStatusLabels = {
 	cancelled: "Cancelled",
 	completed: "Completed",
@@ -83,6 +89,22 @@ export function getPaymentStatusBadgeVariant(
 export function formatPaymentStatus(status: keyof typeof paymentStatusLabels) {
 	return paymentStatusLabels[status];
 }
+
+export const getRefundStatusBadgeVariant = (
+	status: keyof typeof refundStatusLabels,
+): BadgeVariant => {
+	switch (status) {
+		case "full":
+			return "danger";
+		case "partial":
+			return "warning";
+		default:
+			return "outline";
+	}
+};
+
+export const formatRefundStatus = (status: keyof typeof refundStatusLabels) =>
+	refundStatusLabels[status];
 
 export function getOrderStatusBadgeVariant(
 	status: keyof typeof orderStatusLabels,

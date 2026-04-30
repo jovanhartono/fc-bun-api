@@ -41,6 +41,7 @@ import {
   isTerminalOrderServiceStatus,
   summarizeOrderFulfillment,
 } from "@/modules/orders/order-fulfillment";
+import { deriveOrderRefundStatus } from "@/modules/orders/order-refund-status";
 import type { JWTPayload } from "@/types";
 import { assertStoreAccess, getUserStoreIds } from "@/utils/authorization";
 import { jakartaDayEnd, jakartaDayStart } from "@/utils/date";
@@ -605,6 +606,10 @@ export async function getOrderDetailById(id: number) {
   return {
     ...detailWithoutPickupCode,
     dropoff_photo_url: buildMediaUrl(detail.dropoff_photo_path),
+    refund_status: deriveOrderRefundStatus({
+      paid_amount: detail.paid_amount,
+      refunded_amount: detail.refunded_amount,
+    }),
     pickup_events: detail.pickupEvents.map((event) => ({
       created_at: event.created_at,
       id: event.id,
