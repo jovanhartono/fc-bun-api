@@ -61,7 +61,9 @@ export const CancelReasonFields = ({ disabled }: CancelReasonFieldsProps) => {
 							disabled={disabled}
 						>
 							<SelectTrigger id={reasonId} className="w-full">
-								<SelectValue placeholder="Select reason" />
+								<SelectValue placeholder="Select reason">
+									{field.value ? formatCancelReason(field.value) : undefined}
+								</SelectValue>
 							</SelectTrigger>
 							<SelectContent>
 								{CANCEL_REASONS.map((reason) => (

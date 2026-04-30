@@ -517,48 +517,56 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 					title={`Order ${detail.code}`}
 					description={detail.customer?.name ?? "Unknown customer"}
 					actions={
-						<div className="flex max-w-full flex-wrap justify-end gap-1.5">
-							{trackingUrl ? (
-								<Button
-									type="button"
-									variant="outline"
-									size="sm"
-									icon={<LinkSimpleIcon className="size-4" />}
-									onClick={handleCopyTrackingLink}
+						<div className="flex w-full max-w-full flex-wrap items-center gap-1.5 sm:justify-end">
+							<div className="flex max-w-full flex-wrap items-center gap-1.5">
+								{trackingUrl ? (
+									<Button
+										type="button"
+										variant="outline"
+										size="sm"
+										icon={<LinkSimpleIcon className="size-4" />}
+										onClick={handleCopyTrackingLink}
+									>
+										Copy tracking link
+									</Button>
+								) : null}
+								{canCancelOrder && (
+									<Button
+										type="button"
+										variant="destructive"
+										size="sm"
+										disabled={cancelOrderMutation.isPending}
+										onClick={openCancelOrderDialog}
+									>
+										Cancel order
+									</Button>
+								)}
+								{canRefundWholeOrder && (
+									<Button
+										type="button"
+										variant="destructive"
+										size="sm"
+										disabled={refundMutation.isPending}
+										onClick={openRefundOrderDialog}
+									>
+										Refund order
+									</Button>
+								)}
+							</div>
+							<div className="flex shrink-0 items-center gap-1.5">
+								<Badge
+									className="h-7"
+									variant={getOrderStatusBadgeVariant(detail.status)}
 								>
-									Copy tracking link
-								</Button>
-							) : null}
-							{canCancelOrder && (
-								<Button
-									type="button"
-									variant="destructive"
-									size="sm"
-									disabled={cancelOrderMutation.isPending}
-									onClick={openCancelOrderDialog}
+									{formatOrderStatus(detail.status)}
+								</Badge>
+								<Badge
+									className="h-7"
+									variant={getPaymentStatusBadgeVariant(detail.payment_status)}
 								>
-									Cancel order
-								</Button>
-							)}
-							{canRefundWholeOrder && (
-								<Button
-									type="button"
-									variant="destructive"
-									size="sm"
-									disabled={refundMutation.isPending}
-									onClick={openRefundOrderDialog}
-								>
-									Refund order
-								</Button>
-							)}
-							<Badge variant={getOrderStatusBadgeVariant(detail.status)}>
-								{formatOrderStatus(detail.status)}
-							</Badge>
-							<Badge
-								variant={getPaymentStatusBadgeVariant(detail.payment_status)}
-							>
-								{formatPaymentStatus(detail.payment_status)}
-							</Badge>
+									{formatPaymentStatus(detail.payment_status)}
+								</Badge>
+							</div>
 						</div>
 					}
 				/>

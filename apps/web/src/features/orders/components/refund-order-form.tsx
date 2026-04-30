@@ -259,7 +259,9 @@ const RefundItemRow = ({ disabled, index, label }: RefundItemRowProps) => {
 						disabled={inputsDisabled}
 					>
 						<SelectTrigger size="md" className="w-full">
-							<SelectValue placeholder="Select reason" />
+							<SelectValue placeholder="Select reason">
+								{field.value ? formatRefundReason(field.value) : undefined}
+							</SelectValue>
 						</SelectTrigger>
 						<SelectContent>
 							{REFUND_REASONS.map((reason) => (
