@@ -4,6 +4,7 @@ import {
 	CaretUpIcon,
 } from "@phosphor-icons/react";
 import {
+	type Cell,
 	type ColumnDef,
 	flexRender,
 	getCoreRowModel,
@@ -23,6 +24,29 @@ import {
 } from "@/components/ui/table";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
+
+type MobileCardSlot =
+	| "title"
+	| "eyebrow"
+	| "badges"
+	| "detail"
+	| "footer"
+	| "hidden";
+
+interface MobileCardColumnOptions {
+	slot?: MobileCardSlot;
+	label?: string;
+	className?: string;
+	labelClassName?: string;
+	valueClassName?: string;
+}
+
+declare module "@tanstack/react-table" {
+	// biome-ignore lint/correctness/noUnusedVariables: TanStack declaration merging requires these generic names.
+	interface ColumnMeta<TData extends RowData, TValue> {
+		mobileCard?: MobileCardColumnOptions;
+	}
+}
 
 interface DataTableProps<TData extends RowData> {
 	columns: ColumnDef<TData, unknown>[];
@@ -46,7 +70,20 @@ function getColumnKey<TData extends RowData>(
 	return String(column.header ?? "column");
 }
 
-export function DataTable<TData extends RowData>({
+function getCellHeaderLabel<TData extends RowData>(
+	cell: Cell<TData, unknown>,
+): string {
+	const mobileCard = cell.column.columnDef.meta?.mobileCard;
+	const headerDef = cell.column.columnDef.header;
+
+	if (mobileCard?.label) {
+		return mobileCard.label;
+	}
+
+	return typeof headerDef === "string" ? headerDef : cell.column.id;
+}
+
+export const DataTable = <TData extends RowData>({
 	columns,
 	data,
 	isLoading,
@@ -54,7 +91,7 @@ export function DataTable<TData extends RowData>({
 	sortable = false,
 	cardPrimaryColumnId,
 	cardHiddenColumnIds,
-}: DataTableProps<TData>) {
+}: DataTableProps<TData>) => {
 	const [sorting, setSorting] = useState<SortingState>([]);
 	const isMobile = useIsMobile();
 
@@ -72,11 +109,11 @@ export function DataTable<TData extends RowData>({
 	if (isMobile) {
 		if (isLoading) {
 			return (
-				<div className="grid gap-2 md:hidden">
+				<div className="grid gap-2.5 md:hidden">
 					{Array.from({ length: 3 }, (_, index) => (
 						<div
 							key={index}
-							className="h-24 animate-pulse border border-border bg-muted/40"
+							className="h-[8.5rem] animate-pulse rounded-md border border-border/80 bg-muted/40"
 						/>
 					))}
 				</div>
@@ -85,66 +122,168 @@ export function DataTable<TData extends RowData>({
 
 		if (data.length === 0) {
 			return (
-				<div className="border border-dashed border-border bg-muted/30 p-6 text-center text-sm text-muted-foreground md:hidden">
+				<div className="rounded-md border border-dashed border-border bg-muted/30 p-6 text-center font-medium text-foreground text-sm md:hidden">
 					{emptyMessage}
 				</div>
 			);
 		}
 
+		const titleColumn = columns.find(
+			(column) => column.meta?.mobileCard?.slot === "title",
+		);
 		const primaryColumnKey =
 			cardPrimaryColumnId ??
-			getColumnKey(columns[0] ?? ({} as ColumnDef<TData, unknown>));
+			(titleColumn
+				? getColumnKey(titleColumn)
+				: getColumnKey(columns[0] ?? ({} as ColumnDef<TData, unknown>)));
 		const hiddenIds = new Set(cardHiddenColumnIds ?? []);
 
 		return (
-			<div className="grid gap-2 md:hidden">
+			<div className="grid gap-2.5 md:hidden">
 				{table.getRowModel().rows.map((row) => {
 					const visibleCells = row.getVisibleCells();
 					const primaryCell = visibleCells.find(
 						(cell) => cell.column.id === primaryColumnKey,
 					);
-					const otherCells = visibleCells.filter(
-						(cell) =>
+					const usableCells = visibleCells.filter((cell) => {
+						const slot = cell.column.columnDef.meta?.mobileCard?.slot;
+						return (
 							cell.column.id !== primaryColumnKey &&
-							!hiddenIds.has(cell.column.id),
+							!hiddenIds.has(cell.column.id) &&
+							slot !== "hidden"
+						);
+					});
+					const eyebrowCells = usableCells.filter(
+						(cell) =>
+							cell.column.columnDef.meta?.mobileCard?.slot === "eyebrow",
 					);
+					const badgeCells = usableCells.filter(
+						(cell) => cell.column.columnDef.meta?.mobileCard?.slot === "badges",
+					);
+					const footerCells = usableCells.filter(
+						(cell) => cell.column.columnDef.meta?.mobileCard?.slot === "footer",
+					);
+					const detailCells = usableCells.filter((cell) => {
+						const slot = cell.column.columnDef.meta?.mobileCard?.slot;
+						return !slot || slot === "detail";
+					});
+					const primaryConfig = primaryCell?.column.columnDef.meta?.mobileCard;
 
 					return (
 						<article
 							key={row.id}
-							className="grid gap-2 border border-border bg-background p-3 text-sm"
+							className="relative grid gap-3 overflow-hidden rounded-md border border-border/80 bg-background p-3.5 pl-4 text-sm shadow-[0_1px_0_rgba(15,23,42,0.05)] [contain-intrinsic-size:144px] [content-visibility:auto] dark:bg-muted/10"
 						>
-							{primaryCell ? (
-								<div className="font-semibold">
-									{flexRender(
-										primaryCell.column.columnDef.cell,
-										primaryCell.getContext(),
-									)}
-								</div>
-							) : null}
-							<dl className="grid gap-1.5">
-								{otherCells.map((cell) => {
-									const headerDef = cell.column.columnDef.header;
-									const headerLabel =
-										typeof headerDef === "string" ? headerDef : cell.column.id;
-									return (
+							<div className="absolute inset-y-0 left-0 w-1 bg-primary" />
+							<header className="grid gap-2">
+								{eyebrowCells.length > 0 ? (
+									<div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+										{eyebrowCells.map((cell) => {
+											const mobileCard = cell.column.columnDef.meta?.mobileCard;
+											return (
+												<span
+													key={cell.id}
+													className={cn(
+														"font-mono font-medium text-[11px] text-muted-foreground uppercase tracking-[0.12em]",
+														mobileCard?.className,
+													)}
+												>
+													{flexRender(
+														cell.column.columnDef.cell,
+														cell.getContext(),
+													)}
+												</span>
+											);
+										})}
+									</div>
+								) : null}
+								<div className="flex items-start justify-between gap-3">
+									{primaryCell ? (
 										<div
-											key={cell.id}
-											className="flex items-baseline justify-between gap-3"
+											className={cn(
+												"min-w-0 font-semibold text-[15px] text-foreground leading-tight",
+												primaryConfig?.className,
+											)}
 										>
-											<dt className="shrink-0 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
-												{headerLabel}
-											</dt>
-											<dd className="text-right">
-												{flexRender(
-													cell.column.columnDef.cell,
-													cell.getContext(),
-												)}
-											</dd>
+											{flexRender(
+												primaryCell.column.columnDef.cell,
+												primaryCell.getContext(),
+											)}
 										</div>
-									);
-								})}
-							</dl>
+									) : null}
+									{footerCells.length > 0 ? (
+										<div className="shrink-0 text-right">
+											{footerCells.map((cell) => {
+												const mobileCard =
+													cell.column.columnDef.meta?.mobileCard;
+												return (
+													<div
+														key={cell.id}
+														className={cn(
+															"font-mono font-semibold text-foreground text-sm tabular-nums",
+															mobileCard?.className,
+														)}
+													>
+														{flexRender(
+															cell.column.columnDef.cell,
+															cell.getContext(),
+														)}
+													</div>
+												);
+											})}
+										</div>
+									) : null}
+								</div>
+								{badgeCells.length > 0 ? (
+									<div className="flex flex-wrap gap-1.5">
+										{badgeCells.map((cell) => {
+											const mobileCard = cell.column.columnDef.meta?.mobileCard;
+											return (
+												<div key={cell.id} className={mobileCard?.className}>
+													{flexRender(
+														cell.column.columnDef.cell,
+														cell.getContext(),
+													)}
+												</div>
+											);
+										})}
+									</div>
+								) : null}
+							</header>
+							{detailCells.length > 0 ? (
+								<dl className="grid grid-cols-2 gap-2 border-border/70 border-t pt-3">
+									{detailCells.map((cell) => {
+										const mobileCard = cell.column.columnDef.meta?.mobileCard;
+										const headerLabel = getCellHeaderLabel(cell);
+										return (
+											<div
+												key={cell.id}
+												className={cn("min-w-0", mobileCard?.className)}
+											>
+												<dt
+													className={cn(
+														"font-mono font-medium text-[10px] text-muted-foreground uppercase tracking-[0.12em]",
+														mobileCard?.labelClassName,
+													)}
+												>
+													{headerLabel}
+												</dt>
+												<dd
+													className={cn(
+														"mt-1 min-w-0 font-medium text-foreground text-sm",
+														mobileCard?.valueClassName,
+													)}
+												>
+													{flexRender(
+														cell.column.columnDef.cell,
+														cell.getContext(),
+													)}
+												</dd>
+											</div>
+										);
+									})}
+								</dl>
+							) : null}
 						</article>
 					);
 				})}
@@ -231,4 +370,4 @@ export function DataTable<TData extends RowData>({
 			</TableBody>
 		</Table>
 	);
-}
+};
