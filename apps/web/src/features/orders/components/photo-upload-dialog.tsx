@@ -143,7 +143,6 @@ const PhotoUploadDialogBase = ({
 				type: "image/jpeg",
 			}),
 		]);
-		camera.stop();
 	};
 
 	const removePhoto = (photoId: string) => {
