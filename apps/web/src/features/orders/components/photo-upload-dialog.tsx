@@ -21,8 +21,8 @@ import { useCameraCapture } from "@/features/orders/hooks/useCameraCapture";
 import {
 	ACCEPTED_IMAGE_TYPES,
 	isAcceptedImage,
+	type UploadPhotoInput,
 } from "@/features/orders/utils/photo-upload";
-import type { PhotoContentType } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 interface PendingPhoto {
@@ -33,66 +33,58 @@ interface PendingPhoto {
 
 const createPendingPhoto = (file: File): PendingPhoto => ({
 	file,
-	id:
-		typeof crypto !== "undefined" && "randomUUID" in crypto
-			? crypto.randomUUID()
-			: `${file.name}-${file.lastModified}-${Math.random()}`,
+	id: crypto.randomUUID(),
 	previewUrl: URL.createObjectURL(file),
 });
 
-interface PhotoUploadDialogProps {
+const revokePhotos = (photos: PendingPhoto[]) => {
+	for (const photo of photos) {
+		URL.revokeObjectURL(photo.previewUrl);
+	}
+};
+
+interface PhotoUploadDialogBaseProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	title: string;
 	badgeLabel?: string;
-	allowMultiple?: boolean;
-	allowNote?: boolean;
-	uploadPhoto: (input: {
-		file: File;
-		contentType: PhotoContentType;
-		note?: string;
-	}) => Promise<void>;
+	multiple: boolean;
+	withNote: boolean;
+	uploadPhoto: (input: UploadPhotoInput) => Promise<void>;
 	onUploaded: () => Promise<void>;
 }
 
-export const PhotoUploadDialog = ({
+const PhotoUploadDialogBase = ({
 	open,
 	onOpenChange,
 	title,
 	badgeLabel,
-	allowMultiple = true,
-	allowNote = true,
+	multiple,
+	withNote,
 	uploadPhoto,
 	onUploaded,
-}: PhotoUploadDialogProps) => {
+}: PhotoUploadDialogBaseProps) => {
 	const fileInputRef = useRef<HTMLInputElement | null>(null);
 	const camera = useCameraCapture();
 	const [pendingPhotos, setPendingPhotos] = useState<PendingPhoto[]>([]);
 	const [note, setNote] = useState("");
 
-	const clearPendingPhotos = useCallback(() => {
-		setPendingPhotos((previous) => {
-			for (const photo of previous) {
-				URL.revokeObjectURL(photo.previewUrl);
-			}
-			return [];
-		});
-	}, []);
-
 	const stopCamera = camera.stop;
 	const resetDialogState = useCallback(() => {
 		stopCamera();
-		clearPendingPhotos();
+		setPendingPhotos((previous) => {
+			revokePhotos(previous);
+			return [];
+		});
 		setNote("");
-	}, [stopCamera, clearPendingPhotos]);
+	}, [stopCamera]);
 
 	useEffect(() => {
 		if (!open) {
-			resetDialogState();
+			return;
 		}
+		return resetDialogState;
 	}, [open, resetDialogState]);
-
-	useEffect(() => resetDialogState, [resetDialogState]);
 
 	const addFiles = useCallback(
 		(files: File[]) => {
@@ -100,7 +92,7 @@ export const PhotoUploadDialog = ({
 				return;
 			}
 
-			const accepted = allowMultiple ? files : files.slice(0, 1);
+			const accepted = multiple ? files : files.slice(0, 1);
 
 			const unsupportedFile = accepted.find(
 				(file) => !isAcceptedImage(file.type),
@@ -111,10 +103,8 @@ export const PhotoUploadDialog = ({
 			}
 
 			setPendingPhotos((previous) => {
-				if (!allowMultiple) {
-					for (const photo of previous) {
-						URL.revokeObjectURL(photo.previewUrl);
-					}
+				if (!multiple) {
+					revokePhotos(previous);
 					return accepted.map((file) => createPendingPhoto(file));
 				}
 				return [
@@ -123,7 +113,7 @@ export const PhotoUploadDialog = ({
 				];
 			});
 		},
-		[allowMultiple],
+		[multiple],
 	);
 
 	const openFileInput = () => {
@@ -182,7 +172,7 @@ export const PhotoUploadDialog = ({
 				return { ...photo, contentType };
 			});
 
-			const trimmedNote = allowNote ? note.trim() || undefined : undefined;
+			const trimmedNote = withNote ? note.trim() || undefined : undefined;
 			for (const photo of validatedPhotos) {
 				await uploadPhoto({
 					file: photo.file,
@@ -195,7 +185,6 @@ export const PhotoUploadDialog = ({
 			toast.success(
 				pendingPhotos.length > 1 ? "Photos uploaded" : "Photo uploaded",
 			);
-			resetDialogState();
 			onOpenChange(false);
 			await onUploaded();
 		},
@@ -204,28 +193,19 @@ export const PhotoUploadDialog = ({
 		},
 	});
 
-	const handleOpenChange = (nextOpen: boolean) => {
-		if (!nextOpen) {
-			resetDialogState();
-		}
-		onOpenChange(nextOpen);
-	};
-
 	const handleClear = () => {
-		clearPendingPhotos();
+		setPendingPhotos((previous) => {
+			revokePhotos(previous);
+			return [];
+		});
 		setNote("");
 	};
 
-	const handleCancel = () => {
-		resetDialogState();
-		onOpenChange(false);
-	};
-
-	const photoNoun = allowMultiple ? "photos" : "photo";
+	const photoNoun = multiple ? "photos" : "photo";
 	const labelSuffix = badgeLabel ? ` for ${badgeLabel}` : "";
 
 	return (
-		<Dialog open={open} onOpenChange={handleOpenChange}>
+		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="sm:max-w-2xl">
 				<DialogHeader>
 					<DialogTitle className="flex items-center justify-between gap-3 pr-8">
@@ -267,7 +247,7 @@ export const PhotoUploadDialog = ({
 						type="file"
 						aria-label={`Choose ${photoNoun}${labelSuffix}`}
 						accept={ACCEPTED_IMAGE_TYPES.join(",")}
-						multiple={allowMultiple}
+						multiple={multiple}
 						className="sr-only"
 						onChange={(event) => {
 							addFiles(Array.from(event.target.files ?? []));
@@ -319,7 +299,7 @@ export const PhotoUploadDialog = ({
 						<div className="grid gap-3">
 							<div className="flex items-center justify-between gap-3">
 								<p className="text-sm font-medium">
-									{allowMultiple
+									{multiple
 										? `Pending photos (${pendingPhotos.length})`
 										: "Pending photo"}
 								</p>
@@ -336,7 +316,7 @@ export const PhotoUploadDialog = ({
 							<div
 								className={cn(
 									"grid gap-2",
-									allowMultiple ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-1",
+									multiple ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-1",
 								)}
 							>
 								{pendingPhotos.map((photo) => (
@@ -362,7 +342,7 @@ export const PhotoUploadDialog = ({
 									</div>
 								))}
 							</div>
-							{allowNote ? (
+							{withNote ? (
 								<Textarea
 									value={note}
 									onChange={(event) => setNote(event.target.value)}
@@ -381,7 +361,7 @@ export const PhotoUploadDialog = ({
 								camera.isOpen && "hidden",
 							)}
 						>
-							{allowMultiple ? "No photos selected." : "No photo selected."}
+							{multiple ? "No photos selected." : "No photo selected."}
 						</div>
 					)}
 				</div>
@@ -391,7 +371,7 @@ export const PhotoUploadDialog = ({
 						type="button"
 						variant="outline"
 						disabled={uploadMutation.isPending}
-						onClick={handleCancel}
+						onClick={() => onOpenChange(false)}
 					>
 						Cancel
 					</Button>
@@ -411,3 +391,16 @@ export const PhotoUploadDialog = ({
 		</Dialog>
 	);
 };
+
+type PhotoUploadDialogProps = Omit<
+	PhotoUploadDialogBaseProps,
+	"multiple" | "withNote"
+>;
+
+export const PhotoUploadDialog = (props: PhotoUploadDialogProps) => (
+	<PhotoUploadDialogBase {...props} multiple withNote />
+);
+
+export const SinglePhotoUploadDialog = (props: PhotoUploadDialogProps) => (
+	<PhotoUploadDialogBase {...props} multiple={false} withNote={false} />
+);

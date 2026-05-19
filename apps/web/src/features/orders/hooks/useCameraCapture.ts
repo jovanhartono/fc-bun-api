@@ -42,12 +42,14 @@ export interface UseCameraCaptureResult {
 
 export const useCameraCapture = (): UseCameraCaptureResult => {
 	const previewRef = useRef<HTMLVideoElement | null>(null);
+	const cancelRef = useRef(false);
 	const [isOpen, setIsOpen] = useState(false);
 	const [isReady, setIsReady] = useState(false);
 	const [stream, setStream] = useState<MediaStream | null>(null);
 	const [error, setError] = useState<string | null>(null);
 
 	const stop = useCallback(() => {
+		cancelRef.current = true;
 		setStream((previous) => {
 			if (previous) {
 				for (const track of previous.getTracks()) {
@@ -69,6 +71,7 @@ export const useCameraCapture = (): UseCameraCaptureResult => {
 		setError(null);
 		setIsReady(false);
 		setIsOpen(true);
+		cancelRef.current = false;
 
 		if (!navigator.mediaDevices?.getUserMedia) {
 			setError("Camera is unavailable on this device.");
@@ -81,6 +84,13 @@ export const useCameraCapture = (): UseCameraCaptureResult => {
 				video: { facingMode: { ideal: "environment" } },
 				audio: false,
 			});
+
+			if (cancelRef.current) {
+				for (const track of nextStream.getTracks()) {
+					track.stop();
+				}
+				return;
+			}
 
 			setStream(nextStream);
 		} catch {

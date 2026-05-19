@@ -17,13 +17,11 @@ import { HoldToConfirmButton } from "@/features/orders/components/hold-to-confir
 import { OrderPhotoGallery } from "@/features/orders/components/order-photo-gallery";
 import { PhotoUploadDialog } from "@/features/orders/components/photo-upload-dialog";
 import { StatusTimeline } from "@/features/orders/components/status-timeline";
+import { uploadOrderServicePhoto } from "@/features/orders/utils/photo-upload";
 import {
-	presignOrderServicePhoto,
 	queryKeys,
-	saveOrderServicePhoto,
 	type UpdateOrderServiceStatusPayload,
 	updateOrderServiceStatus,
-	uploadFileToPresignedUrl,
 } from "@/lib/api";
 import { formatOrderServiceItemDetails } from "@/lib/order-service-item-details";
 import { orderDetailQueryOptions } from "@/lib/query-options";
@@ -308,22 +306,9 @@ export function QueueServiceDetail({
 					onOpenChange={setIsPhotoDialogOpen}
 					title="Add item photo"
 					badgeLabel={selectedService.item_code ?? `Service #${serviceId}`}
-					uploadPhoto={async ({ file, contentType, note }) => {
-						const presigned = await presignOrderServicePhoto(
-							orderId,
-							serviceId,
-							{ content_type: contentType },
-						);
-						await uploadFileToPresignedUrl(
-							presigned.upload_url,
-							file,
-							contentType,
-						);
-						await saveOrderServicePhoto(orderId, serviceId, {
-							image_path: presigned.key,
-							note,
-						});
-					}}
+					uploadPhoto={(input) =>
+						uploadOrderServicePhoto(orderId, serviceId, input)
+					}
 					onUploaded={async () => {
 						await refreshData(detail.store?.id);
 					}}

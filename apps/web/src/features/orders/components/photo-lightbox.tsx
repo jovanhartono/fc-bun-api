@@ -37,14 +37,18 @@ interface PhotoLightboxProps {
 	title?: string;
 }
 
-function getPhotoPrimaryLabel(item: PhotoLightboxItem) {
+export function getPhotoPrimaryLabel(item: {
+	id: number | string;
+	note?: string | null;
+	primaryLabel?: string;
+}) {
 	if (item.primaryLabel?.trim()) {
 		return item.primaryLabel;
 	}
 	return item.note?.trim() ? item.note : `Photo #${item.id}`;
 }
 
-function formatPhotoTimestamp(createdAt: string) {
+export function formatPhotoTimestamp(createdAt: string) {
 	const timestamp = new Date(createdAt);
 	if (Number.isNaN(timestamp.getTime())) {
 		return createdAt;

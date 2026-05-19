@@ -4,13 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PhotoLightbox } from "@/features/orders/components/photo-lightbox";
-import { PhotoUploadDialog } from "@/features/orders/components/photo-upload-dialog";
-import {
-	type OrderDetail,
-	presignOrderDropoffPhoto,
-	saveOrderDropoffPhoto,
-	uploadFileToPresignedUrl,
-} from "@/lib/api";
+import { SinglePhotoUploadDialog } from "@/features/orders/components/photo-upload-dialog";
+import { uploadOrderDropoffPhoto } from "@/features/orders/utils/photo-upload";
+import type { OrderDetail } from "@/lib/api";
 
 type OrderDropoffPhotoCardProps = {
 	canManage: boolean;
@@ -114,26 +110,12 @@ export const OrderDropoffPhotoCard = memo(
 						]}
 					/>
 				) : null}
-				<PhotoUploadDialog
+				<SinglePhotoUploadDialog
 					open={isDialogOpen}
 					onOpenChange={setIsDialogOpen}
 					title="Upload drop-off photo"
 					badgeLabel="Drop-off"
-					allowMultiple={false}
-					allowNote={false}
-					uploadPhoto={async ({ file, contentType }) => {
-						const presigned = await presignOrderDropoffPhoto(order.id, {
-							content_type: contentType,
-						});
-						await uploadFileToPresignedUrl(
-							presigned.upload_url,
-							file,
-							contentType,
-						);
-						await saveOrderDropoffPhoto(order.id, {
-							image_path: presigned.key,
-						});
-					}}
+					uploadPhoto={(input) => uploadOrderDropoffPhoto(order.id, input)}
 					onUploaded={onUploaded}
 				/>
 			</>

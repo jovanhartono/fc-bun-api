@@ -33,18 +33,16 @@ import { RefundOrderForm } from "@/features/orders/components/refund-order-form"
 import { ServiceCancelButton } from "@/features/orders/components/service-cancel-button";
 import { ServiceStatusUpdateButton } from "@/features/orders/components/service-status-update-button";
 import { StatusTimeline } from "@/features/orders/components/status-timeline";
+import { uploadOrderServicePhoto } from "@/features/orders/utils/photo-upload";
 import {
 	cancelOrder,
 	createOrderRefund,
 	deleteOrderServicePhoto,
 	type OrderDetail,
-	presignOrderServicePhoto,
 	queryKeys,
-	saveOrderServicePhoto,
 	type UpdateOrderServiceStatusPayload,
 	updateOrderPayment,
 	updateOrderServiceStatus,
-	uploadFileToPresignedUrl,
 } from "@/lib/api";
 import { formatOrderServiceItemDetails } from "@/lib/order-service-item-details";
 import {
@@ -901,22 +899,9 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 											}}
 											title="Add item photo"
 											badgeLabel={itemLabel}
-											uploadPhoto={async ({ file, contentType, note }) => {
-												const presigned = await presignOrderServicePhoto(
-													id,
-													service.id,
-													{ content_type: contentType },
-												);
-												await uploadFileToPresignedUrl(
-													presigned.upload_url,
-													file,
-													contentType,
-												);
-												await saveOrderServicePhoto(id, service.id, {
-													image_path: presigned.key,
-													note,
-												});
-											}}
+											uploadPhoto={(input) =>
+												uploadOrderServicePhoto(id, service.id, input)
+											}
 											onUploaded={refreshOrderData}
 										/>
 									</div>

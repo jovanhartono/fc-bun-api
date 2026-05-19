@@ -3,15 +3,12 @@ import type * as React from "react";
 import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
+	formatPhotoTimestamp,
+	getPhotoPrimaryLabel,
 	PhotoLightbox,
 	type PhotoLightboxItem,
 } from "@/features/orders/components/photo-lightbox";
 import { cn } from "@/lib/utils";
-
-const dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
-	dateStyle: "medium",
-	timeStyle: "short",
-});
 
 export type OrderPhotoGalleryItem = {
 	alt: string;
@@ -32,19 +29,6 @@ type OrderPhotoGalleryProps = {
 	thumbnailImageClassName?: string;
 	title?: string;
 };
-
-function getPhotoPrimaryLabel(item: OrderPhotoGalleryItem) {
-	return item.note?.trim() ? item.note : `Photo #${item.id}`;
-}
-
-function formatPhotoTimestamp(createdAt: string) {
-	const timestamp = new Date(createdAt);
-	if (Number.isNaN(timestamp.getTime())) {
-		return createdAt;
-	}
-
-	return dateTimeFormatter.format(timestamp);
-}
 
 function getPhotoDownloadName(item: OrderPhotoGalleryItem) {
 	const pathname = new URL(item.image_url, "https://fresclean.local").pathname;
