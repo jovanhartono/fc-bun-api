@@ -32,7 +32,7 @@ Suggested order:
 |---|-------------------------------------------------|-------------|-------|
 | 1 | Order Status Machine                            | ✅ Done      | See §1 |
 | 2 | Split `order-admin.service.ts` by lifecycle     | ⬜ Pending   | Partially eased by #1; depends on #5 + #6 |
-| 3 | Permissions module (ADR-0004 capability table)  | 🟡 Designed | Ready to implement; see §3 + ADR-0006 |
+| 3 | Permissions module (ADR-0004 capability table)  | ✅ Done      | See §3 + ADR-0006 |
 | 4 | Campaign eligibility → Campaigns module         | ⬜ Pending   | Independent |
 | 5 | Pickup module (ADR-0005 invariants)             | ⬜ Pending   | Uses #1's `completePickup` seam |
 | 6 | Reversal off-ramps (cancel + refund)            | ⬜ Pending   | Uses #1's `transitionOrderService` + `applyRefundTransition` seams |
@@ -131,24 +131,15 @@ naturally.
 
 ---
 
-## §3 — Permissions module ⬜ (design locked, ready to implement)
+## §3 — Permissions module ✅
 
-**Problem**: ADR-0004 documents the capability matrix. Code does not encode it.
-`assertIsAdmin` duplicated (`order-admin.service.ts` + `campaign.service.ts` +
-`routes/admin/users.ts`). `assertCanProcessPaymentOrRefund` +
-`assertCanProcessPickup` live next to one caller. No `permissions/` module.
-
-Audit during grilling also surfaced:
-- `cancelOrder` gates on `assertIsAdmin`, but ADR-0004 lists cashier/worker/admin
-  for cancel-on-unpaid. Code is stricter than the matrix.
-- `assertCanProcessPaymentOrRefund` is a misnomer — refund handler uses
-  `assertIsAdmin`; this function only gates payment.
-- Four ADR-0004 rows are server-ungated today: create Order, self-assign,
-  update OrderService status, upload service photos.
+**Goal**: encode the ADR-0004 capability matrix as code in a single
+module. Replace scattered `assertIsAdmin` copies + misnamed
+`assertCanProcessPaymentOrRefund`. Audit and align call sites with the matrix.
 
 **Home**: `packages/server/src/modules/permissions/permissions.ts`. Single file.
-Pure (no DB). Coexists with `utils/authorization.ts` (store-scoping, DB-reading)
-as two parallel modules with disjoint concerns.
+Pure (no DB). Parallel to `utils/authorization.ts` (store-scoping, DB-reading)
+as two modules with disjoint concerns. See [ADR-0006](adr/0006-permissions-module-shape.md).
 
 **Exports** (all throw `ForbiddenException`; convention `assertCan*`)
 
@@ -170,35 +161,44 @@ assertCanCancelOrderService(user, order)  // cashier/worker/admin + payment_stat
 assertCanRefundOrderService(user, order)  // admin + payment_status='paid'
 ```
 
-**Locked design decisions** (from grilling 2026-05-21)
+**Behavior changes vs pre-refactor**
 
-- **Pure module, no DB.** Order-aware asserts take the Order as an argument;
-  callers already load it for other reasons.
-- **Permissions = role × payment-status. State machine = status × transition.**
-  Both can throw on the paid-cancel case from different concerns; permissions
-  runs first and wins with a 403. Refund's payment-status guard lives only in
-  permissions (state machine has no equivalent).
-- **Not absorbed into `utils/authorization.ts`.** Capability matrix is "what an
-  operator may do"; store-scoping is "which records an operator may touch".
-  Different concept, different test strategy (pure vs DB-fixtures).
-- **Hard move, no re-export shims.** All four old copies deleted; call sites
-  updated in the same PR.
-- **Assert location is pragmatic.** Service-layer when the service already takes
-  `user` for business reasons (campaigns, orders). Route-layer when adding `user`
-  to the service signature would be plumbing-for-plumbing (users CRUD).
-- **Audit-fix during move, not later.** Same PR widens `cancelOrder` to match
-  ADR-0004 and wires the four currently-ungated rows. Goal: matrix is the source
-  of truth on day one.
-- **Tests**: `permissions.test.ts` — pure unit tests via `bun:test`, one
-  describe per function, role-allow / role-deny / payment-status-allow /
-  payment-status-deny.
+- `cancelOrder` now allows cashier/worker on unpaid Orders per ADR-0004 (was admin-only at server level).
+- Refund/cancel payment-status mismatch throws `ForbiddenException` (403) via permissions, not `BadRequestException` (400). Payment-status is now treated as a permission concern (split-responsibility with state machine).
+- `updateOrderServiceStatus` rejects `cancelled`/`refunded` for **all** roles (was worker-only). Terminal exits must use dedicated cancel/refund endpoints.
+- 4 previously-ungated ADR-0004 rows now wired: createOrder, self-assign, updateOrderServiceStatus, upload service photos.
+- 5th user-route (`PUT /admin/users/:id/stores`) gained the missing admin check.
 
-**Implementation watch-outs**
-- Web cancel button gate — verify cashier/worker can actually reach
-  `cancelOrder` from the UI before/after the role widening. If admin-only in
-  UI today, no user-facing surprise; if not, document the policy change.
-- `adminMiddleware` is JWT-only despite its name. Out of scope; mention as
-  follow-up rename only.
+**Ported call sites**
+
+| Handler / Route                                | What changed |
+|------------------------------------------------|--------------|
+| `campaigns/campaign.service.ts`                | Local `assertIsAdmin` deleted; `createCampaign` / `updateCampaign` / `deleteCampaign` call `assertCanManageCampaigns`. |
+| `orders/order-admin.service.ts:updateOrderPayment` | `assertCanProcessPaymentOrRefund` → `assertCanProcessPayment` (rename, name no longer lies). |
+| `orders/order-admin.service.ts:updateOrderServiceHandler` | `assertIsAdmin` → `assertCanReassignHandler`. |
+| `orders/order-admin.service.ts:createOrderRefund` | Inline `assertIsAdmin` + `BadRequestException` payment-status check both removed; replaced by `assertCanRefundOrderService(user, order)` after Order load. |
+| `orders/order-admin.service.ts:cancelOrder` | Inline `assertIsAdmin` + `BadRequestException` payment-status check both removed; replaced by `assertCanCancelOrderService(user, order)` after Order load. |
+| `orders/order-admin.service.ts:startOrderServiceWork` | Added `assertCanSelfAssign(user)` (was ungated). |
+| `orders/order-admin.service.ts:updateOrderServiceStatus` | Added `assertCanProcessOrderService(user)`; inline worker-only cancel/refund check widened to all roles. |
+| `orders/order-admin.service.ts:saveOrderServicePhoto` | Added `assertCanUploadServicePhotos(user)`. |
+| `orders/order-admin.service.ts:createOrderPickupEvent*` | Local `assertCanProcessPickup` deleted; imported from permissions. |
+| `routes/admin/orders.ts:POST /` | Route-layer `assertCanCreateOrder(user)` (createOrder service signature unchanged). |
+| `routes/admin/orders.ts:POST /:id/services/:serviceId/photos/presign` | Route-layer `assertCanUploadServicePhotos(user)` (presign service signature unchanged). |
+| `routes/admin/users.ts` | Context-shape `assertIsAdmin(c)` deleted; every route extracts `user` from JWT and calls `assertCanManageUsers(user)`. 5th route (`PUT /:id/stores`) gained the missing check. |
+
+**Tests**: `permissions.test.ts` — 21 unit tests via `bun:test`, one
+describe per function, covering role-allow / role-deny / payment-status-allow /
+payment-status-deny. Full server suite 80/80 pass.
+
+**Outcomes**
+- 13 `assertCan*` functions in one file = ADR-0004 matrix as code.
+- Server matches matrix on day one (no documented capability the code disagrees with).
+- 4 previously-silent permission gaps closed.
+- Misnamed `assertCanProcessPaymentOrRefund` retired.
+
+**Follow-ups (not in this PR)**
+- Web cancel button gate — verify cashier/worker can actually reach `cancelOrder` from the UI now that the server allows them. If UI is admin-only-rendered, no user-facing change; if not, document the policy alignment.
+- `adminMiddleware` is JWT-only despite its name — rename when other middleware work touches it.
 
 ---
 
