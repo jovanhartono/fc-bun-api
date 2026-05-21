@@ -52,7 +52,7 @@ _Avoid_: Order item, line item, job (informal worker shorthand only).
 A Product line in an Order. Decrements the Product's global `stock` at create (no per-store stock in v1 — see Product). No status, no handler, no photos.
 
 **OrderRefund** / **OrderRefundItem**:
-A post-payment reversal recorded against an Order. Created only when `payment_status = paid`, by an admin, via the refund dialog. One OrderRefund per refund event; one OrderRefundItem per refunded OrderService, each carrying a `refundReasonEnum` value chosen by the admin. The schema does not constrain refund amount against the original service price; partial-dollar refunds within one OrderService are currently server-allowed but discouraged (deferred item D-11). Money movement is **out of band** — the POS records state only.
+A post-payment reversal recorded against an Order. Created only when `payment_status = paid`, by an admin, via the refund dialog. One OrderRefund per refund event; one OrderRefundItem per refunded OrderService, each carrying a `refundReasonEnum` value chosen by the admin. The schema does not constrain refund amount against the original service price; partial-dollar refunds within one OrderService are currently server-allowed but discouraged (deferred item D-11). Money movement is **out of band** — the POS records state only. **Products are not refundable in v1** — the refund flow iterates services only, which causes the `refund_status` bug described below; deferred fix in [architecture-deepening §8](docs/architecture-deepening.md).
 
 **OrderPickupEvent**:
 A collection event. **Multiple events per Order are allowed** (partial pickup).
@@ -69,6 +69,9 @@ A single `orderStatusEnum` column on `orders` (`created`, `processing`, `ready_f
 - **All OrderServices active.** If every active OrderService is `ready_for_pickup`, Order is `ready_for_pickup`. Else if any service has moved past `queued`, Order is `processing`. Else `created`.
 
 Order status is never written directly by handlers; it is always recomputed from the truth-source (OrderServices). Do not bypass the recalculation path.
+
+**Refund status** (`orders.refund_status`):
+A second derived field on Order, separate from Order status. Computed from money, not service states, by `deriveOrderRefundStatus`: `none` when `refunded_amount = 0`, `full` when `refunded_amount >= paid_amount`, `partial` otherwise. Surfaces as the "Fully Refunded" / "Partially Refunded" badge on the order detail page. Because OrderProducts contribute to `paid_amount` but cannot be refunded in v1, **any Order containing products will hit `partial` and stay there even after every OrderService is refunded** — known bug, deferred fix in [architecture-deepening §8](docs/architecture-deepening.md). Do not patch by flipping the badge to a service-state rule without reading the ADR.
 
 **OrderService status**:
 A single `orderServiceStatusEnum` column on `orders_services` that conflates two axes for v1:

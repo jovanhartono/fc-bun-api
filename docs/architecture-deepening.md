@@ -37,8 +37,9 @@ Suggested order:
 | 5 | Pickup module (ADR-0005 invariants)             | ⬜ Pending   | Uses #1's `completePickup` seam |
 | 6 | Reversal off-ramps (cancel + refund)            | ⬜ Pending   | Uses #1's `transitionOrderService` + `applyRefundTransition` seams |
 | 7 | Collapse shallow CRUD services                  | ⬜ Pending   | Policy call, defer |
+| 8 | Product refunds + `refund_status` fix           | ⬜ Pending   | Bug; independent, schema change |
 
-Dependencies: **#1 must land before #5, #6, #2.** #3 / #4 / #7 are independent.
+Dependencies: **#1 must land before #5, #6, #2.** #3 / #4 / #7 / #8 are independent.
 
 ---
 
@@ -238,6 +239,36 @@ that cost cognitive load without leverage.
 needing pre-DB validation on these domains, or (2) someone tries to read a
 Product mutation path and is annoyed by the extra hop. Either signal picks
 the option. Today there's no signal.
+
+---
+
+## §8 — Product refunds + `refund_status` fix ⬜
+
+**Bug**: `orders.refund_status` is derived from money (`deriveOrderRefundStatus` in `order-refund-status.ts`): `none` / `partial` / `full` based on `refunded_amount` vs `paid_amount`. The refund flow (`createOrderRefund` + `getOrderLineRefundCaps` in `order-admin.service.ts`) iterates **services only** — products are not refundable in v1. But `paid_amount` includes products (`total = serviceSubtotal + productSubtotal`, `order.service.ts:414`). So any Order containing products will hit `partial` and stay there forever after all services are refunded. UI badge ("Fully Refunded" in `apps/web/src/lib/status.ts:58-62`) reads `partial` and operators cannot advance it.
+
+**Reproduction**: 1 service (80k) + 1 product (20k), discount 0, paid_amount = 100k. Refund the service → `refunded_amount = 80k`. Badge stuck on "Partially Refunded" with no further action available.
+
+**Decision**: extend refund flow to cover product lines so money-axis can reach `full`. Products become refundable line items alongside services; refund dialog gains a product picker; `getOrderLineRefundCaps` (or successor) iterates both `orders_services` and `orders_products`.
+
+**Why not service-state-axis** (badge means "all services refunded", ignore money): products-only refund is on the roadmap, so we'd need a money signal eventually anyway. Also silently flips semantics under any existing report reader that interprets `full` as "money fully returned."
+
+**Why not two badges**: UI noise; one fact should map to one badge.
+
+**Why not exclude products from denominator** (compare `refunded_amount` to `paid_amount - productSubtotal`): lies about reality. Customer paid for products and didn't get the money back; "fully refunded" would be wrong.
+
+**Schema scope**
+- Either extend `order_refund_items` with optional `order_product_id` (mutually exclusive with `order_service_id`), or new `order_refund_products` table.
+- `orders_products` gains a "refunded" marker — boolean `refunded_at` if no other product states are anticipated, enum otherwise.
+
+**Open questions before implementing**
+- Audit report queries reading `refund_status` for money-semantics assumptions. Flag any consumer treating `full` as "every line refunded."
+- `refundReasonEnum` is service-shaped (`damaged`, `cannot_process`, `lost`, `other`, `customer_cancelled`). Apply unchanged to products, or new vocab?
+
+**Until built**: badge is *accurate from a money perspective* — the product portion is genuinely unrefunded. Do not patch by flipping the badge to a service-state rule without revisiting the decision here.
+
+**CONTEXT.md touchpoints** (rewrite when fix lands)
+- `OrderRefund / OrderRefundItem` entry — "Products are not refundable in v1" claim, and the link back here.
+- `Refund status` entry — bug description, and the link back here.
 
 ---
 
