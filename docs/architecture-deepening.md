@@ -17,6 +17,15 @@ nouns from `CONTEXT.md` (Order, OrderService, Pickup, Reversal, etc.).
    implement, run type-check + lint + tests.
 5. Update this file when a candidate flips to ✅.
 
+Suggested order:
+
+1. #1 OrderStateMachine — foundation. Unblocks 2/5/6.
+2. #3 Permissions — independent, small, parallel-safe warm-up if you want a quick win.
+3. #5 Pickup then #6 Reversal — slices of #2, each riding on #1's seam.
+4. #2 split — by this point order-admin.service is mostly already split; finalize residual (queue + photo modules).
+5. #4 Campaign eligibility — independent.
+6. #7 shallow CRUD — policy call, defer.
+
 ## Status
 
 | # | Candidate                                       | Status      | Notes |
