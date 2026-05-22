@@ -40,10 +40,7 @@ import {
 	queryKeys,
 } from "@/lib/api";
 import { formatOrderServiceItemDetails } from "@/lib/order-service-item-details";
-import {
-	currentUserDetailQueryOptions,
-	storesQueryOptions,
-} from "@/lib/query-options";
+import { meQueryOptions, storesQueryOptions } from "@/lib/query-options";
 import {
 	formatOrderServiceStatus,
 	getOrderServiceStatusBadgeVariant,
@@ -136,9 +133,7 @@ export const Route = createFileRoute("/_admin/worker/")({
 		await context.queryClient.ensureQueryData(storesQueryOptions());
 
 		if (currentUser) {
-			await context.queryClient.ensureQueryData(
-				currentUserDetailQueryOptions(currentUser.id),
-			);
+			await context.queryClient.ensureQueryData(meQueryOptions());
 		}
 	},
 	component: WorkerQueuePage,
@@ -167,16 +162,14 @@ function WorkerQueuePage() {
 	const scanningRef = useRef(false);
 
 	const storesQuery = useQuery(storesQueryOptions());
-	const currentUserDetailQuery = useQuery({
-		...currentUserDetailQueryOptions(currentUser?.id ?? -1),
+	const meQuery = useQuery({
+		...meQueryOptions(),
 		enabled: !!currentUser,
 	});
 
 	const userStoreIds = useMemo(
-		() =>
-			currentUserDetailQuery.data?.userStores.map((item) => item.store_id) ??
-			[],
-		[currentUserDetailQuery.data],
+		() => meQuery.data?.userStores.map((item) => item.store_id) ?? [],
+		[meQuery.data],
 	);
 
 	useEffect(() => {

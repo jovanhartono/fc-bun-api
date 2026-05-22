@@ -37,6 +37,16 @@ const app = new Hono()
 
     return c.json(success(items, undefined, meta));
   })
+  .get("/me", async (c) => {
+    const actor = c.get("jwtPayload") as JWTPayload;
+    const user = await getUserById(actor.id);
+
+    if (!user) {
+      return c.json(failure("User not found"), StatusCodes.NOT_FOUND);
+    }
+
+    return c.json(success(user, "Current user retrieved successfully"));
+  })
   .get("/:id", idParamSchema, async (c) => {
     const actor = c.get("jwtPayload") as JWTPayload;
     assertCanManageUsers(actor);

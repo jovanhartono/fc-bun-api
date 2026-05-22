@@ -22,7 +22,7 @@ import {
 import { PickupRadar } from "@/features/orders/components/pickup-radar";
 import type { Order } from "@/lib/api";
 import {
-	currentUserDetailQueryOptions,
+	meQueryOptions,
 	ordersPageQueryOptions,
 	storesQueryOptions,
 } from "@/lib/query-options";
@@ -69,9 +69,7 @@ export const Route = createFileRoute("/_admin/orders/")({
 		await context.queryClient.ensureQueryData(storesQueryOptions());
 
 		if (currentUser) {
-			await context.queryClient.ensureQueryData(
-				currentUserDetailQueryOptions(currentUser.id),
-			);
+			await context.queryClient.ensureQueryData(meQueryOptions());
 		}
 
 		if (currentUser?.role === "admin" || deps.storeId !== undefined) {
@@ -106,13 +104,13 @@ function OrdersPage() {
 	const search = Route.useSearch();
 
 	const storesQuery = useQuery(storesQueryOptions());
-	const currentUserDetailQuery = useQuery({
-		...currentUserDetailQueryOptions(currentUser?.id ?? -1),
+	const meQuery = useQuery({
+		...meQueryOptions(),
 		enabled: !!currentUser,
 	});
 
 	const userStoreIds =
-		currentUserDetailQuery.data?.userStores?.map((item) => item.store_id) ?? [];
+		meQuery.data?.userStores?.map((item) => item.store_id) ?? [];
 
 	useEffect(() => {
 		if (!currentUser || search.storeId !== undefined) {
@@ -185,7 +183,7 @@ function OrdersPage() {
 
 	const hasNoStoreAssignment =
 		currentUser?.role !== "admin" &&
-		currentUserDetailQuery.isSuccess &&
+		meQuery.isSuccess &&
 		userStoreIds.length === 0;
 
 	const openSheet = useSheet((state) => state.openSheet);
