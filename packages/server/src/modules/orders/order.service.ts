@@ -39,28 +39,28 @@ function formatOrderCode(storeCode: string, dateStr: string, sequence: number) {
 
 interface ExpandedServiceItem {
   brand?: string;
-  model?: string;
+  color?: string;
   id: number;
   is_priority?: boolean;
+  model?: string;
   notes?: string;
-  color?: string;
   size?: string;
 }
 
 interface ResolvedCampaignRow {
   applied_amount: string;
+  buy_quantity: number | null;
   campaign_id: number;
   discount_type: "fixed" | "percentage" | "buy_n_get_m_free";
   discount_value: string;
-  max_discount: string | null;
-  buy_quantity: number | null;
   free_quantity: number | null;
+  max_discount: string | null;
 }
 
 interface ResolvedDiscount {
+  campaignRows: ResolvedCampaignRow[];
   discountAmount: number;
   discountSource: "none" | "manual" | "campaign";
-  campaignRows: ResolvedCampaignRow[];
 }
 
 function expandServices(
@@ -275,10 +275,10 @@ export async function listOrders(query?: GetOrdersQuery, user?: JWTPayload) {
   let scopedStoreIds: number[] | undefined;
 
   if (user && user.role !== "admin") {
-    if (normalized.store_id !== undefined) {
-      await assertStoreAccess(user, normalized.store_id);
-    } else {
+    if (normalized.store_id === undefined) {
       scopedStoreIds = await getUserStoreIds(user.id);
+    } else {
+      await assertStoreAccess(user, normalized.store_id);
     }
   }
 

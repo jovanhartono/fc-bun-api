@@ -30,6 +30,6 @@
     "turbo": "^2.9.16"
   },
   "lint-staged": {
-    "*": "bunx biome check --write --no-errors-on-unmatched"
+    "*": "bunx ultracite fix"
   }
 }
