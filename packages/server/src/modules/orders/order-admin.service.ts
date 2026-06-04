@@ -729,6 +729,10 @@ export async function updateOrderServiceStatus({
     );
   }
 
+  if (body.status === "picked_up") {
+    throw new ForbiddenException("Use the pickup endpoint to record pickups");
+  }
+
   const fromStatus = await db.transaction(async (tx) => {
     const [locked] = await tx
       .select()

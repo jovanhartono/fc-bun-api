@@ -34,7 +34,7 @@ import { getCurrentUser } from "@/stores/auth-store";
 
 const WORKER_BLOCKED_QUEUE_STATUSES = new Set<
 	UpdateOrderServiceStatusPayload["status"]
->(["cancelled", "refunded"]);
+>(["cancelled", "refunded", "picked_up"]);
 
 function QueueServiceDetailSkeleton() {
 	return (

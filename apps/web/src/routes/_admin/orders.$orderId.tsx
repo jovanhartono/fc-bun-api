@@ -768,13 +768,15 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 						</Card>
 					) : null}
 					{orderServices.map((service) => {
-						// Terminal exits (cancelled/refunded) must use the dedicated
-						// cancel/refund endpoints — the status endpoint rejects them.
+						// Cancel/refund/pickup must use their dedicated endpoints
+						// (payment- and role-gated) — the status endpoint rejects them.
 						const availableTransitions = (
 							ORDER_SERVICE_TRANSITIONS[service.status] || []
 						).filter(
 							(nextStatus) =>
-								nextStatus !== "cancelled" && nextStatus !== "refunded",
+								nextStatus !== "cancelled" &&
+								nextStatus !== "refunded" &&
+								nextStatus !== "picked_up",
 						);
 						const itemLabel = service.item_code ?? `Service #${service.id}`;
 
