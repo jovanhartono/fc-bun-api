@@ -15,7 +15,7 @@ const findUserAuthStatePrepared = db.query.usersTable
 
 // JWT proves identity only; role/is_active/can_process_pickup are re-read from
 // the DB on every request so deactivation and role changes take effect on the
-// next request instead of at token expiry — see ADR-0006 amendment 2026-06-04.
+// next request instead of at token expiry — see ADR-0006.
 const refreshAuthState = createMiddleware<{
   Variables: { jwtPayload: JWTPayload };
 }>(async (c, next) => {
