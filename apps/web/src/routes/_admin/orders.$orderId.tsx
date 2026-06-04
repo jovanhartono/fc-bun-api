@@ -30,7 +30,6 @@ import {
 import { PhotoUploadDialog } from "@/features/orders/components/photo-upload-dialog";
 import { QueueServiceDetail } from "@/features/orders/components/queue-service-detail";
 import { RefundOrderForm } from "@/features/orders/components/refund-order-form";
-import { ServiceCancelButton } from "@/features/orders/components/service-cancel-button";
 import { ServiceStatusUpdateButton } from "@/features/orders/components/service-status-update-button";
 import { StatusTimeline } from "@/features/orders/components/status-timeline";
 import { uploadOrderServicePhoto } from "@/features/orders/utils/photo-upload";
@@ -769,9 +768,14 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 						</Card>
 					) : null}
 					{orderServices.map((service) => {
+						// Terminal exits (cancelled/refunded) must use the dedicated
+						// cancel/refund endpoints — the status endpoint rejects them.
 						const availableTransitions = (
 							ORDER_SERVICE_TRANSITIONS[service.status] || []
-						).filter((nextStatus) => !(nextStatus === "cancelled" && isPaid));
+						).filter(
+							(nextStatus) =>
+								nextStatus !== "cancelled" && nextStatus !== "refunded",
+						);
 						const itemLabel = service.item_code ?? `Service #${service.id}`;
 
 						return (
@@ -801,22 +805,14 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 									</div>
 									{availableTransitions.length > 0 ? (
 										<div className="flex flex-wrap gap-2">
-											{availableTransitions.map((nextStatus) =>
-												nextStatus === "cancelled" ? (
-													<ServiceCancelButton
-														key={nextStatus}
-														serviceId={service.id}
-														updateStatusMutation={updateStatusMutation}
-													/>
-												) : (
-													<ServiceStatusUpdateButton
-														key={nextStatus}
-														serviceId={service.id}
-														nextStatus={nextStatus}
-														updateStatusMutation={updateStatusMutation}
-													/>
-												),
-											)}
+											{availableTransitions.map((nextStatus) => (
+												<ServiceStatusUpdateButton
+													key={nextStatus}
+													serviceId={service.id}
+													nextStatus={nextStatus}
+													updateStatusMutation={updateStatusMutation}
+												/>
+											))}
 										</div>
 									) : null}
 								</CardHeader>
