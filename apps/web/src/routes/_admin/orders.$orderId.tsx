@@ -1,4 +1,7 @@
-import { ORDER_SERVICE_TRANSITIONS } from "@fresclean/api/schema";
+import {
+	ORDER_SERVICE_TRANSITIONS,
+	ORDER_TERMINAL_SERVICE_STATUSES,
+} from "@fresclean/api/schema";
 import { ImageSquareIcon, LinkSimpleIcon } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
@@ -23,6 +26,7 @@ import { OrderDropoffPhotoCard } from "@/features/orders/components/order-dropof
 import { OrderFulfillmentOverview } from "@/features/orders/components/order-fulfillment-overview";
 import { OrderPhotoGallery } from "@/features/orders/components/order-photo-gallery";
 import { OrderPickupEventDialog } from "@/features/orders/components/order-pickup-event-dialog";
+import type { NonTerminalServiceStatus } from "@/features/orders/components/order-service-dialog.types";
 import {
 	PhotoLightbox,
 	type PhotoLightboxItem,
@@ -45,6 +49,7 @@ import {
 } from "@/lib/api";
 import { formatOrderServiceItemDetails } from "@/lib/order-service-item-details";
 import {
+	meQueryOptions,
 	orderDetailQueryOptions,
 	paymentMethodsQueryOptions,
 } from "@/lib/query-options";
@@ -64,6 +69,10 @@ import { formatIDRCurrency } from "@/shared/utils";
 import { getCurrentUser } from "@/stores/auth-store";
 import { useDialog } from "@/stores/dialog-store";
 
+const TERMINAL_SERVICE_STATUSES = new Set<string>(
+	ORDER_TERMINAL_SERVICE_STATUSES,
+);
+
 const orderDetailSearchSchema = z.object({
 	queueStoreId: z.coerce.number().int().positive().optional(),
 	workerServiceId: z.coerce.number().int().positive().optional(),
@@ -81,6 +90,7 @@ export const Route = createFileRoute("/_admin/orders/$orderId")({
 		await Promise.all([
 			context.queryClient.ensureQueryData(orderDetailQueryOptions(id)),
 			context.queryClient.ensureQueryData(paymentMethodsQueryOptions()),
+			context.queryClient.ensureQueryData(meQueryOptions()),
 		]);
 	},
 	component: OrderDetailPage,
@@ -317,12 +327,16 @@ const DeletePhotoConfirmDialog = ({
 
 function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 	const user = getCurrentUser();
-	const isPaymentAllowed = user?.role === "admin" || user?.role === "cashier";
+	// Role/can_process_pickup gates read DB-fresh state via /admin/users/me —
+	// the JWT claims go stale when an admin changes them mid-session.
+	const meQuery = useQuery(meQueryOptions());
+	const me = meQuery.data;
+	const isPaymentAllowed = me?.role === "admin" || me?.role === "cashier";
 	const isPickupAllowed =
-		user?.role === "admin" ||
-		user?.role === "cashier" ||
-		user?.can_process_pickup === true;
-	const isAdmin = user?.role === "admin";
+		me?.role === "admin" ||
+		me?.role === "cashier" ||
+		me?.can_process_pickup === true;
+	const isAdmin = me?.role === "admin";
 	const openDialog = useDialog((s) => s.openDialog);
 	const closeDialog = useDialog((s) => s.closeDialog);
 
@@ -684,9 +698,9 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 					<OrderDropoffPhotoCard
 						order={detail}
 						canManage={
-							user?.role === "admin" ||
-							user?.role === "cashier" ||
-							user?.role === "worker"
+							me?.role === "admin" ||
+							me?.role === "cashier" ||
+							me?.role === "worker"
 						}
 						onUploaded={refreshOrderData}
 					/>
@@ -773,10 +787,8 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 						const availableTransitions = (
 							ORDER_SERVICE_TRANSITIONS[service.status] || []
 						).filter(
-							(nextStatus) =>
-								nextStatus !== "cancelled" &&
-								nextStatus !== "refunded" &&
-								nextStatus !== "picked_up",
+							(nextStatus): nextStatus is NonTerminalServiceStatus =>
+								!TERMINAL_SERVICE_STATUSES.has(nextStatus),
 						);
 						const itemLabel = service.item_code ?? `Service #${service.id}`;
 

@@ -123,7 +123,8 @@ export function useTransactionsPageBootstrap(): TransactionsPageBootstrap {
 	const userStoreIds =
 		meQuery.data?.userStores?.map((item) => item.store_id) ?? [];
 
-	const isAdmin = currentUser?.role === "admin";
+	// DB-fresh role — JWT claim goes stale on mid-session role changes.
+	const isAdmin = meQuery.data?.role === "admin";
 
 	const visibleStores = useMemo(() => {
 		const stores = storesQuery.data ?? [];

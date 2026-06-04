@@ -33,7 +33,7 @@ export const Route = createFileRoute("/_admin/transactions")({
 
 		const me = await context.queryClient.ensureQueryData(meQueryOptions());
 
-		if (currentUser.role !== "admin") {
+		if (me.role !== "admin") {
 			const firstStoreId = me.userStores[0]?.store_id;
 
 			if (firstStoreId) {

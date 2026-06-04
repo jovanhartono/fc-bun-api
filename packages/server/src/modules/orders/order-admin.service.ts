@@ -723,14 +723,12 @@ export async function updateOrderServiceStatus({
   body: PatchOrderServiceStatusInput;
   user: JWTPayload;
 }) {
-  if (body.status === "cancelled" || body.status === "refunded") {
+  if (isTerminalOrderServiceStatus(body.status)) {
     throw new ForbiddenException(
-      "Use the cancel or refund endpoint for terminal exit states"
+      body.status === "picked_up"
+        ? "Use the pickup endpoint to record pickups"
+        : "Use the cancel or refund endpoint for terminal exit states"
     );
-  }
-
-  if (body.status === "picked_up") {
-    throw new ForbiddenException("Use the pickup endpoint to record pickups");
   }
 
   const fromStatus = await db.transaction(async (tx) => {
