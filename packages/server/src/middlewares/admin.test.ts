@@ -3,10 +3,9 @@ import { Hono } from "hono";
 import { sign } from "hono/jwt";
 import type { JWTPayload } from "@/types";
 
-type AuthStateRow = Pick<
-  JWTPayload,
-  "role" | "is_active" | "can_process_pickup"
->;
+type AuthStateRow = Pick<JWTPayload, "role" | "can_process_pickup"> & {
+  is_active: boolean;
+};
 
 const executeMock = mock(
   (_args: { id: number }): Promise<AuthStateRow | undefined> =>
@@ -44,7 +43,6 @@ const signToken = (
       name: "Test",
       username: "test",
       role: "cashier",
-      is_active: true,
       can_process_pickup: false,
       exp,
       ...overrides,
@@ -90,13 +88,13 @@ describe("adminMiddleware — DB auth-state refresh", () => {
     expect(executeMock).toHaveBeenCalledTimes(1);
   });
 
-  it("rejects deactivated user with 401 even though token claims is_active", async () => {
+  it("rejects deactivated user with 401 even with a valid token", async () => {
     executeMock.mockResolvedValue({
       role: "cashier",
       is_active: false,
       can_process_pickup: false,
     });
-    const res = await getMe(await signToken({ is_active: true }));
+    const res = await getMe(await signToken());
     expect(res.status).toBe(401);
   });
 
@@ -124,7 +122,6 @@ describe("adminMiddleware — DB auth-state refresh", () => {
     const payload = (await res.json()) as JWTPayload;
     expect(payload.role).toBe("worker");
     expect(payload.can_process_pickup).toBe(true);
-    expect(payload.is_active).toBe(true);
   });
 
   it("preserves identity fields from the token", async () => {

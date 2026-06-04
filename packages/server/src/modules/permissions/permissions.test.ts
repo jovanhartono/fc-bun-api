@@ -23,7 +23,6 @@ const buildUser = (
   name: "Test",
   username: "test",
   role,
-  is_active: true,
   can_process_pickup: false,
   ...overrides,
 });
