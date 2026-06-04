@@ -50,29 +50,9 @@ export function assertCanProcessPickup(user: JWTPayload) {
   }
 }
 
-export function assertCanSelfAssign(user: JWTPayload) {
-  if (user.role !== "worker") {
-    throw new ForbiddenException(
-      "Only workers can self-assign order services from the queue"
-    );
-  }
-}
-
-export function assertCanProcessOrderService(user: JWTPayload) {
-  if (user.role !== "admin" && user.role !== "worker") {
-    throw new ForbiddenException(
-      "Only admin or worker can update order service status during processing"
-    );
-  }
-}
-
-export function assertCanUploadServicePhotos(user: JWTPayload) {
-  if (user.role !== "admin" && user.role !== "worker") {
-    throw new ForbiddenException(
-      "Only admin or worker can upload service detail photos"
-    );
-  }
-}
+// Processing-axis capabilities (self-assign, status updates during processing,
+// service detail photos) are open to all staff and have no assert — see
+// ADR-0004 amendment 2026-06-04. This module lists restricted capabilities only.
 
 export function assertCanCancelOrderService(
   user: JWTPayload,

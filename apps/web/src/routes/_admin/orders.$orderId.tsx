@@ -454,10 +454,7 @@ function AdminOrderDetailPage({ orderId: id }: { orderId: number }) {
 	);
 	const isPaid = detail.payment_status === "paid";
 	const canCancelOrder =
-		isAdmin &&
-		detail.status !== "cancelled" &&
-		!isPaid &&
-		hasCancellableServices;
+		detail.status !== "cancelled" && !isPaid && hasCancellableServices;
 	const canRefundWholeOrder =
 		isAdmin &&
 		detail.status !== "cancelled" &&

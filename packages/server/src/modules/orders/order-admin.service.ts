@@ -40,13 +40,10 @@ import {
 } from "@/modules/orders/order-status-machine";
 import {
   assertCanCancelOrderService,
-  assertCanProcessOrderService,
   assertCanProcessPayment,
   assertCanProcessPickup,
   assertCanReassignHandler,
   assertCanRefundOrderService,
-  assertCanSelfAssign,
-  assertCanUploadServicePhotos,
 } from "@/modules/permissions/permissions";
 import type { JWTPayload } from "@/types";
 import { assertStoreAccess, getUserStoreIds } from "@/utils/authorization";
@@ -619,8 +616,6 @@ export async function startOrderServiceWork({
   serviceId: number;
   user: JWTPayload;
 }) {
-  assertCanSelfAssign(user);
-
   const result = await db.transaction(async (tx) => {
     const [locked] = await tx
       .select()
@@ -643,7 +638,7 @@ export async function startOrderServiceWork({
       locked.handler_id !== user.id
     ) {
       throw new ForbiddenException(
-        "This item is already assigned to another worker"
+        "This item is already assigned to another staff member"
       );
     }
 
@@ -728,8 +723,6 @@ export async function updateOrderServiceStatus({
   body: PatchOrderServiceStatusInput;
   user: JWTPayload;
 }) {
-  assertCanProcessOrderService(user);
-
   if (body.status === "cancelled" || body.status === "refunded") {
     throw new ForbiddenException(
       "Use the cancel or refund endpoint for terminal exit states"
@@ -872,8 +865,6 @@ export async function saveOrderServicePhoto({
   body: PostOrderServicePhotoInput;
   user: JWTPayload;
 }) {
-  assertCanUploadServicePhotos(user);
-
   await getOrderServiceOrThrow(orderId, serviceId);
 
   const [photo] = await db

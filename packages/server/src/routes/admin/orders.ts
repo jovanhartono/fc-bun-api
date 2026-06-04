@@ -42,10 +42,7 @@ import {
   updateOrderServiceHandler,
   updateOrderServiceStatus,
 } from "@/modules/orders/order-admin.service";
-import {
-  assertCanCreateOrder,
-  assertCanUploadServicePhotos,
-} from "@/modules/permissions/permissions";
+import { assertCanCreateOrder } from "@/modules/permissions/permissions";
 import { getStoreById } from "@/modules/stores/store.service";
 import { POSTOrderSchema } from "@/schema";
 import { idParamSchema } from "@/schema/param";
@@ -299,7 +296,6 @@ const app = new Hono()
     zodValidator("json", POSTOrderServicePhotoPresignSchema),
     async (c) => {
       const user = c.get("jwtPayload") as JWTPayload;
-      assertCanUploadServicePhotos(user);
 
       const { id, serviceId } = c.req.valid("param");
       const body = c.req.valid("json");

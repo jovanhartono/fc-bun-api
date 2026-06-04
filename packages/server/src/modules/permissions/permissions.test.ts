@@ -5,13 +5,10 @@ import {
   assertCanCreateOrder,
   assertCanManageCampaigns,
   assertCanManageUsers,
-  assertCanProcessOrderService,
   assertCanProcessPayment,
   assertCanProcessPickup,
   assertCanReassignHandler,
   assertCanRefundOrderService,
-  assertCanSelfAssign,
-  assertCanUploadServicePhotos,
   assertIsAdmin,
 } from "@/modules/permissions/permissions";
 import type { JWTPayload } from "@/types";
@@ -94,43 +91,6 @@ describe("assertCanProcessPickup", () => {
 
   it("respects can_process_pickup=true even for cashier (no effect — already allowed)", () => {
     expect(() => assertCanProcessPickup(cashierWithPickup)).not.toThrow();
-  });
-});
-
-describe("assertCanSelfAssign", () => {
-  it("allows worker only", () => {
-    expect(() => assertCanSelfAssign(worker)).not.toThrow();
-  });
-
-  it("rejects admin and cashier", () => {
-    expect(() => assertCanSelfAssign(admin)).toThrow(ForbiddenException);
-    expect(() => assertCanSelfAssign(cashier)).toThrow(ForbiddenException);
-  });
-});
-
-describe("assertCanProcessOrderService", () => {
-  it("allows admin and worker", () => {
-    expect(() => assertCanProcessOrderService(admin)).not.toThrow();
-    expect(() => assertCanProcessOrderService(worker)).not.toThrow();
-  });
-
-  it("rejects cashier", () => {
-    expect(() => assertCanProcessOrderService(cashier)).toThrow(
-      ForbiddenException
-    );
-  });
-});
-
-describe("assertCanUploadServicePhotos", () => {
-  it("allows admin and worker", () => {
-    expect(() => assertCanUploadServicePhotos(admin)).not.toThrow();
-    expect(() => assertCanUploadServicePhotos(worker)).not.toThrow();
-  });
-
-  it("rejects cashier", () => {
-    expect(() => assertCanUploadServicePhotos(cashier)).toThrow(
-      ForbiddenException
-    );
   });
 });
 
