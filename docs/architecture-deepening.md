@@ -303,10 +303,12 @@ same throw semantics. Pure relocation + the provably-equivalent tx→db read swa
 | `campaigns/campaign.service.ts` | Gained `assertCampaignUsable` + `getUsableCampaigns`; imports `NotFoundException` + `findCampaignsByIdsWithEligibility`. |
 | `orders/order.service.ts` | `loadAndValidateCampaigns`, `assertCampaignUsable`, the `ValidatedCampaign` type removed. `resolveDiscount` drops its `tx` param, calls `getUsableCampaigns`, stacks the flattened campaigns directly. Orphaned `OrderTx` import removed. `createOrder` call site drops the `tx` arg. |
 
-**Tests**: `campaign-eligibility.test.ts` — 7 unit tests via `bun:test` (happy
-path + 5 reject branches + store-scope allow). Full server suite 49/49 pass;
-type-check 3/3 turbo tasks + biome clean. Loader (`getUsableCampaigns`) is
-DB-touching — integration test deferred, same as #1/#5.
+**Tests**: `campaign-eligibility.test.ts` — 10 unit tests via `bun:test` (happy
+path + 5 reject branches + store-scope allow + 3 inclusive-boundary allows that
+pin the strict `<`/`>` operators: `now === starts_at`, `now === ends_at`,
+`grossTotal === min_order_total`). Full server suite 52/52 pass; type-check 3/3
+turbo tasks + biome clean. Loader (`getUsableCampaigns`) is DB-touching —
+integration test deferred, same as #1/#5.
 
 **Outcomes**
 - Campaign eligibility reads in the Campaigns module; Order no longer owns it.

@@ -67,4 +67,25 @@ describe("assertCampaignUsable", () => {
       assertCampaignUsable({ ...baseCampaign, min_order_total: "200000" }, ctx)
     ).toThrow(BadRequestException);
   });
+
+  it("allows a campaign starting exactly at now (inclusive lower bound)", () => {
+    expect(() =>
+      assertCampaignUsable({ ...baseCampaign, starts_at: ctx.now }, ctx)
+    ).not.toThrow();
+  });
+
+  it("allows a campaign ending exactly at now (inclusive upper bound)", () => {
+    expect(() =>
+      assertCampaignUsable({ ...baseCampaign, ends_at: ctx.now }, ctx)
+    ).not.toThrow();
+  });
+
+  it("allows a gross total exactly at the campaign minimum", () => {
+    expect(() =>
+      assertCampaignUsable(
+        { ...baseCampaign, min_order_total: String(ctx.grossTotal) },
+        ctx
+      )
+    ).not.toThrow();
+  });
 });
