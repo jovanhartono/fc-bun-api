@@ -37,7 +37,7 @@ Suggested order:
 | 5 | Pickup module (ADR-0005 invariants)             | ✅ Done      | See §5 |
 | 6 | Reversal off-ramps (cancel + refund)            | ✅ Done      | See §6 |
 | 7 | Collapse shallow CRUD services                  | ⬜ Pending   | Policy call, defer |
-| 8 | Product refunds + `refund_status` fix           | 🚧 Server ✅ | PR #41 + ADR-0007; web picker pending. See §8 |
+| 8 | Product refunds + `refund_status` fix           | ✅ Done      | PR #41 + ADR-0007. See §8 |
 
 Dependencies: **#1 must land before #5, #6, #2.** #3 / #4 / #7 / #8 are independent.
 
@@ -456,7 +456,7 @@ the option. Today there's no signal.
 
 ---
 
-## §8 — Product refunds + `refund_status` fix 🚧 (server ✅, web pending)
+## §8 — Product refunds + `refund_status` fix ✅
 
 **Bug**: `orders.refund_status` is derived from money (`deriveOrderRefundStatus` in `order-refund-status.ts`): `none` / `partial` / `full` based on `refunded_amount` vs `paid_amount`. The refund flow (`createOrderRefund` + `getOrderLineRefundCaps` in `order-admin.service.ts`) iterates **services only** — products are not refundable in v1. But `paid_amount` includes products (`total = serviceSubtotal + productSubtotal`, `order.service.ts:414`). So any Order containing products will hit `partial` and stay there forever after all services are refunded. UI badge ("Fully Refunded" in `apps/web/src/lib/status.ts:58-62`) reads `partial` and operators cannot advance it.
 
@@ -503,14 +503,17 @@ machine stays service-only).
 - No report reads `refund_status` for money semantics (money aggregates only).
 - `refundReasonEnum` applies to products unchanged (Q3, ADR-0007).
 
-**Remaining (web)** — mockup approved-in-principle, awaiting IMPLEMENT:
-- `lib/api.ts`: `CreateOrderRefundPayload` items become service/product union.
-- `refund-order-form.tsx`: `refundableProducts` prop, SERVICES/PRODUCTS section
-  labels when both kinds present, product label `name × qty`.
-- `orders.$orderId.tsx`: `refundableProducts = products.filter(p => !p.refunded_at)`,
-  extend `canRefundWholeOrder` gate, `[Refunded]` badge on product rows, render
-  product refund lines in refund history (today product refunds are invisible on the
-  detail page).
+**Web (same PR)**
+- `lib/api.ts`: `CreateOrderRefundPayload` items are a service/product union.
+- `refund-order-form.tsx`: `refundableProducts` prop; rows carry kind; Services/
+  Products group labels rendered only when the Order has both kinds; product label
+  `name × qty`; submit maps per kind.
+- `orders.$orderId.tsx`: `refundableProducts = products.filter(p => !p.refunded_at)`;
+  refund button also gates on refundable products (the stuck-on-partial fix moment);
+  refunded product rows get a danger `Refunded` badge.
+- Not done (recorded): product refund reason/note are not rendered on the detail
+  page — the products relation doesn't load `refundItems`. Add when someone asks
+  why a product was refunded.
 
 **Known gap (out of scope, ADR-0007 consequences)**: products-only unpaid Orders
 cannot be cancelled (`cancelOrder` throws "No cancellable services").
