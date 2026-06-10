@@ -116,7 +116,7 @@ function buildRefundItems({
 
   if (remainingWholeUnits > 0) {
     throw new BadRequestException(
-      "Refund amount could not be allocated across the selected services"
+      "Refund amount could not be allocated across the selected refund lines"
     );
   }
 
@@ -144,6 +144,7 @@ async function getOrderLineRefundCaps(orderId: number) {
       where: { order_id: orderId },
       columns: {
         id: true,
+        refunded_at: true,
         subtotal: true,
       },
     }),
@@ -198,7 +199,9 @@ async function getOrderLineRefundCaps(orderId: number) {
     }),
     ...productRows.map((row): [string, number] => {
       const key = lineKey("product", row.id);
-      return [key, lineCap(key, row.subtotal)];
+      // rounding residue can leave a fractional cap after a whole-line refund;
+      // refunded_at is authoritative — a refunded product line is never refundable again
+      return [key, row.refunded_at ? 0 : lineCap(key, row.subtotal)];
     }),
   ]);
 }
