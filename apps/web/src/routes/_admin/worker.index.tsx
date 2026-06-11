@@ -30,6 +30,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { formatOrderDateTime } from "@/features/orders/lib/format";
 import {
 	type FetchOrderServiceQueueQuery,
 	fetchOrderDetail,
@@ -919,12 +920,7 @@ function QueueRow({
 
 			<div className="grid gap-1 text-sm text-muted-foreground sm:grid-cols-2">
 				<p>{`Order ${item.order_code}`}</p>
-				<p>
-					{new Date(item.order_created_at).toLocaleString("en-ID", {
-						dateStyle: "medium",
-						timeStyle: "short",
-					})}
-				</p>
+				<p>{formatOrderDateTime(item.order_created_at)}</p>
 				<p>{`Store ${item.store_code} - ${item.store_name}`}</p>
 				<p>{`Item ${formatOrderServiceItemDetails(item)}`}</p>
 			</div>

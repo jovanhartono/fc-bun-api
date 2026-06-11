@@ -9,6 +9,7 @@ import {
 	useCancelOrderMutation,
 	useRefundOrderMutation,
 } from "@/features/orders/hooks/useOrderMutations";
+import { formatOrderDateTime } from "@/features/orders/lib/format";
 import type { OrderActionGates } from "@/features/orders/lib/order-action-gates";
 import type { OrderDetail } from "@/lib/api";
 import {
@@ -167,11 +168,7 @@ export const OrderDetailHeader = ({
 				}
 			/>
 			<p className="text-muted-foreground text-sm">
-				{detail.store?.name ?? "—"} ·{" "}
-				{new Date(detail.created_at).toLocaleString("en-ID", {
-					dateStyle: "medium",
-					timeStyle: "short",
-				})}
+				{detail.store?.name ?? "—"} · {formatOrderDateTime(detail.created_at)}
 			</p>
 		</div>
 	);

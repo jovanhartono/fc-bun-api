@@ -4,6 +4,7 @@ import {
 	PhotoLightbox,
 	type PhotoLightboxItem,
 } from "@/features/orders/components/photo-lightbox";
+import { formatOrderDateTime } from "@/features/orders/lib/format";
 import type { OrderDetail } from "@/lib/api";
 
 type PickupEvent = OrderDetail["pickup_events"][number];
@@ -23,10 +24,7 @@ export const OrderPickupHistoryCard = ({
 
 	const lightboxItems: PhotoLightboxItem[] = eventsWithImage.map(
 		({ event }) => {
-			const pickedUpAt = new Date(event.picked_up_at).toLocaleString("en-ID", {
-				dateStyle: "medium",
-				timeStyle: "short",
-			});
+			const pickedUpAt = formatOrderDateTime(event.picked_up_at);
 			const pickedUpBy = event.picked_up_by?.name ?? "unknown operator";
 			return {
 				alt: `Pickup on ${pickedUpAt} by ${pickedUpBy}`,
@@ -55,13 +53,7 @@ export const OrderPickupHistoryCard = ({
 				</CardHeader>
 				<CardContent className="grid gap-3">
 					{pickupEvents.map((event) => {
-						const pickedUpAt = new Date(event.picked_up_at).toLocaleString(
-							"en-ID",
-							{
-								dateStyle: "medium",
-								timeStyle: "short",
-							},
-						);
+						const pickedUpAt = formatOrderDateTime(event.picked_up_at);
 						const pickedUpBy = event.picked_up_by?.name ?? "unknown operator";
 
 						return (

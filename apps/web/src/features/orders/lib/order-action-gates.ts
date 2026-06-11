@@ -32,9 +32,8 @@ export const getOrderActionGates = (
 	const refundableServices = services.filter(
 		(service) => !["refunded", "cancelled"].includes(service.status),
 	);
-	const refundableProducts = detail.products.filter(
-		(item) => !item.refunded_at,
-	);
+	const products = Array.isArray(detail.products) ? detail.products : [];
+	const refundableProducts = products.filter((item) => !item.refunded_at);
 	const hasCancellableServices = services.some(
 		(service) =>
 			!["picked_up", "refunded", "cancelled"].includes(service.status),
