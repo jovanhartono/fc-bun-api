@@ -4,6 +4,9 @@
   "workspaces": {
     "": {
       "name": "fresclean",
+      "dependencies": {
+        "@types/bun": "^1.3.14",
+      },
       "devDependencies": {
         "husky": "^9.1.7",
         "lint-staged": "^17.0.7",

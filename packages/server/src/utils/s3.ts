@@ -1,6 +1,9 @@
 import { s3 } from "bun";
+import { BadRequestException } from "@/errors";
 
 const DEFAULT_PRESIGNED_EXPIRES_SECONDS = 300;
+const MAX_IMAGE_DIMENSION = 1600;
+const WEBP_QUALITY = 80;
 
 export function buildMediaUrl(path: string): string;
 export function buildMediaUrl(path: null | undefined): null;
@@ -41,4 +44,28 @@ export function createPresignedUploadUrl({
     key,
     expires_in_seconds: DEFAULT_PRESIGNED_EXPIRES_SECONDS,
   };
+}
+
+export async function optimizeUploadedImage(key: string): Promise<void> {
+  const file = s3.file(key);
+
+  let optimized: Uint8Array;
+  try {
+    optimized = await file
+      .image()
+      .resize(MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION, {
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .webp({ quality: WEBP_QUALITY })
+      .bytes();
+  } catch (error) {
+    // Format Bun can't decode on this platform (e.g. HEIC) — keep the original.
+    if ((error as { code?: string }).code === "ERR_IMAGE_FORMAT_UNSUPPORTED") {
+      return;
+    }
+    throw new BadRequestException("Uploaded file is missing or not an image");
+  }
+
+  await file.write(optimized, { type: "image/webp" });
 }
