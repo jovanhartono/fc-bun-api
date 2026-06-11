@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { z } from "zod";
 import { Skeleton } from "@/components/ui/skeleton";
 import { OrderDetailHeader } from "@/features/orders/components/order-detail-header";
 import { OrderDropoffPhotoCard } from "@/features/orders/components/order-dropoff-photo-card";
@@ -11,7 +10,6 @@ import { OrderPickupHistoryCard } from "@/features/orders/components/order-picku
 import { OrderProductsCard } from "@/features/orders/components/order-products-card";
 import { OrderServiceCard } from "@/features/orders/components/order-service-card";
 import { OrderSummaryCard } from "@/features/orders/components/order-summary-card";
-import { QueueServiceDetail } from "@/features/orders/components/queue-service-detail";
 import { useRefreshOrder } from "@/features/orders/hooks/useOrderMutations";
 import { getOrderActionGates } from "@/features/orders/lib/order-action-gates";
 import {
@@ -21,13 +19,7 @@ import {
 } from "@/lib/query-options";
 import { useDialog } from "@/stores/dialog-store";
 
-const orderDetailSearchSchema = z.object({
-	queueStoreId: z.coerce.number().int().positive().optional(),
-	workerServiceId: z.coerce.number().int().positive().optional(),
-});
-
 export const Route = createFileRoute("/_admin/orders/$orderId")({
-	validateSearch: (search) => orderDetailSearchSchema.parse(search),
 	loader: async ({ context, params }) => {
 		const id = Number(params.orderId);
 
@@ -87,7 +79,6 @@ const OrderDetailMessage = ({
 );
 
 function OrderDetailPage() {
-	const search = Route.useSearch();
 	const { orderId } = Route.useParams();
 	const parsedOrderId = Number(orderId);
 	const isValidOrderId = Number.isInteger(parsedOrderId) && parsedOrderId > 0;
@@ -98,16 +89,6 @@ function OrderDetailPage() {
 				tone="error"
 				title="Invalid order ID"
 				description="The URL does not point to a valid order."
-			/>
-		);
-	}
-
-	if (search.workerServiceId) {
-		return (
-			<QueueServiceDetail
-				orderId={parsedOrderId}
-				serviceId={search.workerServiceId}
-				queueStoreId={search.queueStoreId}
 			/>
 		);
 	}

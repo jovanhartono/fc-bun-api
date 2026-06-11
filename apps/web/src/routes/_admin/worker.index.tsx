@@ -328,16 +328,21 @@ function WorkerQueuePage() {
 			};
 		},
 		onSuccess: (result) => {
+			if (result.workerServiceId !== undefined) {
+				void navigate({
+					to: "/worker/$orderId/$serviceId",
+					params: {
+						orderId: String(result.orderId),
+						serviceId: String(result.workerServiceId),
+					},
+				});
+				return;
+			}
+
 			void navigate({
 				to: "/orders/$orderId",
 				params: {
 					orderId: String(result.orderId),
-				},
-				search: {
-					queueStoreId: result.storeId,
-					...(result.workerServiceId !== undefined
-						? { workerServiceId: result.workerServiceId }
-						: {}),
 				},
 			});
 		},
@@ -472,13 +477,10 @@ function WorkerQueuePage() {
 
 	const navigateToQueueDetail = (item: QueueOrderServiceItem) => {
 		void navigate({
-			to: "/orders/$orderId",
+			to: "/worker/$orderId/$serviceId",
 			params: {
 				orderId: String(item.order_id),
-			},
-			search: {
-				queueStoreId: item.store_id,
-				workerServiceId: item.id,
+				serviceId: String(item.id),
 			},
 		});
 	};

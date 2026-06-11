@@ -83,13 +83,11 @@ function QueueServiceDetailMessage({
 type QueueServiceDetailProps = {
 	orderId: number;
 	serviceId: number;
-	queueStoreId?: number;
 };
 
 export function QueueServiceDetail({
 	orderId,
 	serviceId,
-	queueStoreId,
 }: QueueServiceDetailProps) {
 	const queryClient = useQueryClient();
 	const currentUser = getCurrentUser();
@@ -185,7 +183,7 @@ export function QueueServiceDetail({
 			<div className="mb-6 flex items-center gap-3">
 				<Link
 					to="/worker"
-					search={{ storeId: queueStoreId ?? detail.store?.id }}
+					search={{ storeId: detail.store?.id }}
 					className="flex size-9 shrink-0 items-center justify-center border border-border text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
 				>
 					<ArrowLeftIcon className="size-4" weight="bold" />
