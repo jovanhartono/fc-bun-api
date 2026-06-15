@@ -5,7 +5,14 @@ import { useCallback, useEffect, useMemo } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
-import { handleCreatedOrderSuccess } from "@/features/orders/lib/create-order-workflow";
+import {
+	getCreatedOrderId,
+	handleCreatedOrderSuccess,
+} from "@/features/orders/lib/create-order-workflow";
+import {
+	isAcceptedImage,
+	uploadOrderDropoffPhoto,
+} from "@/features/orders/utils/photo-upload";
 import {
 	type TransactionDraftValues,
 	toOrderPayload,
@@ -191,6 +198,7 @@ export function useTransactionsPageBootstrap(): TransactionsPageBootstrap {
 	const resetCart = useCallback(() => {
 		const selectedStore = form.getValues("selectedStoreId");
 		useTransactionsPageStore.getState().setSubmitError("");
+		useTransactionsPageStore.getState().setDropoffPhoto(null);
 		form.reset({
 			...defaultDraftValues,
 			selectedStoreId: selectedStore,
@@ -205,6 +213,27 @@ export function useTransactionsPageBootstrap(): TransactionsPageBootstrap {
 				const created = await createMutation.mutateAsync(
 					toOrderPayload(values),
 				);
+
+				// Order is committed; attach the drop-off photo now that we have an
+				// id. A failed attach must NOT fail the Order — surface it and let the
+				// cashier retry from the order detail card.
+				const orderId = getCreatedOrderId(created);
+				const { dropoffPhoto } = useTransactionsPageStore.getState();
+				if (orderId && dropoffPhoto && isAcceptedImage(dropoffPhoto.type)) {
+					try {
+						await uploadOrderDropoffPhoto(orderId, {
+							file: dropoffPhoto,
+							contentType: dropoffPhoto.type,
+						});
+					} catch {
+						toast.error(
+							"Order created, but the drop-off photo failed to upload",
+							{
+								description: "Open the order to add it.",
+							},
+						);
+					}
+				}
 
 				await handleCreatedOrderSuccess({
 					created,

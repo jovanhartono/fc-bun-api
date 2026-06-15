@@ -50,8 +50,13 @@ interface PhotoUploadDialogBaseProps {
 	badgeLabel?: string;
 	multiple: boolean;
 	withNote: boolean;
-	uploadPhoto: (input: UploadPhotoInput) => Promise<void>;
-	onUploaded: () => Promise<void>;
+	// Upload mode: presign → upload → save on confirm.
+	uploadPhoto?: (input: UploadPhotoInput) => Promise<void>;
+	onUploaded?: () => Promise<void>;
+	// Capture-only mode: hand the picked File(s) back instead of uploading. Used
+	// at the POS where the Order does not exist yet, so the upload is deferred to
+	// after checkout commits. When set, uploadPhoto/onUploaded are ignored.
+	onCapture?: (files: File[]) => void;
 }
 
 const PhotoUploadDialogBase = ({
@@ -63,6 +68,7 @@ const PhotoUploadDialogBase = ({
 	withNote,
 	uploadPhoto,
 	onUploaded,
+	onCapture,
 }: PhotoUploadDialogBaseProps) => {
 	const fileInputRef = useRef<HTMLInputElement | null>(null);
 	const camera = useCameraCapture();
@@ -173,7 +179,7 @@ const PhotoUploadDialogBase = ({
 
 			const trimmedNote = withNote ? note.trim() || undefined : undefined;
 			for (const photo of validatedPhotos) {
-				await uploadPhoto({
+				await uploadPhoto?.({
 					file: photo.file,
 					contentType: photo.contentType,
 					note: trimmedNote,
@@ -185,7 +191,7 @@ const PhotoUploadDialogBase = ({
 				pendingPhotos.length > 1 ? "Photos uploaded" : "Photo uploaded",
 			);
 			onOpenChange(false);
-			await onUploaded();
+			await onUploaded?.();
 		},
 		onError: (error: Error) => {
 			toast.error(error.message || "Failed to upload photos");
@@ -202,6 +208,21 @@ const PhotoUploadDialogBase = ({
 
 	const photoNoun = multiple ? "photos" : "photo";
 	const labelSuffix = badgeLabel ? ` for ${badgeLabel}` : "";
+
+	const isCaptureMode = Boolean(onCapture);
+	const confirmLabel = isCaptureMode
+		? multiple
+			? "Use photos"
+			: "Use photo"
+		: "Upload";
+	const handleConfirm = async () => {
+		if (onCapture) {
+			onCapture(pendingPhotos.map((photo) => photo.file));
+			onOpenChange(false);
+			return;
+		}
+		await uploadMutation.mutateAsync();
+	};
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -379,11 +400,9 @@ const PhotoUploadDialogBase = ({
 						disabled={pendingPhotos.length === 0 || uploadMutation.isPending}
 						loading={uploadMutation.isPending}
 						loadingText="Uploading..."
-						onClick={async () => {
-							await uploadMutation.mutateAsync();
-						}}
+						onClick={handleConfirm}
 					>
-						Upload
+						{confirmLabel}
 					</Button>
 				</DialogFooter>
 			</DialogContent>
@@ -393,7 +412,7 @@ const PhotoUploadDialogBase = ({
 
 type PhotoUploadDialogProps = Omit<
 	PhotoUploadDialogBaseProps,
-	"multiple" | "withNote"
+	"multiple" | "withNote" | "onCapture"
 >;
 
 export const PhotoUploadDialog = (props: PhotoUploadDialogProps) => (
@@ -402,4 +421,31 @@ export const PhotoUploadDialog = (props: PhotoUploadDialogProps) => (
 
 export const SinglePhotoUploadDialog = (props: PhotoUploadDialogProps) => (
 	<PhotoUploadDialogBase {...props} multiple={false} withNote={false} />
+);
+
+type SinglePhotoCaptureDialogProps = Pick<
+	PhotoUploadDialogBaseProps,
+	"open" | "onOpenChange" | "title" | "badgeLabel"
+> & {
+	onCapture: (file: File) => void;
+};
+
+// Capture-only single-photo dialog. Reuses the camera/picker/preview UI but,
+// instead of uploading, hands the picked File back to the caller — for flows
+// where the target row does not exist yet (POS drop-off photo before checkout).
+export const SinglePhotoCaptureDialog = ({
+	onCapture,
+	...props
+}: SinglePhotoCaptureDialogProps) => (
+	<PhotoUploadDialogBase
+		{...props}
+		multiple={false}
+		withNote={false}
+		onCapture={(files) => {
+			const [file] = files;
+			if (file) {
+				onCapture(file);
+			}
+		}}
+	/>
 );
