@@ -60,11 +60,17 @@ export async function optimizeUploadedImage(key: string): Promise<void> {
       .webp({ quality: WEBP_QUALITY })
       .bytes();
   } catch (error) {
+    const code = (error as { code?: string }).code;
     // Format Bun can't decode on this platform (e.g. HEIC) — keep the original.
-    if ((error as { code?: string }).code === "ERR_IMAGE_FORMAT_UNSUPPORTED") {
+    if (code === "ERR_IMAGE_FORMAT_UNSUPPORTED") {
       return;
     }
-    throw new BadRequestException("Uploaded file is missing or not an image");
+    // Any other image error means the upload isn't a usable image.
+    if (code?.startsWith("ERR_IMAGE_")) {
+      throw new BadRequestException("Uploaded file is not a valid image");
+    }
+    // S3/network/other infra fault — propagate, don't mislabel as a bad image.
+    throw error;
   }
 
   await file.write(optimized, { type: "image/webp" });
