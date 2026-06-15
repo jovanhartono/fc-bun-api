@@ -96,6 +96,10 @@ export const ShiftClockCard = ({ stores }: ShiftClockCardProps) => {
 		<div className="flex items-center gap-2">
 			{stores.length > 1 ? (
 				<Select
+					items={stores.map((store) => ({
+						value: String(store.id),
+						label: store.code,
+					}))}
 					value={selectedStoreId}
 					onValueChange={(value) => setStoreOverride(value ?? null)}
 				>

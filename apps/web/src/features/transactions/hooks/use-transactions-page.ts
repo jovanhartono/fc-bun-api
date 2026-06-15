@@ -14,6 +14,8 @@ import {
 	uploadOrderDropoffPhoto,
 } from "@/features/orders/utils/photo-upload";
 import {
+	defaultDraftValues,
+	resetTransactionDraft,
 	type TransactionDraftValues,
 	toOrderPayload,
 } from "@/features/transactions/cart/cart";
@@ -23,18 +25,6 @@ import { meQueryOptions, storesQueryOptions } from "@/lib/query-options";
 import { getCurrentUser } from "@/stores/auth-store";
 import { useTransactionPreferencesStore } from "@/stores/transaction-preferences-store";
 import { useTransactionsPageStore } from "@/stores/transactions-store";
-
-const defaultDraftValues: TransactionDraftValues = {
-	selectedStoreId: "",
-	selectedCustomerId: "",
-	selectedCampaignIds: [],
-	selectedPaymentMethodId: "",
-	paymentStatus: "unpaid",
-	manualDiscount: "",
-	notes: "",
-	productCart: [],
-	serviceCart: [],
-};
 
 const transactionDraftSchema = z
 	.object({
@@ -196,13 +186,9 @@ export function useTransactionsPageBootstrap(): TransactionsPageBootstrap {
 	});
 
 	const resetCart = useCallback(() => {
-		const selectedStore = form.getValues("selectedStoreId");
-		useTransactionsPageStore.getState().setSubmitError("");
-		useTransactionsPageStore.getState().setDropoffPhoto(null);
-		form.reset({
-			...defaultDraftValues,
-			selectedStoreId: selectedStore,
-		});
+		const { setSubmitError, setDropoffPhoto } =
+			useTransactionsPageStore.getState();
+		resetTransactionDraft(form, { setSubmitError, setDropoffPhoto });
 	}, [form]);
 
 	const onValidSubmit = useCallback(

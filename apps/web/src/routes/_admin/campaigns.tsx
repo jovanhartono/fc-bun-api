@@ -397,6 +397,12 @@ function CampaignsPage() {
 					<CardContent>
 						<div className="mb-4 flex items-center gap-2">
 							<Select
+								items={{
+									all: "All status",
+									active: "Active only",
+									expired: "Expired only",
+									archived: "Archived only",
+								}}
 								value={search.status}
 								onValueChange={(value) => {
 									void navigate({

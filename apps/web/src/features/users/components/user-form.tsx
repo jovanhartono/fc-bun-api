@@ -156,6 +156,7 @@ export function UserForm({
 						<Field data-invalid={fieldState.invalid}>
 							<FieldLabel htmlFor="user-role">Role</FieldLabel>
 							<Select
+								items={{ admin: "Admin", cashier: "Cashier", worker: "Worker" }}
 								value={field.value}
 								onValueChange={(value) =>
 									field.onChange((value ?? "cashier") as UserFormState["role"])

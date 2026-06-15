@@ -32,6 +32,10 @@ export const OrderPaymentCard = ({ orderId }: OrderPaymentCardProps) => {
 			</CardHeader>
 			<CardContent className="grid gap-3">
 				<Select
+					items={paymentMethods.map((method) => ({
+						value: String(method.id),
+						label: method.name,
+					}))}
 					value={selectedPaymentMethodId}
 					onValueChange={(value) => setSelectedPaymentMethodId(value ?? "")}
 				>

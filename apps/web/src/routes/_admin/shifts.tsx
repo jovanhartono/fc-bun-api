@@ -129,6 +129,13 @@ function ShiftsPage() {
 									Store
 								</label>
 								<Select
+									items={[
+										{ value: "all", label: "All stores" },
+										...stores.map((store) => ({
+											value: String(store.id),
+											label: `${store.code} · ${store.name}`,
+										})),
+									]}
 									value={
 										search.store_id !== undefined
 											? String(search.store_id)

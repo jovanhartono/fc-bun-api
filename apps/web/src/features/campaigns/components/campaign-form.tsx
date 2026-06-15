@@ -396,6 +396,7 @@ export function CampaignForm({
 									Discount Type
 								</FieldLabel>
 								<Select
+									items={DISCOUNT_TYPE_OPTIONS}
 									value={field.value}
 									onValueChange={(value) =>
 										field.onChange((value ?? "fixed") as CampaignDiscountType)
