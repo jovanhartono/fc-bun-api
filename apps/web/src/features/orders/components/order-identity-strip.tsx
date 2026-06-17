@@ -184,7 +184,7 @@ export const OrderIdentityStrip = ({
 									aria-describedby={
 										gates.canOpenPickup ? undefined : "pickup-disabled-reason"
 									}
-									className="h-10 flex-1 sm:flex-none"
+									className="flex-1 sm:flex-none"
 									disabled={!gates.canOpenPickup}
 									onClick={openPickupDialog}
 									type="button"

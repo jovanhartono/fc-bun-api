@@ -16,17 +16,15 @@ interface RefundInfo {
 	note?: string;
 }
 
-const SectionLabel = ({
+const SectionHeader = ({
 	children,
 	hint,
 }: {
 	children: ReactNode;
 	hint?: string;
 }) => (
-	<div className="flex items-center justify-between px-4 pt-4 pb-1">
-		<p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
-			{children}
-		</p>
+	<div className="flex items-center justify-between px-4 py-2.5">
+		<p className="text-foreground text-sm font-semibold">{children}</p>
 		{hint ? (
 			<span className="text-muted-foreground text-xs">{hint}</span>
 		) : null}
@@ -54,7 +52,7 @@ const ProductLine = ({
 						<Badge variant="danger">Cancelled</Badge>
 					) : null}
 				</div>
-				<p className="text-muted-foreground text-xs">
+				<p className="text-muted-foreground text-xs tabular-nums">
 					{formatIDRCurrency(String(product.price ?? 0))} × {product.qty}
 				</p>
 			</div>
@@ -112,11 +110,11 @@ export const OrderLineItemsCard = ({
 	}, [detail.refunds]);
 
 	return (
-		<Card className="gap-0 py-0">
-			<div>
-				<SectionLabel hint={services.length > 0 ? "tap a line" : undefined}>
+		<div className="grid gap-3 sm:gap-4">
+			<Card className="gap-0 overflow-hidden py-0">
+				<SectionHeader hint={services.length > 0 ? "tap a line" : undefined}>
 					Services · {services.length}
-				</SectionLabel>
+				</SectionHeader>
 				{services.length > 0 ? (
 					services.map((service) => (
 						<OrderServiceRow
@@ -127,15 +125,15 @@ export const OrderLineItemsCard = ({
 						/>
 					))
 				) : (
-					<p className="border-t px-4 py-6 text-muted-foreground text-sm">
+					<p className="px-4 py-6 text-muted-foreground text-sm">
 						No service lines.
 					</p>
 				)}
-			</div>
+			</Card>
 
 			{products.length > 0 ? (
-				<div>
-					<SectionLabel>Products · {products.length}</SectionLabel>
+				<Card className="gap-0 overflow-hidden py-0">
+					<SectionHeader>Products · {products.length}</SectionHeader>
 					{products.map((item) => (
 						<ProductLine
 							key={item.id}
@@ -143,10 +141,13 @@ export const OrderLineItemsCard = ({
 							refund={refundByProductId.get(item.id)}
 						/>
 					))}
-				</div>
+				</Card>
 			) : null}
 
-			<OrderMoneySummary detail={detail} />
-		</Card>
+			<Card className="gap-0 overflow-hidden py-0">
+				<SectionHeader>Totals</SectionHeader>
+				<OrderMoneySummary detail={detail} />
+			</Card>
+		</div>
 	);
 };

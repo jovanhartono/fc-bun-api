@@ -23,13 +23,8 @@ export const OrderServiceRow = memo(
 
 		const code = service.item_code ?? `Service #${service.id}`;
 		const serviceName = service.service?.name ?? "Service";
-		const meta = [
-			serviceName,
-			getOrderServiceItemDetails(service),
-			service.handler?.name,
-		]
-			.filter(Boolean)
-			.join(" · ");
+		const itemDetails = getOrderServiceItemDetails(service);
+		const handlerName = service.handler?.name;
 
 		const handleClick = () => {
 			openSheet({
@@ -51,13 +46,21 @@ export const OrderServiceRow = memo(
 				onClick={handleClick}
 				type="button"
 			>
-				<span className="min-w-0 flex-1">
+				<span className="min-w-0 flex-1 space-y-1">
 					<span className="block break-all font-mono text-[13px] font-semibold leading-snug">
 						{code}
 					</span>
-					<span className="mt-1 block truncate text-muted-foreground text-xs">
-						{meta}
-					</span>
+					<span className="block text-sm leading-snug">{serviceName}</span>
+					{itemDetails ? (
+						<span className="block text-muted-foreground text-xs leading-snug">
+							{itemDetails}
+						</span>
+					) : null}
+					{handlerName ? (
+						<span className="block text-muted-foreground text-xs leading-snug">
+							Handler · {handlerName}
+						</span>
+					) : null}
 				</span>
 				<span className="flex shrink-0 flex-wrap justify-end gap-1.5">
 					{service.is_priority ? (
