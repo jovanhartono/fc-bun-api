@@ -1,5 +1,6 @@
 import { Separator } from "@/components/ui/separator";
 import type { OrderDetail } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import { formatIDRCurrency } from "@/shared/utils";
 
 interface OrderMoneySummaryProps {
@@ -7,7 +8,8 @@ interface OrderMoneySummaryProps {
 }
 
 export const OrderMoneySummary = ({ detail }: OrderMoneySummaryProps) => {
-	const net = Number(detail.total ?? 0) - Number(detail.discount ?? 0);
+	const discount = Number(detail.discount ?? 0);
+	const net = Number(detail.total ?? 0) - discount;
 	const refunded = Number(detail.refunded_amount ?? 0);
 
 	return (
@@ -37,8 +39,10 @@ export const OrderMoneySummary = ({ detail }: OrderMoneySummaryProps) => {
 				))}
 				<div className="flex justify-between gap-4">
 					<dt className="text-muted-foreground">Discount total</dt>
-					<dd className="font-mono text-destructive">
-						-{formatIDRCurrency(String(detail.discount ?? 0))}
+					<dd className={cn("font-mono", discount > 0 && "text-destructive")}>
+						{discount > 0
+							? `-${formatIDRCurrency(String(discount))}`
+							: formatIDRCurrency("0")}
 					</dd>
 				</div>
 			</dl>

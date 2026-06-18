@@ -327,8 +327,7 @@ export function QueueServiceDetail({
 				</section>
 			</div>
 
-			<div className="h-20 sm:hidden" />
-			<div className="fixed inset-x-0 bottom-0 z-10 border-t border-border bg-background/95 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 backdrop-blur sm:sticky sm:bottom-0 sm:mt-6 sm:px-0 sm:pb-3">
+			<div className="sticky bottom-0 z-10 mt-6 border-t border-border bg-background/95 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 backdrop-blur sm:px-0 sm:pb-3">
 				<div className="flex flex-col gap-2 sm:flex-row">
 					{canStartWork ? (
 						<HoldToConfirmButton

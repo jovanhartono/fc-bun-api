@@ -522,7 +522,7 @@ function WorkerQueuePage() {
 
 			<div className="grid gap-5">
 				<section className="grid gap-4 border border-border bg-background/70 p-4">
-					<div className="flex justify-end md:hidden">
+					<div className="flex justify-end lg:hidden">
 						<Dialog
 							open={isMobileFilterOpen}
 							onOpenChange={setIsMobileFilterOpen}
@@ -611,8 +611,8 @@ function WorkerQueuePage() {
 						</Dialog>
 					</div>
 
-					<div className="grid gap-3 md:grid-cols-[minmax(0,220px)_1fr]">
-						<div className="hidden md:block">
+					<div className="grid gap-3 lg:grid-cols-[minmax(0,220px)_1fr]">
+						<div className="hidden lg:block">
 							<StoreAutocomplete
 								id="queue-store"
 								value={parsedStoreId?.toString() ?? ""}
@@ -676,7 +676,7 @@ function WorkerQueuePage() {
 						</div>
 					</div>
 
-					<div className="hidden gap-2 md:grid">
+					<div className="hidden gap-2 lg:grid">
 						<p className="text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground">
 							Status
 						</p>
@@ -714,7 +714,7 @@ function WorkerQueuePage() {
 						</div>
 					</div>
 
-					<div className="hidden md:block">
+					<div className="hidden lg:block">
 						<DateRangePicker
 							commitOnComplete
 							from={selectedDateFrom}
