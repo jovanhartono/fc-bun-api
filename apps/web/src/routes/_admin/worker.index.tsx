@@ -554,7 +554,7 @@ function WorkerQueuePage() {
 									/>
 
 									<div className="grid gap-2">
-										<p className="text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground">
+										<p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
 											Status
 										</p>
 										<div className="-mx-1 overflow-x-auto pb-1">
@@ -677,7 +677,7 @@ function WorkerQueuePage() {
 					</div>
 
 					<div className="hidden gap-2 lg:grid">
-						<p className="text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground">
+						<p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
 							Status
 						</p>
 						<div className="-mx-1 overflow-x-auto pb-1">

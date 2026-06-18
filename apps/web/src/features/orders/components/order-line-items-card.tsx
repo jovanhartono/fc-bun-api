@@ -16,18 +16,9 @@ interface RefundInfo {
 	note?: string;
 }
 
-const SectionHeader = ({
-	children,
-	hint,
-}: {
-	children: ReactNode;
-	hint?: string;
-}) => (
+const SectionHeader = ({ children }: { children: ReactNode }) => (
 	<div className="flex items-center justify-between px-4 py-2.5">
 		<p className="text-foreground text-sm font-semibold">{children}</p>
-		{hint ? (
-			<span className="text-muted-foreground text-xs">{hint}</span>
-		) : null}
 	</div>
 );
 
@@ -112,9 +103,7 @@ export const OrderLineItemsCard = ({
 	return (
 		<div className="grid gap-3 sm:gap-4">
 			<Card className="gap-0 overflow-hidden py-0">
-				<SectionHeader hint={services.length > 0 ? "tap a line" : undefined}>
-					Services · {services.length}
-				</SectionHeader>
+				<SectionHeader>Services · {services.length}</SectionHeader>
 				{services.length > 0 ? (
 					services.map((service) => (
 						<OrderServiceRow

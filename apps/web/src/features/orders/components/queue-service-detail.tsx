@@ -262,7 +262,7 @@ export function QueueServiceDetail({
 				<section className="grid gap-4 border border-border bg-background">
 					<div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-4 lg:px-5">
 						<div className="grid gap-1">
-							<p className="text-xs font-medium uppercase tracking-[0.28em] text-muted-foreground">
+							<p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
 								Photos
 							</p>
 						</div>

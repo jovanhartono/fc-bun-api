@@ -196,7 +196,7 @@ export const DataTable = <TData extends RowData>({
 													) : null}
 													<span
 														className={cn(
-															"font-medium font-mono text-[10px] text-muted-foreground uppercase tracking-[0.16em]",
+															"font-medium font-mono text-[10px] text-muted-foreground uppercase tracking-[0.18em]",
 															mobileCard?.className,
 														)}
 													>
@@ -293,7 +293,7 @@ export const DataTable = <TData extends RowData>({
 											>
 												<dt
 													className={cn(
-														"font-medium font-mono text-[10px] text-muted-foreground uppercase tracking-[0.16em]",
+														"font-medium font-mono text-[10px] text-muted-foreground uppercase tracking-[0.18em]",
 														mobileCard?.labelClassName,
 													)}
 												>
@@ -336,7 +336,7 @@ export const DataTable = <TData extends RowData>({
 							return (
 								<TableHead
 									key={header.id}
-									className="sticky top-0 z-10 h-9 bg-muted font-medium font-mono text-[10px] text-muted-foreground uppercase tracking-[0.14em]"
+									className="sticky top-0 z-10 h-9 bg-muted font-medium font-mono text-[10px] text-muted-foreground uppercase tracking-[0.18em]"
 								>
 									{header.isPlaceholder ? null : canSort ? (
 										<button
@@ -381,7 +381,7 @@ export const DataTable = <TData extends RowData>({
 					<TableRow>
 						<TableCell
 							colSpan={colSpan}
-							className="h-20 text-center font-medium font-mono text-[11px] text-muted-foreground uppercase tracking-[0.16em] md:h-24"
+							className="h-20 text-center font-medium font-mono text-[11px] text-muted-foreground uppercase tracking-[0.18em] md:h-24"
 						>
 							Loading…
 						</TableCell>
@@ -400,7 +400,7 @@ export const DataTable = <TData extends RowData>({
 					<TableRow>
 						<TableCell
 							colSpan={colSpan}
-							className="h-20 text-center font-medium font-mono text-[11px] text-muted-foreground uppercase tracking-[0.16em] md:h-24"
+							className="h-20 text-center font-medium font-mono text-[11px] text-muted-foreground uppercase tracking-[0.18em] md:h-24"
 						>
 							{emptyMessage}
 						</TableCell>
