@@ -1,5 +1,5 @@
 import { CalendarBlankIcon, XIcon } from "@phosphor-icons/react";
-import { format, parseISO, startOfToday } from "date-fns";
+import dayjs from "dayjs";
 import { useEffect, useMemo, useState } from "react";
 import type { DateRange, Matcher } from "react-day-picker";
 import { Button } from "@/components/ui/button";
@@ -11,8 +11,8 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
-const DISPLAY_FORMAT = "MMM d, yyyy";
-const WIRE_FORMAT = "yyyy-MM-dd";
+const DISPLAY_FORMAT = "MMM D, YYYY";
+const WIRE_FORMAT = "YYYY-MM-DD";
 
 interface DatePickerProps {
 	id?: string;
@@ -36,15 +36,15 @@ export const DatePicker = ({
 	className,
 }: DatePickerProps) => {
 	const [isOpen, setIsOpen] = useState(false);
-	const selected = value ? parseISO(value) : undefined;
+	const selected = value ? dayjs(value).toDate() : undefined;
 
 	const disabledMatchers = useMemo<Matcher[] | undefined>(() => {
 		const matchers: Matcher[] = [];
 		if (max) {
-			matchers.push({ after: parseISO(max) });
+			matchers.push({ after: dayjs(max).toDate() });
 		}
 		if (min) {
-			matchers.push({ before: parseISO(min) });
+			matchers.push({ before: dayjs(min).toDate() });
 		}
 		return matchers.length > 0 ? matchers : undefined;
 	}, [min, max]);
@@ -68,7 +68,7 @@ export const DatePicker = ({
 				}
 			>
 				<span className="truncate">
-					{value ? format(selected as Date, DISPLAY_FORMAT) : placeholder}
+					{value ? dayjs(value).format(DISPLAY_FORMAT) : placeholder}
 				</span>
 			</PopoverTrigger>
 			<PopoverContent align="start" className="w-auto p-0">
@@ -78,7 +78,7 @@ export const DatePicker = ({
 					defaultMonth={selected}
 					disabled={disabledMatchers}
 					onSelect={(date) => {
-						onChange(date ? format(date, WIRE_FORMAT) : undefined);
+						onChange(date ? dayjs(date).format(WIRE_FORMAT) : undefined);
 						setIsOpen(false);
 					}}
 				/>
@@ -119,8 +119,8 @@ export const DateRangePicker = ({
 			return undefined;
 		}
 		return {
-			from: from ? parseISO(from) : undefined,
-			to: to ? parseISO(to) : undefined,
+			from: from ? dayjs(from).toDate() : undefined,
+			to: to ? dayjs(to).toDate() : undefined,
 		};
 	}, [from, to]);
 
@@ -138,13 +138,13 @@ export const DateRangePicker = ({
 
 	const label = (() => {
 		if (displayRange?.from && displayRange?.to) {
-			return `${format(displayRange.from, DISPLAY_FORMAT)} - ${format(displayRange.to, DISPLAY_FORMAT)}`;
+			return `${dayjs(displayRange.from).format(DISPLAY_FORMAT)} - ${dayjs(displayRange.to).format(DISPLAY_FORMAT)}`;
 		}
 		if (displayRange?.from) {
-			return format(displayRange.from, DISPLAY_FORMAT);
+			return dayjs(displayRange.from).format(DISPLAY_FORMAT);
 		}
 		if (displayRange?.to) {
-			return format(displayRange.to, DISPLAY_FORMAT);
+			return dayjs(displayRange.to).format(DISPLAY_FORMAT);
 		}
 		return placeholder;
 	})();
@@ -177,7 +177,7 @@ export const DateRangePicker = ({
 					defaultMonth={displayRange?.from}
 					selected={displayRange}
 					numberOfMonths={numberOfMonths}
-					disabled={{ after: startOfToday() }}
+					disabled={{ after: dayjs().startOf("day").toDate() }}
 					onSelect={(range) => {
 						setDraftRange(range);
 						if (commitOnComplete && !(range?.from && range?.to)) {
@@ -187,8 +187,10 @@ export const DateRangePicker = ({
 							return;
 						}
 						onChange({
-							from: range?.from ? format(range.from, WIRE_FORMAT) : undefined,
-							to: range?.to ? format(range.to, WIRE_FORMAT) : undefined,
+							from: range?.from
+								? dayjs(range.from).format(WIRE_FORMAT)
+								: undefined,
+							to: range?.to ? dayjs(range.to).format(WIRE_FORMAT) : undefined,
 						});
 					}}
 				/>
