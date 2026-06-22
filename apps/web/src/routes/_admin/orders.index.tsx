@@ -176,21 +176,18 @@ function OrdersPage() {
 					mobileCard: {
 						slot: "title",
 					},
-					headerClassName: "left-0 z-20 border-border border-r",
-					cellClassName:
-						"sticky left-0 z-10 border-border border-r bg-background",
 				},
 				cell: ({ row }) => (
 					<div className="flex flex-col gap-0.5">
 						<Link
 							to="/orders/$orderId"
 							params={{ orderId: String(row.original.id) }}
-							className="font-mono font-semibold text-foreground underline underline-offset-4 md:font-normal"
+							className="font-mono font-semibold"
 						>
 							{row.original.code}
 						</Link>
 						<span className="font-mono font-normal text-[11px] text-muted-foreground tabular-nums">
-							{dayjs(row.original.created_at).format("DD MMM")}
+							{row.original.store_name}
 						</span>
 					</div>
 				),
@@ -204,7 +201,7 @@ function OrdersPage() {
 					},
 				},
 				cell: ({ row }) => (
-					<span className="font-mono">{row.original.store_code}</span>
+					<span>{dayjs(row.original.created_at).format("DD MMM HH:mm")}</span>
 				),
 			},
 			{
@@ -213,27 +210,14 @@ function OrdersPage() {
 				meta: {
 					mobileCard: {
 						label: "Customer",
+						className: "col-span-2",
 						valueClassName: "truncate",
 					},
 				},
 			},
 			{
-				id: "items",
-				header: "Items",
-				meta: {
-					mobileCard: {
-						label: "Items",
-					},
-				},
-				cell: ({ row }) => (
-					<span className="font-mono tabular-nums">
-						{row.original.fulfillment.service_total_count}
-					</span>
-				),
-			},
-			{
 				accessorKey: "status",
-				header: "Status",
+				header: "Fulfillment",
 				meta: {
 					mobileCard: {
 						slot: "badges",
