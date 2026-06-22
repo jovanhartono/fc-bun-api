@@ -1,4 +1,4 @@
-import { CrosshairSimpleIcon, PlusIcon } from "@phosphor-icons/react";
+import { CrosshairSimpleIcon } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -176,29 +176,23 @@ function OrdersPage() {
 					mobileCard: {
 						slot: "title",
 					},
+					headerClassName: "left-0 z-20 border-border border-r",
+					cellClassName:
+						"sticky left-0 z-10 border-border border-r bg-background",
 				},
 				cell: ({ row }) => (
-					<Link
-						to="/orders/$orderId"
-						params={{ orderId: String(row.original.id) }}
-						className="font-mono font-semibold text-foreground underline underline-offset-4 md:font-normal"
-					>
-						{row.original.code}
-					</Link>
-				),
-			},
-			{
-				id: "created",
-				header: "Created",
-				meta: {
-					mobileCard: {
-						slot: "eyebrow",
-					},
-				},
-				cell: ({ row }) => (
-					<span className="font-mono text-muted-foreground tabular-nums">
-						{dayjs(row.original.created_at).format("D MMM HH:mm")}
-					</span>
+					<div className="flex flex-col gap-0.5">
+						<Link
+							to="/orders/$orderId"
+							params={{ orderId: String(row.original.id) }}
+							className="font-mono font-semibold text-foreground underline underline-offset-4 md:font-normal"
+						>
+							{row.original.code}
+						</Link>
+						<span className="font-mono font-normal text-[11px] text-muted-foreground tabular-nums">
+							{dayjs(row.original.created_at).format("DD MMM")}
+						</span>
+					</div>
 				),
 			},
 			{
@@ -298,32 +292,18 @@ function OrdersPage() {
 		[],
 	);
 
-	const handleAddOrder = () => {
-		void navigate({
-			to: "/transactions",
-		});
-	};
-
 	return (
 		<>
 			<PageHeader
 				title="Orders"
 				actions={
-					<>
-						<Button
-							variant="outline"
-							onClick={handleOpenPickupRadar}
-							icon={<CrosshairSimpleIcon className="size-4" />}
-						>
-							Pickup Radar
-						</Button>
-						<Button
-							onClick={handleAddOrder}
-							icon={<PlusIcon className="size-4" />}
-						>
-							Add Order
-						</Button>
-					</>
+					<Button
+						variant="outline"
+						onClick={handleOpenPickupRadar}
+						icon={<CrosshairSimpleIcon className="size-4" />}
+					>
+						Pickup Radar
+					</Button>
 				}
 			/>
 			<div className="grid gap-4">
