@@ -38,18 +38,20 @@ import { useSheet } from "@/stores/sheet-store";
 
 const ordersSearchSchema = z.object({
 	page: z.coerce.number().int().positive().catch(1),
-	search: z.string().trim().min(1).max(100).optional(),
-	storeId: z.coerce.number().int().positive().optional(),
-	status: z.enum(ORDER_STATUS_VALUES).optional(),
-	paymentStatus: z.enum(PAYMENT_STATUS_VALUES).optional(),
+	search: z.string().trim().min(1).max(100).optional().catch(undefined),
+	storeId: z.coerce.number().int().positive().optional().catch(undefined),
+	status: z.enum(ORDER_STATUS_VALUES).optional().catch(undefined),
+	paymentStatus: z.enum(PAYMENT_STATUS_VALUES).optional().catch(undefined),
 	dateFrom: z
 		.string()
 		.regex(/^\d{4}-\d{2}-\d{2}$/)
-		.optional(),
+		.optional()
+		.catch(undefined),
 	dateTo: z
 		.string()
 		.regex(/^\d{4}-\d{2}-\d{2}$/)
-		.optional(),
+		.optional()
+		.catch(undefined),
 });
 
 const PAGE_SIZE = 25;
