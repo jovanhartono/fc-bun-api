@@ -2,19 +2,23 @@ import { CrosshairSimpleIcon, PlusIcon } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
+import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo } from "react";
 import { z } from "zod";
 import { DataTable } from "@/components/data-table";
-import { DebouncedSearchInput } from "@/components/debounced-search-input";
 import { PageHeader } from "@/components/page-header";
 import { TablePagination } from "@/components/table-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { DateRangePicker } from "@/components/ui/date-picker";
+import {
+	ORDER_STATUS_VALUES,
+	OrderFilters,
+	type OrderFilterValues,
+	PAYMENT_STATUS_VALUES,
+} from "@/features/orders/components/order-filters";
 import { PickupRadar } from "@/features/orders/components/pickup-radar";
-import { StoreAutocomplete } from "@/features/orders/components/store-autocomplete";
-import type { Order } from "@/lib/api";
+import type { FetchOrdersQuery, Order } from "@/lib/api";
 import {
 	meQueryOptions,
 	ordersPageQueryOptions,
@@ -32,17 +36,12 @@ import { formatIDRCurrency } from "@/shared/utils";
 import { getCurrentUser } from "@/stores/auth-store";
 import { useSheet } from "@/stores/sheet-store";
 
-const orderCreatedFormatter = new Intl.DateTimeFormat("en-ID", {
-	day: "2-digit",
-	month: "short",
-	hour: "2-digit",
-	minute: "2-digit",
-});
-
 const ordersSearchSchema = z.object({
 	page: z.coerce.number().int().positive().catch(1),
 	search: z.string().trim().min(1).max(100).optional(),
 	storeId: z.coerce.number().int().positive().optional(),
+	status: z.enum(ORDER_STATUS_VALUES).optional(),
+	paymentStatus: z.enum(PAYMENT_STATUS_VALUES).optional(),
 	dateFrom: z
 		.string()
 		.regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -54,6 +53,22 @@ const ordersSearchSchema = z.object({
 });
 
 const PAGE_SIZE = 25;
+
+function buildOrdersListParams(
+	filters: OrderFilterValues & { page: number },
+	storeId?: number,
+): FetchOrdersQuery {
+	return {
+		limit: PAGE_SIZE,
+		offset: (filters.page - 1) * PAGE_SIZE,
+		...(filters.search ? { search: filters.search } : {}),
+		...(storeId !== undefined ? { store_id: storeId } : {}),
+		...(filters.status ? { status: filters.status } : {}),
+		...(filters.paymentStatus ? { payment_status: filters.paymentStatus } : {}),
+		...(filters.dateFrom ? { date_from: filters.dateFrom } : {}),
+		...(filters.dateTo ? { date_to: filters.dateTo } : {}),
+	};
+}
 
 export const Route = createFileRoute("/_admin/orders/")({
 	validateSearch: (search) => ordersSearchSchema.parse(search),
@@ -69,24 +84,7 @@ export const Route = createFileRoute("/_admin/orders/")({
 
 		if (me?.role === "admin" || deps.storeId !== undefined) {
 			await context.queryClient.ensureQueryData(
-				ordersPageQueryOptions(
-					deps.storeId !== undefined
-						? {
-								limit: PAGE_SIZE,
-								offset: (deps.page - 1) * PAGE_SIZE,
-								...(deps.search ? { search: deps.search } : {}),
-								store_id: deps.storeId,
-								...(deps.dateFrom ? { date_from: deps.dateFrom } : {}),
-								...(deps.dateTo ? { date_to: deps.dateTo } : {}),
-							}
-						: {
-								limit: PAGE_SIZE,
-								offset: (deps.page - 1) * PAGE_SIZE,
-								...(deps.search ? { search: deps.search } : {}),
-								...(deps.dateFrom ? { date_from: deps.dateFrom } : {}),
-								...(deps.dateTo ? { date_to: deps.dateTo } : {}),
-							},
-				),
+				ordersPageQueryOptions(buildOrdersListParams(deps, deps.storeId)),
 			);
 		}
 	},
@@ -130,48 +128,22 @@ function OrdersPage() {
 		}
 	}, [currentUser, navigate, role, search.storeId, userStoreIds]);
 
-	const handleSearchChange = useCallback(
-		(next: string) => {
+	const handleFilterChange = useCallback(
+		(patch: Partial<OrderFilterValues>) => {
 			void navigate({
-				search: (prev) => ({
-					...prev,
-					page: 1,
-					search: next || undefined,
-				}),
+				search: (prev) => ({ ...prev, page: 1, ...patch }),
 			});
 		},
 		[navigate],
 	);
 
 	const parsedStoreId = search.storeId;
+	// Admin and non-admin build the same params once a store is chosen; the only
+	// gap — non-admin with no store — never runs (gated by `enabled` below).
 	const orderQuery =
-		role === "admin"
-			? parsedStoreId
-				? {
-						limit: PAGE_SIZE,
-						offset: (search.page - 1) * PAGE_SIZE,
-						...(search.search ? { search: search.search } : {}),
-						store_id: parsedStoreId,
-						...(search.dateFrom ? { date_from: search.dateFrom } : {}),
-						...(search.dateTo ? { date_to: search.dateTo } : {}),
-					}
-				: {
-						limit: PAGE_SIZE,
-						offset: (search.page - 1) * PAGE_SIZE,
-						...(search.search ? { search: search.search } : {}),
-						...(search.dateFrom ? { date_from: search.dateFrom } : {}),
-						...(search.dateTo ? { date_to: search.dateTo } : {}),
-					}
-			: parsedStoreId
-				? {
-						limit: PAGE_SIZE,
-						offset: (search.page - 1) * PAGE_SIZE,
-						...(search.search ? { search: search.search } : {}),
-						store_id: parsedStoreId,
-						...(search.dateFrom ? { date_from: search.dateFrom } : {}),
-						...(search.dateTo ? { date_to: search.dateTo } : {}),
-					}
-				: undefined;
+		role !== "admin" && parsedStoreId === undefined
+			? undefined
+			: buildOrdersListParams(search, parsedStoreId);
 
 	const ordersQuery = useQuery({
 		...ordersPageQueryOptions(orderQuery),
@@ -222,8 +194,8 @@ function OrdersPage() {
 					},
 				},
 				cell: ({ row }) => (
-					<span className="font-mono font-medium text-muted-foreground text-xs tabular-nums">
-						{orderCreatedFormatter.format(new Date(row.original.created_at))}
+					<span className="font-mono text-muted-foreground tabular-nums">
+						{dayjs(row.original.created_at).format("D MMM HH:mm")}
 					</span>
 				),
 			},
@@ -236,9 +208,7 @@ function OrdersPage() {
 					},
 				},
 				cell: ({ row }) => (
-					<span className="font-mono font-medium text-foreground">
-						{row.original.store_code}
-					</span>
+					<span className="font-mono">{row.original.store_code}</span>
 				),
 			},
 			{
@@ -357,60 +327,12 @@ function OrdersPage() {
 			<div className="grid gap-4">
 				<Card>
 					<CardContent>
-						<div className="mb-4 flex flex-wrap items-center gap-2">
-							<DebouncedSearchInput
-								id="orders-search"
-								value={search.search ?? ""}
-								onDebouncedChange={handleSearchChange}
-								placeholder="Order ID, customer, phone"
-								ariaLabel="Search orders"
-								className="w-full sm:w-72"
-							/>
-							<StoreAutocomplete
-								id="orders-store-filter"
-								hideLabel
-								value={search.storeId?.toString() ?? ""}
-								onValueChange={(value) => {
-									void navigate({
-										search: (prev) => ({
-											...prev,
-											page: 1,
-											storeId: value ? Number(value) : undefined,
-										}),
-									});
-								}}
-								allowedStoreIds={role === "admin" ? undefined : userStoreIds}
-								allOptionLabel={role === "admin" ? "All stores" : undefined}
-								placeholder="Filter by store"
-								triggerClassName="h-10 w-max min-w-48 text-sm"
-							/>
-							<DateRangePicker
-								resetOnSelect
-								commitOnComplete
-								from={search.dateFrom}
-								to={search.dateTo}
-								onChange={({ from, to }) => {
-									void navigate({
-										search: (prev) => ({
-											...prev,
-											page: 1,
-											dateFrom: from,
-											dateTo: to,
-										}),
-									});
-								}}
-								onClear={() => {
-									void navigate({
-										search: (prev) => ({
-											...prev,
-											page: 1,
-											dateFrom: undefined,
-											dateTo: undefined,
-										}),
-									});
-								}}
-							/>
-						</div>
+						<OrderFilters
+							values={search}
+							role={role}
+							userStoreIds={userStoreIds}
+							onChange={handleFilterChange}
+						/>
 						{hasNoStoreAssignment ? (
 							<div className="border border-dashed border-border bg-muted/20 px-6 py-10 text-center font-medium font-mono text-[11px] text-muted-foreground uppercase tracking-[0.18em]">
 								No store assigned

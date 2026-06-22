@@ -390,7 +390,7 @@ export const DataTable = <TData extends RowData>({
 					table.getRowModel().rows.map((row) => (
 						<TableRow key={row.id} className="border-border/60">
 							{row.getVisibleCells().map((cell) => (
-								<TableCell key={cell.id}>
+								<TableCell key={cell.id} className="py-3">
 									{flexRender(cell.column.columnDef.cell, cell.getContext())}
 								</TableCell>
 							))}

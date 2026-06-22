@@ -134,6 +134,7 @@ export const DateRangePicker = ({
 
 	const displayRange = draftRange ?? selectedFromProps;
 	const hasValue = Boolean(from || to);
+	const showClear = Boolean(onClear) && hasValue;
 
 	const label = (() => {
 		if (displayRange?.from && displayRange?.to) {
@@ -160,6 +161,7 @@ export const DateRangePicker = ({
 						className={cn(
 							"h-10 justify-start font-normal",
 							!hasValue && "text-muted-foreground",
+							showClear && "pr-9",
 							className,
 						)}
 						icon={<CalendarBlankIcon className="size-4" />}
@@ -199,18 +201,17 @@ export const DateRangePicker = ({
 	}
 
 	return (
-		<div className="flex flex-wrap items-center gap-2">
+		<div className="relative inline-flex w-fit">
 			{picker}
-			{hasValue ? (
-				<Button
+			{showClear ? (
+				<button
 					type="button"
-					variant="outline"
-					className="h-10"
-					icon={<XIcon className="size-4" />}
+					aria-label="Clear date range"
 					onClick={onClear}
+					className="absolute inset-y-0 right-0 flex w-9 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
 				>
-					Clear
-				</Button>
+					<XIcon className="size-4" />
+				</button>
 			) : null}
 		</div>
 	);
