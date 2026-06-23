@@ -1,23 +1,28 @@
-import { CameraIcon, ReceiptIcon, StorefrontIcon } from "@phosphor-icons/react";
+import {
+	CameraIcon,
+	CheckCircleIcon,
+	CheckIcon,
+	EyeIcon,
+	ReceiptIcon,
+	StorefrontIcon,
+	WarningIcon,
+} from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { Controller, useFormContext, useWatch } from "react-hook-form";
 import { CurrencyInput } from "@/components/form/currency-input";
-import { SelectField } from "@/components/form/select-field";
 import { Button } from "@/components/ui/button";
 import type { ComboboxOption } from "@/components/ui/combobox";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
-import { Textarea } from "@/components/ui/textarea";
 import { CampaignAutocomplete } from "@/features/orders/components/campaign-autocomplete";
+import { PhotoLightbox } from "@/features/orders/components/photo-lightbox";
 import { SinglePhotoCaptureDialog } from "@/features/orders/components/photo-upload-dialog";
 import type { TransactionDraftValues } from "@/features/transactions/cart/cart";
 import { CampaignSummaryCard } from "@/features/transactions/components/campaign-summary-card";
 import { useCheckoutPricing } from "@/features/transactions/hooks/useCheckoutPricing";
 import { useTransactionsPageContext } from "@/features/transactions/lib/transactions-context";
-import {
-	paymentMethodsQueryOptions,
-	usersPageQueryOptions,
-} from "@/lib/query-options";
+import { paymentMethodsQueryOptions } from "@/lib/query-options";
+import { cn } from "@/lib/utils";
 import { formatIDRCurrency } from "@/shared/utils";
 import { useTransactionsPageStore } from "@/stores/transactions-store";
 
@@ -25,15 +30,10 @@ export const CheckoutPaymentStep = () => {
 	const { visibleStores } = useTransactionsPageContext();
 	const { subtotal, selectedCampaigns, pricing } = useCheckoutPricing();
 	const form = useFormContext<TransactionDraftValues>();
-	const [paymentStatus = "unpaid", selectedStoreId = ""] = useWatch<
-		TransactionDraftValues,
-		["paymentStatus", "selectedStoreId"]
-	>({ name: ["paymentStatus", "selectedStoreId"] });
+	const selectedStoreId =
+		useWatch({ control: form.control, name: "selectedStoreId" }) ?? "";
 
 	const paymentMethodsQuery = useQuery(paymentMethodsQueryOptions());
-	const couriersQuery = useQuery(
-		usersPageQueryOptions({ role: "courier", is_active: true }),
-	);
 
 	const paymentMethodOptions = useMemo<ComboboxOption[]>(
 		() =>
@@ -42,17 +42,6 @@ export const CheckoutPaymentStep = () => {
 				label: paymentMethod.name,
 			})),
 		[paymentMethodsQuery.data],
-	);
-
-	const courierOptions = useMemo<ComboboxOption[]>(
-		() => [
-			{ value: "none", label: "Walk-in (no courier)" },
-			...(couriersQuery.data?.items ?? []).map((courier) => ({
-				value: String(courier.id),
-				label: courier.name,
-			})),
-		],
-		[couriersQuery.data],
 	);
 
 	const selectedStoreNumber =
@@ -81,63 +70,6 @@ export const CheckoutPaymentStep = () => {
 				)}
 			/>
 
-			<Controller
-				name="paymentStatus"
-				control={form.control}
-				render={({ field, fieldState }) => (
-					<Field data-invalid={fieldState.invalid}>
-						<FieldLabel>Payment Status</FieldLabel>
-						<div className="grid grid-cols-2 gap-2">
-							<Button
-								type="button"
-								variant={field.value === "unpaid" ? "default" : "outline"}
-								className="h-11"
-								onClick={() => {
-									field.onChange("unpaid");
-									// A method is "how money arrived" — an unpaid order has none.
-									form.setValue("selectedPaymentMethodId", "");
-								}}
-							>
-								Unpaid
-							</Button>
-							<Button
-								type="button"
-								variant={field.value === "paid" ? "default" : "outline"}
-								className="h-11"
-								onClick={() => field.onChange("paid")}
-							>
-								Paid
-							</Button>
-						</div>
-						<FieldError errors={[fieldState.error]} />
-					</Field>
-				)}
-			/>
-
-			{paymentStatus === "paid" ? (
-				<Controller
-					name="selectedPaymentMethodId"
-					control={form.control}
-					render={({ field, fieldState }) => (
-						<Field data-invalid={fieldState.invalid}>
-							<FieldLabel htmlFor="transaction-payment-method">
-								Payment Method
-							</FieldLabel>
-							<SelectField
-								id="transaction-payment-method"
-								items={paymentMethodOptions}
-								value={field.value}
-								onValueChange={field.onChange}
-								placeholder="Select payment method"
-								size="lg"
-								className="w-full text-sm"
-							/>
-							<FieldError errors={[fieldState.error]} />
-						</Field>
-					)}
-				/>
-			) : null}
-
 			{selectedCampaigns.length > 0 ? (
 				<div className="grid gap-2">
 					{selectedCampaigns.map((campaign) => (
@@ -165,41 +97,30 @@ export const CheckoutPaymentStep = () => {
 			/>
 
 			<Controller
-				name="selectedCourierId"
+				name="selectedPaymentMethodId"
 				control={form.control}
 				render={({ field, fieldState }) => (
 					<Field data-invalid={fieldState.invalid}>
-						<FieldLabel htmlFor="transaction-courier">
-							Collected by courier
-						</FieldLabel>
-						<SelectField
-							id="transaction-courier"
-							items={courierOptions}
-							value={field.value || "none"}
-							onValueChange={(value) =>
-								field.onChange(value === "none" ? "" : value)
-							}
-							placeholder="Walk-in (no courier)"
-							size="lg"
-							className="w-full text-sm"
-						/>
-						<FieldError errors={[fieldState.error]} />
-					</Field>
-				)}
-			/>
-
-			<Controller
-				name="notes"
-				control={form.control}
-				render={({ field, fieldState }) => (
-					<Field data-invalid={fieldState.invalid}>
-						<FieldLabel htmlFor="transaction-notes">Notes</FieldLabel>
-						<Textarea
-							id="transaction-notes"
-							value={field.value}
-							onChange={field.onChange}
-							placeholder="Add notes"
-						/>
+						<FieldLabel>Payment</FieldLabel>
+						{/* Method = "how the money arrived". Picking one marks the order
+						    paid; "Pay later" (empty) leaves it unpaid. No separate
+						    paid/unpaid toggle — the selection carries both. */}
+						<div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+							<PaymentMethodTile
+								label="Pay later"
+								hint="Unpaid"
+								isSelected={field.value === ""}
+								onSelect={() => field.onChange("")}
+							/>
+							{paymentMethodOptions.map((option) => (
+								<PaymentMethodTile
+									key={option.value}
+									label={option.label}
+									isSelected={field.value === option.value}
+									onSelect={() => field.onChange(option.value)}
+								/>
+							))}
+						</div>
 						<FieldError errors={[fieldState.error]} />
 					</Field>
 				)}
@@ -230,14 +151,19 @@ export const CheckoutPaymentStep = () => {
 						<span className="text-muted-foreground">
 							{campaign.code} ({campaign.name})
 						</span>
-						<span className="font-medium">
+						<span className="font-medium text-destructive">
 							-{formatIDRCurrency(String(amount))}
 						</span>
 					</div>
 				))}
 				<div className="flex items-center justify-between gap-3 text-sm">
 					<span className="text-muted-foreground">Manual Discount</span>
-					<span className="font-medium">
+					<span
+						className={cn(
+							"font-medium",
+							pricing.manualDiscount > 0 && "text-destructive",
+						)}
+					>
 						-{formatIDRCurrency(String(pricing.manualDiscount))}
 					</span>
 				</div>
@@ -252,12 +178,56 @@ export const CheckoutPaymentStep = () => {
 	);
 };
 
+interface PaymentMethodTileProps {
+	label: string;
+	hint?: string;
+	isSelected: boolean;
+	onSelect: () => void;
+}
+
+const PaymentMethodTile = ({
+	label,
+	hint,
+	isSelected,
+	onSelect,
+}: PaymentMethodTileProps) => (
+	<button
+		type="button"
+		aria-pressed={isSelected}
+		onClick={onSelect}
+		className={cn(
+			"flex min-h-12 items-center justify-between gap-2 border px-3 py-2 text-left outline-none transition active:scale-[0.97] focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50",
+			isSelected
+				? "border-foreground bg-foreground text-background"
+				: "border-border/70 text-foreground/80 hover:border-border hover:bg-muted/40",
+		)}
+	>
+		<span className="flex flex-col">
+			<span className="text-sm font-medium">{label}</span>
+			{hint ? (
+				<span
+					className={cn(
+						"text-[11px]",
+						isSelected ? "text-background/70" : "text-muted-foreground",
+					)}
+				>
+					{hint}
+				</span>
+			) : null}
+		</span>
+		{isSelected ? (
+			<CheckIcon className="size-4 shrink-0" weight="bold" />
+		) : null}
+	</button>
+);
+
 const CheckoutDropoffPhotoField = () => {
 	const dropoffPhoto = useTransactionsPageStore((state) => state.dropoffPhoto);
 	const setDropoffPhoto = useTransactionsPageStore(
 		(state) => state.setDropoffPhoto,
 	);
 	const [isDialogOpen, setIsDialogOpen] = useState(false);
+	const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 	const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
 	useEffect(() => {
@@ -270,34 +240,77 @@ const CheckoutDropoffPhotoField = () => {
 		return () => URL.revokeObjectURL(url);
 	}, [dropoffPhoto]);
 
+	const hasPhoto = !!previewUrl;
+
 	return (
-		<Field>
-			<FieldLabel>
-				Drop-off photo <span className="text-muted-foreground">(required)</span>
-			</FieldLabel>
-			<div className="aspect-4/3 w-full overflow-hidden border bg-muted sm:aspect-16/10">
-				{previewUrl ? (
-					<img
-						src={previewUrl}
-						alt="Drop-off preview"
-						className="h-full w-full object-cover"
-					/>
-				) : (
-					<div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center text-muted-foreground">
-						<CameraIcon className="size-8 opacity-50" />
-						<p className="text-sm">Photo of the items at intake</p>
+		<>
+			{/* Status section, not a preview: amber = required-but-missing,
+			    emerald = captured. Color carries the state, so no separate label. */}
+			<div
+				className={cn(
+					"flex items-center justify-between gap-3 border p-3 text-sm",
+					hasPhoto
+						? "border-emerald-300/60 bg-emerald-50/70 dark:border-emerald-800 dark:bg-emerald-950/30"
+						: "border-amber-300/70 bg-amber-50/70 dark:border-amber-800 dark:bg-amber-950/30",
+				)}
+			>
+				<div className="flex items-center gap-2">
+					{hasPhoto ? (
+						<CheckCircleIcon
+							className="size-5 shrink-0 text-emerald-600 dark:text-emerald-400"
+							weight="fill"
+						/>
+					) : (
+						<WarningIcon
+							className="size-5 shrink-0 text-amber-600 dark:text-amber-400"
+							weight="fill"
+						/>
+					)}
+					<div>
+						<p className="font-medium">Drop-off photo</p>
+						<p className="text-xs text-muted-foreground">
+							{hasPhoto ? "Captured" : "Required · capture items at intake"}
+						</p>
 					</div>
+				</div>
+
+				{hasPhoto ? (
+					<div className="flex items-center gap-2">
+						<Button
+							type="button"
+							variant="outline"
+							size="sm"
+							className="h-9 shrink-0"
+							icon={<EyeIcon className="size-4" />}
+							onClick={() => setIsLightboxOpen(true)}
+						>
+							Preview photo
+						</Button>
+						<Button
+							type="button"
+							variant="outline"
+							size="sm"
+							className="h-9 shrink-0"
+							icon={<CameraIcon className="size-4" />}
+							onClick={() => setIsDialogOpen(true)}
+						>
+							Retake
+						</Button>
+					</div>
+				) : (
+					<Button
+						type="button"
+						variant="outline"
+						size="sm"
+						className="h-9 shrink-0"
+						icon={<CameraIcon className="size-4" />}
+						onClick={() => setIsDialogOpen(true)}
+					>
+						Take photo
+					</Button>
 				)}
 			</div>
-			<Button
-				type="button"
-				variant="outline"
-				className="h-11 w-full"
-				icon={<CameraIcon className="size-4" />}
-				onClick={() => setIsDialogOpen(true)}
-			>
-				{dropoffPhoto ? "Replace photo" : "Add photo"}
-			</Button>
+
 			<SinglePhotoCaptureDialog
 				open={isDialogOpen}
 				onOpenChange={setIsDialogOpen}
@@ -305,6 +318,23 @@ const CheckoutDropoffPhotoField = () => {
 				badgeLabel="Drop-off"
 				onCapture={setDropoffPhoto}
 			/>
-		</Field>
+
+			{previewUrl ? (
+				<PhotoLightbox
+					open={isLightboxOpen}
+					onOpenChange={setIsLightboxOpen}
+					title="Drop-off photo"
+					items={[
+						{
+							id: "dropoff-preview",
+							image_url: previewUrl,
+							alt: "Drop-off photo",
+							created_at: "",
+							primaryLabel: "Drop-off photo",
+						},
+					]}
+				/>
+			) : null}
+		</>
 	);
 };

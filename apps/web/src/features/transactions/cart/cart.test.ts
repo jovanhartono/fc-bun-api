@@ -155,7 +155,6 @@ describe("toOrderPayload", () => {
 		selectedCampaignIds: ["3", "4"],
 		selectedPaymentMethodId: "",
 		selectedCourierId: "",
-		paymentStatus: "unpaid",
 		manualDiscount: "",
 		notes: "  ",
 		productCart: [productLine(1, 2)],
@@ -191,11 +190,10 @@ describe("toOrderPayload", () => {
 		});
 	});
 
-	test("carries payment method and manual discount when set", () => {
+	test("a selected payment method marks the order paid and carries discount", () => {
 		const payload = toOrderPayload({
 			...draft,
 			selectedPaymentMethodId: "9",
-			paymentStatus: "paid",
 			manualDiscount: "2500",
 		});
 		expect(payload.payment_method_id).toBe(9);

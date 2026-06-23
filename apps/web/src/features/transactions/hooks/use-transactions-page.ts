@@ -42,7 +42,6 @@ const transactionDraftSchema = z
 		selectedCampaignIds: z.array(z.string()),
 		selectedPaymentMethodId: z.string(),
 		selectedCourierId: z.string(),
-		paymentStatus: z.enum(["paid", "unpaid"]),
 		manualDiscount: z
 			.string()
 			.refine(
@@ -75,14 +74,6 @@ const transactionDraftSchema = z
 				code: "custom",
 				path: ["productCart"],
 				message: "Add at least one product or service to the cart.",
-			});
-		}
-
-		if (values.paymentStatus === "paid" && !values.selectedPaymentMethodId) {
-			ctx.addIssue({
-				code: "custom",
-				path: ["selectedPaymentMethodId"],
-				message: "Payment method is required for paid orders.",
 			});
 		}
 	});

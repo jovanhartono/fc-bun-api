@@ -92,9 +92,21 @@ export const CustomerFields = () => {
 				control={form.control}
 				render={({ field, fieldState }) => (
 					<Field data-invalid={fieldState.invalid}>
-						<FieldLabel htmlFor="customer-name" asterisk>
-							Name
-						</FieldLabel>
+						{/* Status lives in the label row, not below the input — the lookup
+						    resolves async, and inserting a line under the field shifted the
+						    whole cart (CLS). The label row has fixed height, so the badge
+						    toggles in place. */}
+						<div className="flex items-center justify-between gap-2">
+							<FieldLabel htmlFor="customer-name" asterisk>
+								Name
+							</FieldLabel>
+							{isReturning ? (
+								<span className="flex items-center gap-1 text-xs font-normal text-muted-foreground">
+									<CheckCircleIcon className="size-3.5" weight="fill" />
+									Existing customer
+								</span>
+							) : null}
+						</div>
 						<Input
 							id="customer-name"
 							className="h-11"
@@ -104,14 +116,7 @@ export const CustomerFields = () => {
 							aria-invalid={fieldState.invalid}
 							placeholder="e.g. Budi Santoso"
 						/>
-						{isReturning ? (
-							<p className="flex items-center gap-1 text-xs text-muted-foreground">
-								<CheckCircleIcon className="size-3.5" weight="fill" />
-								Existing customer
-							</p>
-						) : (
-							<FieldError errors={[fieldState.error]} />
-						)}
+						<FieldError errors={[fieldState.error]} />
 					</Field>
 				)}
 			/>

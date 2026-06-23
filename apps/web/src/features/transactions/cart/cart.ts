@@ -39,7 +39,6 @@ export type TransactionDraftValues = {
 	selectedCampaignIds: string[];
 	selectedPaymentMethodId: string;
 	selectedCourierId: string;
-	paymentStatus: CreateOrderPayload["payment_status"];
 	manualDiscount: string;
 	notes: string;
 	productCart: ProductCartLine[];
@@ -53,7 +52,6 @@ export const defaultDraftValues: TransactionDraftValues = {
 	selectedCampaignIds: [],
 	selectedPaymentMethodId: "",
 	selectedCourierId: "",
-	paymentStatus: "unpaid",
 	manualDiscount: "",
 	notes: "",
 	productCart: [],
@@ -170,7 +168,6 @@ export const toOrderPayload = ({
 	selectedCampaignIds,
 	selectedPaymentMethodId,
 	selectedCourierId,
-	paymentStatus,
 	manualDiscount,
 	notes,
 	productCart,
@@ -187,7 +184,8 @@ export const toOrderPayload = ({
 		? Number(selectedPaymentMethodId)
 		: undefined,
 	collected_by: selectedCourierId ? Number(selectedCourierId) : undefined,
-	payment_status: paymentStatus,
+	// A picked method means money arrived; no method means pay-later.
+	payment_status: selectedPaymentMethodId ? "paid" : "unpaid",
 	notes: notes.trim() || undefined,
 	products: productCart.map((line) => ({
 		id: line.id,

@@ -261,7 +261,10 @@ const PhotoUploadDialogBase = ({
 				}
 			}}
 		>
-			<DialogContent className="sm:max-w-2xl">
+			<DialogContent
+				className="z-[60] sm:max-w-2xl"
+				overlayClassName="z-[60] bg-black/40 supports-backdrop-filter:backdrop-blur-sm"
+			>
 				<DialogHeader>
 					<DialogTitle className="flex items-center justify-between gap-3 pr-8">
 						<span>{title}</span>

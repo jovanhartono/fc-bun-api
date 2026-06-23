@@ -1,15 +1,21 @@
 import { XIcon } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
-import { useFormContext } from "react-hook-form";
+import { Controller, useFormContext } from "react-hook-form";
+import { SelectField } from "@/components/form/select-field";
 import { Button } from "@/components/ui/button";
+import type { ComboboxOption } from "@/components/ui/combobox";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import type { TransactionDraftValues } from "@/features/transactions/cart/cart";
 import { useCart } from "@/features/transactions/cart/useCart";
 import { CustomerFields } from "@/features/transactions/components/customer-fields";
 import { getEntityCategoryName } from "@/features/transactions/lib/transactions";
-import { categoriesQueryOptions } from "@/lib/query-options";
+import {
+	categoriesQueryOptions,
+	usersPageQueryOptions,
+} from "@/lib/query-options";
 import { formatIDRCurrency } from "@/shared/utils";
 
 export const CheckoutCartStep = () => {
@@ -31,9 +37,46 @@ export const CheckoutCartStep = () => {
 		[categoriesQuery.data],
 	);
 
+	const couriersQuery = useQuery(
+		usersPageQueryOptions({ role: "courier", is_active: true }),
+	);
+	const courierOptions = useMemo<ComboboxOption[]>(
+		() => [
+			{ value: "none", label: "Walk-in (no courier)" },
+			...(couriersQuery.data?.items ?? []).map((courier) => ({
+				value: String(courier.id),
+				label: courier.name,
+			})),
+		],
+		[couriersQuery.data],
+	);
+
 	return (
 		<div className="grid gap-5">
 			<CustomerFields />
+			<Controller
+				name="selectedCourierId"
+				control={form.control}
+				render={({ field, fieldState }) => (
+					<Field data-invalid={fieldState.invalid}>
+						<FieldLabel htmlFor="transaction-courier">
+							Collected by courier
+						</FieldLabel>
+						<SelectField
+							id="transaction-courier"
+							items={courierOptions}
+							value={field.value || "none"}
+							onValueChange={(value) =>
+								field.onChange(value === "none" ? "" : value)
+							}
+							placeholder="Walk-in (no courier)"
+							size="lg"
+							className="w-full text-sm"
+						/>
+						<FieldError errors={[fieldState.error]} />
+					</Field>
+				)}
+			/>
 			<div className="grid gap-3">
 				{productRows.length === 0 && serviceRows.length === 0 ? (
 					<div className="border border-dashed border-border p-4 text-sm text-muted-foreground">
@@ -228,6 +271,23 @@ export const CheckoutCartStep = () => {
 					</div>
 				))}
 			</div>
+
+			<Controller
+				name="notes"
+				control={form.control}
+				render={({ field, fieldState }) => (
+					<Field data-invalid={fieldState.invalid}>
+						<FieldLabel htmlFor="transaction-notes">Notes</FieldLabel>
+						<Textarea
+							id="transaction-notes"
+							value={field.value}
+							onChange={field.onChange}
+							placeholder="Add notes"
+						/>
+						<FieldError errors={[fieldState.error]} />
+					</Field>
+				)}
+			/>
 		</div>
 	);
 };

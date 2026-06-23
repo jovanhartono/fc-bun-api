@@ -1,4 +1,4 @@
-import { ShoppingCartIcon, TrashIcon } from "@phosphor-icons/react";
+import { TrashIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { useWatch } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import {
 } from "@/features/transactions/components/checkout-footer";
 import { CheckoutPaymentStep } from "@/features/transactions/components/checkout-payment-step";
 import { isValidPhoneNumber } from "@/lib/phone-number";
+import { cn } from "@/lib/utils";
 
 // Two-step POS checkout: Cart → Payment. Body scrolls; the total + primary
 // action live in a pinned footer so they stay reachable on the iPad sheet. Step
@@ -36,9 +37,32 @@ export const TransactionsCheckout = () => {
 			<div className="min-h-0 flex-1 overflow-y-auto">
 				<div className="grid gap-5 p-4">
 					<div className="flex items-center justify-between gap-3">
-						<div className="flex items-center gap-2 text-sm font-medium">
-							<ShoppingCartIcon className="size-4" />
-							Cart Summary
+						<div className="inline-flex gap-1 border border-border/70 bg-background/80 p-1">
+							<button
+								type="button"
+								className={cn(
+									"flex h-8 items-center justify-center border px-4 text-xs font-medium outline-none transition focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50",
+									step === "cart"
+										? "border-foreground bg-foreground text-background"
+										: "border-transparent text-foreground/60 hover:bg-muted/40",
+								)}
+								onClick={() => setStep("cart")}
+							>
+								Cart
+							</button>
+							<button
+								type="button"
+								disabled={count === 0 || !isCustomerReady}
+								className={cn(
+									"flex h-8 items-center justify-center border px-4 text-xs font-medium outline-none transition focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-40",
+									step === "payment"
+										? "border-foreground bg-foreground text-background"
+										: "border-transparent text-foreground/60 hover:bg-muted/40",
+								)}
+								onClick={() => setStep("payment")}
+							>
+								Payment
+							</button>
 						</div>
 						<Button
 							type="button"
@@ -58,31 +82,25 @@ export const TransactionsCheckout = () => {
 						</Button>
 					</div>
 
-					<div className="grid grid-cols-2 gap-2">
-						<Button
-							type="button"
-							variant={step === "cart" ? "default" : "outline"}
-							className="h-11"
-							onClick={() => setStep("cart")}
-						>
-							1 · Cart
-						</Button>
-						<Button
-							type="button"
-							variant={step === "payment" ? "default" : "outline"}
-							className="h-11"
-							onClick={() => setStep("payment")}
-							disabled={count === 0 || !isCustomerReady}
-						>
-							2 · Payment
-						</Button>
+					<div
+						key={step}
+						className={cn(
+							"animate-in fade-in duration-150",
+							step === "cart"
+								? "slide-in-from-left-2"
+								: "slide-in-from-right-2",
+						)}
+					>
+						{step === "cart" ? <CheckoutCartStep /> : <CheckoutPaymentStep />}
 					</div>
-
-					{step === "cart" ? <CheckoutCartStep /> : <CheckoutPaymentStep />}
 				</div>
 			</div>
 
-			<CheckoutFooter step={step} onContinue={() => setStep("payment")} />
+			<CheckoutFooter
+				step={step}
+				onContinue={() => setStep("payment")}
+				onBack={() => setStep("cart")}
+			/>
 		</div>
 	);
 };

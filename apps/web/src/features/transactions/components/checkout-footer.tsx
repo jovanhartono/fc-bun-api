@@ -1,4 +1,8 @@
-import { ArrowRightIcon, CreditCardIcon } from "@phosphor-icons/react";
+import {
+	ArrowLeftIcon,
+	ArrowRightIcon,
+	CreditCardIcon,
+} from "@phosphor-icons/react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
@@ -15,12 +19,17 @@ export type CheckoutStep = "cart" | "payment";
 interface CheckoutFooterProps {
 	step: CheckoutStep;
 	onContinue: () => void;
+	onBack: () => void;
 }
 
 // Pinned action bar — total + the step's primary button stay visible while the
 // step body scrolls above. Self-sources everything from the form/cart/pricing
 // hooks; only step + onContinue are owned by the orchestrator.
-export const CheckoutFooter = ({ step, onContinue }: CheckoutFooterProps) => {
+export const CheckoutFooter = ({
+	step,
+	onContinue,
+	onBack,
+}: CheckoutFooterProps) => {
 	const { submit } = useTransactionsPageContext();
 	const { count } = useCart();
 	const { pricing } = useCheckoutPricing();
@@ -61,19 +70,32 @@ export const CheckoutFooter = ({ step, onContinue }: CheckoutFooterProps) => {
 						Continue
 					</Button>
 				) : (
-					<Button
-						type="button"
-						size="lg"
-						className="h-11"
-						onClick={submit}
-						loading={isSubmitting}
-						loadingText="Creating order..."
-						disabled={count === 0 || !dropoffPhoto}
-						aria-describedby={showPhotoHint ? "create-order-hint" : undefined}
-						icon={<CreditCardIcon className="size-4" />}
-					>
-						Create Order
-					</Button>
+					<div className="flex items-center gap-2">
+						<Button
+							type="button"
+							variant="outline"
+							size="lg"
+							className="h-11"
+							onClick={onBack}
+							disabled={isSubmitting}
+							icon={<ArrowLeftIcon className="size-4" />}
+						>
+							Back
+						</Button>
+						<Button
+							type="button"
+							size="lg"
+							className="h-11"
+							onClick={submit}
+							loading={isSubmitting}
+							loadingText="Creating order..."
+							disabled={count === 0 || !dropoffPhoto}
+							aria-describedby={showPhotoHint ? "create-order-hint" : undefined}
+							icon={<CreditCardIcon className="size-4" />}
+						>
+							Create Order
+						</Button>
+					</div>
 				)}
 			</div>
 			{showPhotoHint ? (
