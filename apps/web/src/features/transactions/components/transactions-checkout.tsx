@@ -10,6 +10,7 @@ import {
 	type CheckoutStep,
 } from "@/features/transactions/components/checkout-footer";
 import { CheckoutPaymentStep } from "@/features/transactions/components/checkout-payment-step";
+import { isValidPhoneNumber } from "@/lib/phone-number";
 
 // Two-step POS checkout: Cart → Payment. Body scrolls; the total + primary
 // action live in a pinned footer so they stay reachable on the iPad sheet. Step
@@ -22,6 +23,13 @@ export const TransactionsCheckout = () => {
 			TransactionDraftValues,
 			["customerName", "customerPhone", "selectedCampaignIds"]
 		>({ name: ["customerName", "customerPhone", "selectedCampaignIds"] });
+
+	// Same gate as the footer's Continue button — the step tabs are a second way
+	// to reach Payment, so they must enforce it too, or a cashier could jump
+	// ahead with an empty customer and hit a Create Order that fails validation
+	// silently (the errors live on the Cart step they skipped).
+	const isCustomerReady =
+		customerName.trim().length > 0 && isValidPhoneNumber(customerPhone);
 
 	return (
 		<div className="flex min-h-0 flex-1 flex-col">
@@ -64,6 +72,7 @@ export const TransactionsCheckout = () => {
 							variant={step === "payment" ? "default" : "outline"}
 							className="h-11"
 							onClick={() => setStep("payment")}
+							disabled={count === 0 || !isCustomerReady}
 						>
 							2 · Payment
 						</Button>
