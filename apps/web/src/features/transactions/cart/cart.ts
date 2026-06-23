@@ -6,6 +6,7 @@ import {
 } from "@fresclean/api/schema";
 import type { UseFormReturn } from "react-hook-form";
 import type { CreateOrderPayload, Product, Service } from "@/lib/api";
+import { normalizePhoneNumber } from "@/lib/phone-number";
 
 export type ProductCartLine = {
 	kind: "product";
@@ -33,7 +34,8 @@ export type ServiceCartDisplayLine = ServiceCartLine & {
 
 export type TransactionDraftValues = {
 	selectedStoreId: string;
-	selectedCustomerId: string;
+	customerName: string;
+	customerPhone: string;
 	selectedCampaignIds: string[];
 	selectedPaymentMethodId: string;
 	selectedCourierId: string;
@@ -46,7 +48,8 @@ export type TransactionDraftValues = {
 
 export const defaultDraftValues: TransactionDraftValues = {
 	selectedStoreId: "",
-	selectedCustomerId: "",
+	customerName: "",
+	customerPhone: "",
 	selectedCampaignIds: [],
 	selectedPaymentMethodId: "",
 	selectedCourierId: "",
@@ -161,7 +164,8 @@ export const getCartPricing = <C extends CartCampaign>({
 };
 
 export const toOrderPayload = ({
-	selectedCustomerId,
+	customerName,
+	customerPhone,
 	selectedStoreId,
 	selectedCampaignIds,
 	selectedPaymentMethodId,
@@ -172,7 +176,10 @@ export const toOrderPayload = ({
 	productCart,
 	serviceCart,
 }: TransactionDraftValues): CreateOrderPayload => ({
-	customer_id: Number(selectedCustomerId),
+	customer: {
+		name: customerName.trim(),
+		phone_number: normalizePhoneNumber(customerPhone),
+	},
 	store_id: Number(selectedStoreId),
 	campaign_ids: selectedCampaignIds.map((id) => Number(id)),
 	discount: manualDiscount || "0",

@@ -150,7 +150,8 @@ describe("getCartPricing", () => {
 describe("toOrderPayload", () => {
 	const draft: TransactionDraftValues = {
 		selectedStoreId: "2",
-		selectedCustomerId: "7",
+		customerName: " budi santoso ",
+		customerPhone: "081234567890",
 		selectedCampaignIds: ["3", "4"],
 		selectedPaymentMethodId: "",
 		selectedCourierId: "",
@@ -165,7 +166,10 @@ describe("toOrderPayload", () => {
 
 	test("maps draft to CreateOrderPayload with trimmed optional fields", () => {
 		expect(toOrderPayload(draft)).toEqual({
-			customer_id: 7,
+			customer: {
+				name: "budi santoso",
+				phone_number: "+6281234567890",
+			},
 			store_id: 2,
 			campaign_ids: [3, 4],
 			discount: "0",

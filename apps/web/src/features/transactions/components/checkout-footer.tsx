@@ -1,0 +1,86 @@
+import { ArrowRightIcon, CreditCardIcon } from "@phosphor-icons/react";
+import { useFormContext, useWatch } from "react-hook-form";
+import { Button } from "@/components/ui/button";
+import { FieldError } from "@/components/ui/field";
+import type { TransactionDraftValues } from "@/features/transactions/cart/cart";
+import { useCart } from "@/features/transactions/cart/useCart";
+import { useCheckoutPricing } from "@/features/transactions/hooks/useCheckoutPricing";
+import { useTransactionsPageContext } from "@/features/transactions/lib/transactions-context";
+import { isValidPhoneNumber } from "@/lib/phone-number";
+import { formatIDRCurrency } from "@/shared/utils";
+import { useTransactionsPageStore } from "@/stores/transactions-store";
+
+export type CheckoutStep = "cart" | "payment";
+
+interface CheckoutFooterProps {
+	step: CheckoutStep;
+	onContinue: () => void;
+}
+
+// Pinned action bar — total + the step's primary button stay visible while the
+// step body scrolls above. Self-sources everything from the form/cart/pricing
+// hooks; only step + onContinue are owned by the orchestrator.
+export const CheckoutFooter = ({ step, onContinue }: CheckoutFooterProps) => {
+	const { submit } = useTransactionsPageContext();
+	const { count } = useCart();
+	const { pricing } = useCheckoutPricing();
+	const form = useFormContext<TransactionDraftValues>();
+	const isSubmitting = form.formState.isSubmitting;
+	const [customerName = "", customerPhone = ""] = useWatch<
+		TransactionDraftValues,
+		["customerName", "customerPhone"]
+	>({ name: ["customerName", "customerPhone"] });
+	const isCustomerReady =
+		customerName.trim().length > 0 && isValidPhoneNumber(customerPhone);
+	const submitError = useTransactionsPageStore((state) => state.submitError);
+	const dropoffPhoto = useTransactionsPageStore((state) => state.dropoffPhoto);
+
+	const showPhotoHint = step === "payment" && count > 0 && !dropoffPhoto;
+
+	return (
+		<div className="grid shrink-0 gap-2 border-t border-border/70 bg-popover p-4">
+			{submitError ? <FieldError>{submitError}</FieldError> : null}
+			<div className="flex items-center justify-between gap-3">
+				<div className="grid gap-0.5">
+					<span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+						Total
+					</span>
+					<span className="text-base font-semibold">
+						{formatIDRCurrency(String(Math.round(pricing.total)))}
+					</span>
+				</div>
+				{step === "cart" ? (
+					<Button
+						type="button"
+						size="lg"
+						className="h-11"
+						onClick={onContinue}
+						disabled={count === 0 || !isCustomerReady}
+						icon={<ArrowRightIcon className="size-4" />}
+					>
+						Continue
+					</Button>
+				) : (
+					<Button
+						type="button"
+						size="lg"
+						className="h-11"
+						onClick={submit}
+						loading={isSubmitting}
+						loadingText="Creating order..."
+						disabled={count === 0 || !dropoffPhoto}
+						aria-describedby={showPhotoHint ? "create-order-hint" : undefined}
+						icon={<CreditCardIcon className="size-4" />}
+					>
+						Create Order
+					</Button>
+				)}
+			</div>
+			{showPhotoHint ? (
+				<p className="text-muted-foreground text-xs" id="create-order-hint">
+					Add a drop-off photo to create the order.
+				</p>
+			) : null}
+		</div>
+	);
+};

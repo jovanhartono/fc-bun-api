@@ -22,7 +22,7 @@ export function TransactionsWorkspace() {
 			<Sheet open={cartSheetOpen} onOpenChange={setCartSheetOpen}>
 				<SheetContent
 					side="bottom"
-					className="max-h-[92dvh] overflow-y-auto"
+					className="max-h-[92dvh]"
 					showCloseButton={false}
 				>
 					<SheetHeader className="sr-only">

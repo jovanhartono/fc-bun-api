@@ -21,6 +21,7 @@ import {
 } from "@/features/transactions/cart/cart";
 import type { TransactionsPageContextValue } from "@/features/transactions/lib/transactions-context";
 import { createOrder } from "@/lib/api";
+import { isValidPhoneNumber } from "@/lib/phone-number";
 import { meQueryOptions, storesQueryOptions } from "@/lib/query-options";
 import { getCurrentUser } from "@/stores/auth-store";
 import { useTransactionPreferencesStore } from "@/stores/transaction-preferences-store";
@@ -32,7 +33,12 @@ const transactionDraftSchema = z
 			.string()
 			.trim()
 			.min(1, "Store is required before creating a transaction."),
-		selectedCustomerId: z.string().trim().min(1, "Customer is required."),
+		customerName: z.string().trim().min(1, "Customer name is required."),
+		customerPhone: z
+			.string()
+			.trim()
+			.min(1, "Phone number is required.")
+			.refine(isValidPhoneNumber, "Invalid phone number"),
 		selectedCampaignIds: z.array(z.string()),
 		selectedPaymentMethodId: z.string(),
 		selectedCourierId: z.string(),
