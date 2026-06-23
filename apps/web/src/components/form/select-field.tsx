@@ -6,7 +6,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
 
 type SelectFieldItems =
 	| Record<string, ReactNode>
@@ -73,7 +72,7 @@ export const SelectField = ({
 					<SelectItem
 						key={entry.value}
 						value={entry.value}
-						className={cn(itemClassName)}
+						className={itemClassName}
 					>
 						{entry.label}
 					</SelectItem>
