@@ -16,7 +16,7 @@ import { SelectField } from "@/components/form/select-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
+import type { ComboboxOption } from "@/components/ui/combobox";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -140,13 +140,11 @@ export function TransactionsCheckout() {
 	);
 
 	const paymentMethodOptions = useMemo<ComboboxOption[]>(
-		() => [
-			{ value: "none", label: "No payment method" },
-			...paymentMethods.map((paymentMethod) => ({
+		() =>
+			paymentMethods.map((paymentMethod) => ({
 				value: String(paymentMethod.id),
 				label: paymentMethod.name,
 			})),
-		],
 		[paymentMethods],
 	);
 
@@ -238,32 +236,6 @@ export function TransactionsCheckout() {
 			/>
 
 			<Controller
-				name="selectedPaymentMethodId"
-				control={form.control}
-				render={({ field, fieldState }) => (
-					<Field data-invalid={fieldState.invalid}>
-						<FieldLabel htmlFor="transaction-payment-method">
-							Payment Method
-						</FieldLabel>
-						<Combobox
-							id="transaction-payment-method"
-							triggerClassName="h-11 w-full text-sm"
-							options={paymentMethodOptions}
-							value={field.value || "none"}
-							onValueChange={(value) =>
-								field.onChange(value === "none" ? "" : value)
-							}
-							loading={paymentMethodsQuery.isFetching}
-							placeholder="No payment method"
-							searchPlaceholder="Search payment method..."
-							emptyText="No payment method found"
-						/>
-						<FieldError errors={[fieldState.error]} />
-					</Field>
-				)}
-			/>
-
-			<Controller
 				name="paymentStatus"
 				control={form.control}
 				render={({ field, fieldState }) => (
@@ -274,7 +246,11 @@ export function TransactionsCheckout() {
 								type="button"
 								variant={field.value === "unpaid" ? "default" : "outline"}
 								className="h-11"
-								onClick={() => field.onChange("unpaid")}
+								onClick={() => {
+									field.onChange("unpaid");
+									// A method is "how money arrived" — an unpaid order has none.
+									form.setValue("selectedPaymentMethodId", "");
+								}}
 							>
 								Unpaid
 							</Button>
@@ -291,6 +267,30 @@ export function TransactionsCheckout() {
 					</Field>
 				)}
 			/>
+
+			{paymentStatus === "paid" ? (
+				<Controller
+					name="selectedPaymentMethodId"
+					control={form.control}
+					render={({ field, fieldState }) => (
+						<Field data-invalid={fieldState.invalid}>
+							<FieldLabel htmlFor="transaction-payment-method">
+								Payment Method
+							</FieldLabel>
+							<SelectField
+								id="transaction-payment-method"
+								items={paymentMethodOptions}
+								value={field.value}
+								onValueChange={field.onChange}
+								placeholder="Select payment method"
+								size="lg"
+								className="w-full text-sm"
+							/>
+							<FieldError errors={[fieldState.error]} />
+						</Field>
+					)}
+				/>
+			) : null}
 
 			{selectedCampaigns.length > 0 ? (
 				<div className="grid gap-2">
@@ -334,7 +334,8 @@ export function TransactionsCheckout() {
 								field.onChange(value === "none" ? "" : value)
 							}
 							placeholder="Walk-in (no courier)"
-							className="h-11 w-full text-sm"
+							size="lg"
+							className="w-full text-sm"
 						/>
 						<FieldError errors={[fieldState.error]} />
 					</Field>
@@ -374,6 +375,7 @@ export function TransactionsCheckout() {
 						type="button"
 						variant="outline"
 						size="sm"
+						className="h-9"
 						onClick={resetCart}
 						disabled={
 							count === 0 &&
@@ -505,6 +507,7 @@ export function TransactionsCheckout() {
 											</FieldLabel>
 											<Input
 												id={`service-color-${line.line_id}`}
+												className="h-11"
 												value={line.color}
 												onChange={(event) =>
 													updateServiceField(
@@ -526,6 +529,7 @@ export function TransactionsCheckout() {
 											</FieldLabel>
 											<Input
 												id={`service-brand-${line.line_id}`}
+												className="h-11"
 												value={line.brand}
 												onChange={(event) =>
 													updateServiceField(
@@ -552,6 +556,7 @@ export function TransactionsCheckout() {
 											</FieldLabel>
 											<Input
 												id={`service-model-${line.line_id}`}
+												className="h-11"
 												value={line.model}
 												onChange={(event) =>
 													updateServiceField(
@@ -578,6 +583,7 @@ export function TransactionsCheckout() {
 											</FieldLabel>
 											<Input
 												id={`service-size-${line.line_id}`}
+												className="h-11"
 												value={line.size}
 												onChange={(event) =>
 													updateServiceField(
@@ -743,7 +749,7 @@ function CheckoutDropoffPhotoField() {
 			<Button
 				type="button"
 				variant="outline"
-				className="w-full"
+				className="h-11 w-full"
 				icon={<CameraIcon className="size-4" />}
 				onClick={() => setIsDialogOpen(true)}
 			>

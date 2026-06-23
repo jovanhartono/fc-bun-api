@@ -164,9 +164,11 @@ const PhotoUploadDialogBase = ({
 				type: "image/jpeg",
 			}),
 		]);
-		// Camera-only: stop after the shot so the user reviews one still, not a
-		// live feed stacked under the capture.
-		if (cameraOnly) {
+		// Single-photo flows: stop after the shot so the still preview replaces the
+		// live feed in place, instead of the feed staying open with the preview
+		// stacked below it (which forces a scroll). Multiple-photo flows keep the
+		// camera open so consecutive shots can be taken without reopening it.
+		if (!multiple) {
 			stopCamera();
 		}
 	};
