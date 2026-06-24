@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import type { TransactionDraftValues } from "@/features/transactions/cart/cart";
 import { fetchCustomersPage } from "@/lib/api";
 import { isValidPhoneNumber, normalizePhoneNumber } from "@/lib/phone-number";
+import { cn } from "@/lib/utils";
 
 // POS customer entry — two always-visible fields. The cashier enters the phone;
 // a debounced exact lookup prefills + locks the name when that phone already
@@ -65,7 +66,7 @@ export const CustomerFields = () => {
 			return;
 		}
 		if (appliedPhoneRef.current !== null) {
-			form.setValue("customerName", "", { shouldValidate: true });
+			form.setValue("customerName", "");
 			appliedPhoneRef.current = null;
 		}
 	}, [match, form]);
@@ -96,16 +97,22 @@ export const CustomerFields = () => {
 						    resolves async, and inserting a line under the field shifted the
 						    whole cart (CLS). The label row has fixed height, so the badge
 						    toggles in place. */}
-						<div className="flex items-center justify-between gap-2">
+						<div className="flex items-center gap-2">
 							<FieldLabel htmlFor="customer-name" asterisk>
 								Name
 							</FieldLabel>
-							{isReturning ? (
-								<span className="flex items-center gap-1 border border-emerald-300/60 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400">
-									<CheckCircleIcon className="size-3.5" weight="fill" />
-									Existing customer
-								</span>
-							) : null}
+							{/* Always mounted; hidden until the lookup confirms a returning
+							    customer. Reserving the badge's height keeps the row from
+							    growing when it toggles in (CLS). */}
+							<span
+								className={cn(
+									"flex items-center gap-1 border border-emerald-300/60 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400",
+									!isReturning && "invisible",
+								)}
+							>
+								<CheckCircleIcon className="size-3.5" weight="fill" />
+								Existing customer
+							</span>
 						</div>
 						<Input
 							id="customer-name"
