@@ -101,7 +101,7 @@ export const CustomerFields = () => {
 								Name
 							</FieldLabel>
 							{isReturning ? (
-								<span className="flex items-center gap-1 text-xs font-normal text-muted-foreground">
+								<span className="flex items-center gap-1 border border-emerald-300/60 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400">
 									<CheckCircleIcon className="size-3.5" weight="fill" />
 									Existing customer
 								</span>

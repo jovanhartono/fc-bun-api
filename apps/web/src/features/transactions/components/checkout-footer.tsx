@@ -6,6 +6,7 @@ import {
 import { useFormContext, useWatch } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
+import { SheetFooter } from "@/components/ui/sheet";
 import type { TransactionDraftValues } from "@/features/transactions/cart/cart";
 import { useCart } from "@/features/transactions/cart/useCart";
 import { useCheckoutPricing } from "@/features/transactions/hooks/useCheckoutPricing";
@@ -47,7 +48,7 @@ export const CheckoutFooter = ({
 	const showPhotoHint = step === "payment" && count > 0 && !dropoffPhoto;
 
 	return (
-		<div className="grid shrink-0 gap-2 border-t border-border/70 bg-popover p-4">
+		<SheetFooter className="shrink-0 gap-2 border-t border-border/70 bg-popover">
 			{submitError ? <FieldError>{submitError}</FieldError> : null}
 			<div className="flex items-center justify-between gap-3">
 				<div className="grid gap-0.5">
@@ -103,6 +104,6 @@ export const CheckoutFooter = ({
 					Add a drop-off photo to create the order.
 				</p>
 			) : null}
-		</div>
+		</SheetFooter>
 	);
 };
