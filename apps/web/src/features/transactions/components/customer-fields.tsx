@@ -36,6 +36,10 @@ export const CustomerFields = () => {
 		queryKey: ["customer-by-phone", lookupPhone],
 		queryFn: () => fetchCustomersPage({ limit: 5, search: lookupPhone }),
 		enabled: lookupPhone.length > 0,
+		// A phone→customer mapping is stable; cache it so re-looking-up the same
+		// phone (e.g. after a cart↔payment tab toggle remounts this field) is
+		// instant instead of refetching and flashing the name/badge.
+		staleTime: 5 * 60 * 1000,
 	});
 
 	// search is a substring match, so confirm exact phone equality before

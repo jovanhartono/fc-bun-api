@@ -6,7 +6,7 @@ import {
 } from "@fresclean/api/schema";
 import type { UseFormReturn } from "react-hook-form";
 import type { CreateOrderPayload, Product, Service } from "@/lib/api";
-import { normalizePhoneNumber } from "@/lib/phone-number";
+import { isValidPhoneNumber, normalizePhoneNumber } from "@/lib/phone-number";
 
 export type ProductCartLine = {
 	kind: "product";
@@ -160,6 +160,15 @@ export const getCartPricing = <C extends CartCampaign>({
 		total: Math.max(0, subtotal - totalDiscount),
 	};
 };
+
+// The cart→payment gate: a customer is ready once they have a name and a phone
+// that parses. Shared by the step tabs, the Continue button, and the Create
+// Order button so all three progression controls enforce the identical rule.
+export const isCustomerReady = (
+	customerName: string,
+	customerPhone: string,
+): boolean =>
+	customerName.trim().length > 0 && isValidPhoneNumber(customerPhone);
 
 export const toOrderPayload = ({
 	customerName,

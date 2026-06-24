@@ -7,11 +7,13 @@ import { useFormContext, useWatch } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
 import { SheetFooter } from "@/components/ui/sheet";
-import type { TransactionDraftValues } from "@/features/transactions/cart/cart";
+import {
+	isCustomerReady,
+	type TransactionDraftValues,
+} from "@/features/transactions/cart/cart";
 import { useCart } from "@/features/transactions/cart/useCart";
 import { useCheckoutPricing } from "@/features/transactions/hooks/useCheckoutPricing";
 import { useTransactionsPageContext } from "@/features/transactions/lib/transactions-context";
-import { isValidPhoneNumber } from "@/lib/phone-number";
 import { formatIDRCurrency } from "@/shared/utils";
 import { useTransactionsPageStore } from "@/stores/transactions-store";
 
@@ -40,8 +42,7 @@ export const CheckoutFooter = ({
 		TransactionDraftValues,
 		["customerName", "customerPhone"]
 	>({ name: ["customerName", "customerPhone"] });
-	const isCustomerReady =
-		customerName.trim().length > 0 && isValidPhoneNumber(customerPhone);
+	const customerReady = isCustomerReady(customerName, customerPhone);
 	const submitError = useTransactionsPageStore((state) => state.submitError);
 	const dropoffPhoto = useTransactionsPageStore((state) => state.dropoffPhoto);
 
@@ -65,7 +66,7 @@ export const CheckoutFooter = ({
 						size="lg"
 						className="h-11"
 						onClick={onContinue}
-						disabled={count === 0 || !isCustomerReady}
+						disabled={count === 0 || !customerReady}
 						icon={<ArrowRightIcon className="size-4" />}
 					>
 						Continue
@@ -90,7 +91,7 @@ export const CheckoutFooter = ({
 							onClick={submit}
 							loading={isSubmitting}
 							loadingText="Creating order..."
-							disabled={count === 0 || !dropoffPhoto}
+							disabled={count === 0 || !dropoffPhoto || !customerReady}
 							aria-describedby={showPhotoHint ? "create-order-hint" : undefined}
 							icon={<CreditCardIcon className="size-4" />}
 						>

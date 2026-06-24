@@ -7,7 +7,10 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@/components/ui/sheet";
-import type { TransactionDraftValues } from "@/features/transactions/cart/cart";
+import {
+	isCustomerReady,
+	type TransactionDraftValues,
+} from "@/features/transactions/cart/cart";
 import { useCart } from "@/features/transactions/cart/useCart";
 import { CheckoutCartStep } from "@/features/transactions/components/checkout-cart-step";
 import {
@@ -15,7 +18,6 @@ import {
 	type CheckoutStep,
 } from "@/features/transactions/components/checkout-footer";
 import { CheckoutPaymentStep } from "@/features/transactions/components/checkout-payment-step";
-import { isValidPhoneNumber } from "@/lib/phone-number";
 import { cn } from "@/lib/utils";
 
 // Two-step POS checkout: Cart → Payment. Body scrolls; the total + primary
@@ -34,8 +36,7 @@ export const TransactionsCheckout = () => {
 	// to reach Payment, so they must enforce it too, or a cashier could jump
 	// ahead with an empty customer and hit a Create Order that fails validation
 	// silently (the errors live on the Cart step they skipped).
-	const isCustomerReady =
-		customerName.trim().length > 0 && isValidPhoneNumber(customerPhone);
+	const customerReady = isCustomerReady(customerName, customerPhone);
 
 	return (
 		<div className="flex min-h-0 flex-1 flex-col">
@@ -59,7 +60,7 @@ export const TransactionsCheckout = () => {
 					</button>
 					<button
 						type="button"
-						disabled={count === 0 || !isCustomerReady}
+						disabled={count === 0 || !customerReady}
 						className={cn(
 							"flex h-8 items-center justify-center border px-4 text-xs font-medium outline-none transition focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-40",
 							step === "payment"

@@ -248,8 +248,16 @@ export function useTransactionsPageBootstrap(): TransactionsPageBootstrap {
 		[createMutation, navigate, queryClient, resetCart],
 	);
 
+	// onInvalid surfaces a footer error: the two-step split can put a failing
+	// field on a step the cashier isn't looking at, so a blocked submit would
+	// otherwise be a silent no-op with the FieldError on the hidden step.
 	const submit = useMemo(
-		() => form.handleSubmit(onValidSubmit),
+		() =>
+			form.handleSubmit(onValidSubmit, () => {
+				useTransactionsPageStore
+					.getState()
+					.setSubmitError("Some details are incomplete. Check the cart step.");
+			}),
 		[form, onValidSubmit],
 	);
 
