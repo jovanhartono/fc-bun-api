@@ -55,13 +55,12 @@ export const TransactionsCheckout = () => {
 		if (targetIndex <= stepIndex) {
 			return true;
 		}
-		if (target === "items") {
-			return customerReady;
-		}
 		if (target === "payment") {
 			return customerReady && itemsReady;
 		}
-		return true;
+		// Only "items" can reach here — "customer" is always at or before the
+		// current step and already returned above.
+		return customerReady;
 	};
 
 	const headingRef = useRef<HTMLHeadingElement>(null);
@@ -119,7 +118,13 @@ export const TransactionsCheckout = () => {
 						!dropoffPhoto
 					}
 					icon={<TrashIcon className="size-4" />}
-					onClick={resetCart}
+					onClick={() => {
+						resetCart();
+						// Start over means start at step one — otherwise Reset on the
+						// Payment step strands the cashier there with everything cleared
+						// and a disabled Create Order.
+						goToStep("customer");
+					}}
 					size="sm"
 					type="button"
 					variant="outline"
@@ -154,8 +159,12 @@ export const TransactionsCheckout = () => {
 	);
 };
 
+interface CheckoutStepBodyProps {
+	step: CheckoutStep;
+}
+
 // Module-level so it isn't redefined each render (no remount of the step body).
-const CheckoutStepBody = ({ step }: { step: CheckoutStep }) => {
+const CheckoutStepBody = ({ step }: CheckoutStepBodyProps) => {
 	if (step === "customer") {
 		return <CheckoutCustomerStep />;
 	}

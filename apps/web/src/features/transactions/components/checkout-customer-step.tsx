@@ -14,9 +14,14 @@ import { usersPageQueryOptions } from "@/lib/query-options";
 export const CheckoutCustomerStep = () => {
 	const form = useFormContext<TransactionDraftValues>();
 
-	const couriersQuery = useQuery(
-		usersPageQueryOptions({ role: "courier", is_active: true }),
-	);
+	const couriersQuery = useQuery({
+		...usersPageQueryOptions({ role: "courier", is_active: true }),
+		// Couriers are slow-changing reference data; cache like the other reference
+		// lists so reopening checkout doesn't refetch the roster every time. The
+		// customer step now mounts on every open, so an uncached query refetched
+		// on each one.
+		staleTime: 5 * 60 * 1000,
+	});
 	const courierOptions = useMemo<ComboboxOption[]>(
 		() => [
 			{ value: "none", label: "Walk-in (no courier)" },

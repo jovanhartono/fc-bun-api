@@ -279,6 +279,9 @@ const CheckoutDropoffPhotoField = () => {
 	useEffect(() => {
 		if (!dropoffPhoto) {
 			setPreviewUrl(null);
+			// Photo was cleared (e.g. Reset) — close the preview too, or the lightbox
+			// stays "open" and re-pops the moment the next photo is captured.
+			setIsLightboxOpen(false);
 			return;
 		}
 		const url = URL.createObjectURL(dropoffPhoto);
