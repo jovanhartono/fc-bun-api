@@ -468,6 +468,15 @@ export async function getOrderDetailById(id: number) {
             where: { deleted_at: { isNull: true } },
             orderBy: { id: "asc" },
           },
+          // Complaints opened against this line + (if this line is a rework)
+          // the complaint that spawned it — see ADR-0013.
+          complaints: {
+            columns: { id: true, status: true, resolution: true },
+            orderBy: { id: "asc" },
+          },
+          reworkOf: {
+            columns: { id: true, status: true, resolution: true },
+          },
           refundItems: true,
           service: true,
           statusLogs: {
