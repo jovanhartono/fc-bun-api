@@ -56,6 +56,8 @@ const ordersRoute = rpc.api.admin.orders.$get;
 const orderDetailRoute = rpc.api.admin.orders[":id"].$get;
 const campaignsRoute = rpc.api.admin.campaigns.$get;
 const campaignDetailRoute = rpc.api.admin.campaigns[":id"].$get;
+const complaintsRoute = rpc.api.admin.complaints.$get;
+const complaintDetailRoute = rpc.api.admin.complaints[":id"].$get;
 const orderServiceByIdRoute = rpc.api.admin.orders.services["by-id"].$get;
 const orderServiceByItemCodeRoute =
 	rpc.api.admin.orders.services["by-item-code"].$get;
@@ -110,6 +112,37 @@ export type CampaignDetail = Extract<
 	InferResponseType<typeof campaignDetailRoute>,
 	{ success: true }
 >["data"];
+export type ComplaintListItem = Extract<
+	InferResponseType<typeof complaintsRoute>,
+	{ success: true }
+>["data"][number];
+export type ComplaintDetail = Extract<
+	InferResponseType<typeof complaintDetailRoute>,
+	{ success: true }
+>["data"];
+export type ComplaintStatus = "open" | "closed";
+export type ComplaintResolution = "rework" | "refund" | "rejected";
+
+export type FetchComplaintsQuery = {
+	status?: ComplaintStatus;
+	store_id?: number;
+	search?: string;
+	limit?: number;
+	offset?: number;
+};
+
+export type OpenComplaintPayload = {
+	order_service_id: number;
+	reason: string;
+	voucher_promised?: boolean;
+	start_rework?: boolean;
+};
+
+export type ResolveComplaintPayload = {
+	resolution: ComplaintResolution;
+	resolution_note?: string;
+	voucher_promised?: boolean;
+};
 export type OrderServiceLookup = Extract<
 	InferResponseType<typeof orderServiceByItemCodeRoute>,
 	{ success: true }
@@ -441,6 +474,9 @@ export const queryKeys = {
 	campaigns: (query?: FetchCampaignsQuery) =>
 		["campaigns", query ?? {}] as const,
 	campaignDetail: (id: number) => ["campaign-detail", id] as const,
+	complaints: (query?: FetchComplaintsQuery) =>
+		["complaints", query ?? {}] as const,
+	complaintDetail: (id: number) => ["complaint-detail", id] as const,
 	orderServiceLookup: (itemCode: string) =>
 		["order-service-lookup", itemCode] as const,
 	orderServiceQueue: (
@@ -966,6 +1002,74 @@ export async function updateOrderCourier(
 	return parseResponse(
 		rpcWithAuth().api.admin.orders[":id"].courier.$patch({
 			param: { id: String(orderId) },
+			json: payload,
+		}),
+	);
+}
+
+export async function fetchComplaintsPage(
+	query?: FetchComplaintsQuery,
+): Promise<PaginatedData<ComplaintListItem>> {
+	const response = await parseResponse(
+		rpcWithAuth().api.admin.complaints.$get({
+			query:
+				query && Object.keys(query).length > 0
+					? {
+							...(query.limit !== undefined
+								? { limit: String(query.limit) }
+								: {}),
+							...(query.offset !== undefined
+								? { offset: String(query.offset) }
+								: {}),
+							...(query.status ? { status: query.status } : {}),
+							...(query.store_id !== undefined
+								? { store_id: String(query.store_id) }
+								: {}),
+							...(query.search ? { search: query.search } : {}),
+						}
+					: undefined,
+		}),
+	);
+
+	return {
+		items: response.data,
+		meta: (response.meta ?? {
+			limit: query?.limit ?? response.data.length,
+			offset: query?.offset ?? 0,
+			total: response.data.length,
+		}) as PaginationMeta,
+	};
+}
+
+export function fetchComplaintDetail(id: number) {
+	return parseSuccessData<ComplaintDetail>(
+		rpcWithAuth().api.admin.complaints[":id"].$get({
+			param: { id: String(id) },
+		}),
+	);
+}
+
+export async function openComplaint(payload: OpenComplaintPayload) {
+	return parseResponse(
+		rpcWithAuth().api.admin.complaints.$post({ json: payload }),
+	);
+}
+
+export async function addComplaintRework(complaintId: number) {
+	return parseResponse(
+		rpcWithAuth().api.admin.complaints[":id"].rework.$post({
+			param: { id: String(complaintId) },
+		}),
+	);
+}
+
+export async function resolveComplaint(
+	complaintId: number,
+	payload: ResolveComplaintPayload,
+) {
+	return parseResponse(
+		rpcWithAuth().api.admin.complaints[":id"].$patch({
+			param: { id: String(complaintId) },
 			json: payload,
 		}),
 	);

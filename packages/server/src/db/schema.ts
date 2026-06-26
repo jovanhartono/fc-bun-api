@@ -1,5 +1,6 @@
 import { type SQL, sql } from "drizzle-orm";
 import {
+  type AnyPgColumn,
   boolean,
   check,
   decimal,
@@ -205,6 +206,15 @@ export const cancelReasonEnum = pgEnum("cancel_reason_enum", [
   "damaged_intake",
   "duplicate_order",
   "other",
+]);
+export const complaintStatusEnum = pgEnum("complaint_status_enum", [
+  "open",
+  "closed",
+]);
+export const complaintResolutionEnum = pgEnum("complaint_resolution_enum", [
+  "rework",
+  "refund",
+  "rejected",
 ]);
 
 export const campaignsTable = pgTable(
@@ -524,6 +534,13 @@ export const ordersServicesTable = pgTable(
 
     cancel_reason: cancelReasonEnum("cancel_reason"),
     cancel_note: text("cancel_note"),
+    // Non-null marks this line as a REWORK: a free re-clean spawned by the
+    // complaint it points at (the original complained line carries no value
+    // here). See ADR-0013.
+    complaint_id: integer("complaint_id").references(
+      (): AnyPgColumn => complaintsTable.id,
+      { onDelete: "set null" }
+    ),
     handler_id: integer("handler_id").references(() => usersTable.id),
     id: integer().primaryKey().generatedAlwaysAsIdentity(),
     is_priority: boolean("is_priority").default(false).notNull(),
@@ -575,6 +592,7 @@ export const ordersServicesTable = pgTable(
     index("order_services_priority_idx").on(table.is_priority),
     index("order_services_item_code_idx").on(table.item_code),
     index("order_services_pickup_event_idx").on(table.pickup_event_id),
+    index("order_services_complaint_idx").on(table.complaint_id),
     uniqueIndex("order_services_item_code_uidx").on(table.item_code),
     check("price_non_negative_check", sql`${table.price} >= 0`),
     check("discount_valid_check", sql`${table.price} >= ${table.discount}`),
@@ -587,6 +605,51 @@ export const ordersServicesTable = pgTable(
     check(
       "order_services_picked_up_requires_event_check",
       sql`${table.status} != 'picked_up' OR ${table.pickup_event_id} IS NOT NULL`
+    ),
+  ]
+);
+
+// A Customer's post-pickup grievance about an OrderService (ADR-0013). The
+// original complained line is `order_service_id`; the free re-clean lines it
+// spawns point back via `orders_services.complaint_id`. picked_up stays
+// terminal — a complaint never mutates the original line.
+export const complaintsTable = pgTable(
+  "complaints",
+  {
+    closed_at: timestamp("closed_at"),
+    closed_by: integer("closed_by").references(() => usersTable.id),
+    created_at: timestamp("created_at").defaultNow().notNull(),
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    opened_by: integer("opened_by")
+      .references(() => usersTable.id)
+      .notNull(),
+    order_service_id: integer("order_service_id")
+      .references((): AnyPgColumn => ordersServicesTable.id, {
+        onDelete: "cascade",
+      })
+      .notNull(),
+    reason: text("reason").notNull(),
+    resolution: complaintResolutionEnum("resolution"),
+    resolution_note: text("resolution_note"),
+    status: complaintStatusEnum("status").default("open").notNull(),
+    updated_at: timestamp("updated_at")
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+    voucher_promised: boolean("voucher_promised").default(false).notNull(),
+  },
+  (table) => [
+    index("complaints_order_service_idx").on(table.order_service_id),
+    index("complaints_status_idx").on(table.status),
+    index("complaints_opened_by_idx").on(table.opened_by),
+    // At most one OPEN complaint per complained line.
+    uniqueIndex("complaints_one_open_per_service_uidx")
+      .on(table.order_service_id)
+      .where(sql`${table.status} = 'open'`),
+    // A closed complaint must record how it resolved.
+    check(
+      "complaints_closed_requires_resolution_check",
+      sql`${table.status} != 'closed' OR ${table.resolution} IS NOT NULL`
     ),
   ]
 );
