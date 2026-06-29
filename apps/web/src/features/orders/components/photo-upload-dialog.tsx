@@ -12,8 +12,7 @@ import { Button } from "@/components/ui/button";
 import {
 	Dialog,
 	DialogContent,
-	DialogFooter,
-	DialogHeader,
+	DialogDescription,
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -65,10 +64,10 @@ const PhotoThumb = ({
 			aria-current={isActive}
 			aria-label={`Preview ${photo.file.name}`}
 			className={cn(
-				"block size-14 overflow-hidden border bg-muted transition",
+				"block size-14 overflow-hidden border bg-white/5 transition",
 				isActive
-					? "border-foreground ring-1 ring-foreground"
-					: "border-border/70 opacity-80 hover:opacity-100",
+					? "border-white ring-1 ring-white"
+					: "border-white/30 opacity-70 hover:opacity-100",
 			)}
 			onClick={onSelect}
 			type="button"
@@ -77,7 +76,7 @@ const PhotoThumb = ({
 		</button>
 		<button
 			aria-label={`Remove ${photo.file.name}`}
-			className="absolute -top-1.5 -right-1.5 grid size-5 place-items-center border border-border bg-background text-foreground shadow-sm disabled:opacity-50"
+			className="absolute top-1 right-1 grid size-5 place-items-center rounded-full bg-black/60 text-white shadow-sm transition hover:bg-black/80 disabled:opacity-50"
 			disabled={disabled}
 			onClick={onRemove}
 			type="button"
@@ -279,11 +278,15 @@ const PhotoUploadDialogBase = ({
 	const labelSuffix = badgeLabel ? ` for ${badgeLabel}` : "";
 
 	const isCaptureMode = Boolean(onCapture);
-	const confirmLabel = isCaptureMode
+	const confirmBase = isCaptureMode
 		? multiple
 			? "Use photos"
 			: "Use photo"
 		: "Upload";
+	const confirmLabel =
+		multiple && pendingPhotos.length > 0
+			? `${confirmBase} · ${pendingPhotos.length}`
+			: confirmBase;
 	const handleConfirm = async () => {
 		if (onCapture) {
 			onCapture(pendingPhotos.map((photo) => photo.file));
@@ -316,112 +319,123 @@ const PhotoUploadDialogBase = ({
 			}}
 		>
 			<DialogContent
-				className="z-[60] sm:max-w-2xl"
-				overlayClassName="z-[60] bg-black/40 supports-backdrop-filter:backdrop-blur-sm"
+				className="inset-0 z-[60] flex h-dvh max-h-dvh w-screen max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-none bg-black p-0 text-white ring-0 sm:max-w-none"
+				overlayClassName="z-[60] bg-black"
+				showCloseButton={false}
 			>
-				<DialogHeader>
-					<DialogTitle className="flex items-center justify-between gap-3 pr-8">
-						<span>{title}</span>
-						{badgeLabel ? (
-							<Badge variant="outline" className="shrink-0">
-								{badgeLabel}
-							</Badge>
-						) : null}
-					</DialogTitle>
-				</DialogHeader>
+				<DialogTitle className="sr-only">{title}</DialogTitle>
+				<DialogDescription className="sr-only">
+					Capture a photo with the camera or upload one from your device.
+				</DialogDescription>
 
-				<div className="grid gap-3">
-					{/* Stage: live viewfinder, reviewed still, or empty hint. */}
-					<div className="relative aspect-[4/3] w-full overflow-hidden border border-border bg-black">
-						{camera.isOpen ? (
-							<video
-								ref={camera.previewRef}
-								autoPlay
-								muted
-								playsInline
-								onLoadedMetadata={camera.markReady}
-								className="size-full object-cover"
-							/>
-						) : selectedPhoto ? (
-							<img
-								src={selectedPhoto.previewUrl}
-								alt={`Preview ${selectedPhoto.file.name}`}
-								className="size-full object-contain"
-							/>
-						) : (
-							<div className="flex size-full flex-col items-center justify-center gap-2 px-6 text-center text-sm text-white/70">
-								<CameraIcon className="size-8 opacity-60" />
-								<p>{placeholderText}</p>
-							</div>
-						)}
+				{/* Top chrome: close · item badge, over the viewfinder. */}
+				<div className="flex shrink-0 items-center justify-between gap-3 px-4 pt-[calc(env(safe-area-inset-top)_+_0.75rem)] pb-3">
+					<button
+						aria-label="Close"
+						className="grid size-9 place-items-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
+						onClick={() => onOpenChange(false)}
+						type="button"
+					>
+						<XIcon className="size-5" aria-hidden="true" />
+					</button>
+					{badgeLabel ? (
+						<Badge
+							className="border-white/40 bg-transparent text-white"
+							variant="outline"
+						>
+							{badgeLabel}
+						</Badge>
+					) : null}
+				</div>
 
-						{camera.error ? (
-							<div className="absolute inset-x-3 bottom-3 flex items-start gap-2 border border-destructive/40 bg-destructive px-3 py-2 text-sm text-destructive-foreground">
-								<WarningCircleIcon
-									className="mt-0.5 size-4 shrink-0"
-									weight="fill"
+				{/* Viewfinder: live feed, reviewed still, or empty hint. */}
+				<div className="relative min-h-0 flex-1 overflow-hidden px-4">
+					{camera.isOpen ? (
+						<video
+							ref={camera.previewRef}
+							autoPlay
+							muted
+							playsInline
+							onLoadedMetadata={camera.markReady}
+							className="size-full object-cover"
+						/>
+					) : selectedPhoto ? (
+						<img
+							src={selectedPhoto.previewUrl}
+							alt={`Preview ${selectedPhoto.file.name}`}
+							className="size-full object-contain"
+						/>
+					) : (
+						<div className="flex size-full flex-col items-center justify-center gap-2 px-6 text-center text-sm text-white/70">
+							<CameraIcon className="size-10 opacity-60" />
+							<p>{placeholderText}</p>
+						</div>
+					)}
+
+					{camera.error ? (
+						<div className="absolute inset-x-4 bottom-4 flex items-start gap-2 border border-destructive/40 bg-destructive px-3 py-2 text-sm text-destructive-foreground">
+							<WarningCircleIcon
+								className="mt-0.5 size-4 shrink-0"
+								weight="fill"
+							/>
+							<span>{camera.error}</span>
+						</div>
+					) : null}
+				</div>
+
+				{/* Bottom chrome: thumbs · shutter · device, note, primary action. */}
+				<div className="shrink-0 space-y-3 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)_+_1rem)]">
+					<div className="grid h-16 grid-cols-[1fr_auto_1fr] items-center gap-2">
+						<div className="flex min-w-0 items-center gap-2 overflow-x-auto py-1">
+							{pendingPhotos.map((photo) => (
+								<PhotoThumb
+									disabled={isBusy}
+									isActive={!camera.isOpen && selectedPhoto?.id === photo.id}
+									key={photo.id}
+									onRemove={() => removePhoto(photo.id)}
+									onSelect={() => reviewPhoto(photo.id)}
+									photo={photo}
 								/>
-								<span>{camera.error}</span>
-							</div>
-						) : null}
-					</div>
+							))}
+						</div>
 
-					{/* Control bar: thumb strip · shutter · device picker. */}
-					<div className="flex items-center gap-3">
-						<div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto py-1">
-							{pendingPhotos.length > 0 ? (
-								pendingPhotos.map((photo) => (
-									<PhotoThumb
-										disabled={isBusy}
-										isActive={!camera.isOpen && selectedPhoto?.id === photo.id}
-										key={photo.id}
-										onRemove={() => removePhoto(photo.id)}
-										onSelect={() => reviewPhoto(photo.id)}
-										photo={photo}
-									/>
-								))
+						<div className="justify-self-center">
+							{camera.isOpen ? (
+								<button
+									aria-label="Capture photo"
+									className="grid size-16 place-items-center rounded-full border-4 border-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 disabled:opacity-40"
+									disabled={!camera.isReady || isBusy}
+									onClick={captureCameraPhoto}
+									type="button"
+								>
+									<span className="size-12 rounded-full bg-white transition active:scale-90" />
+								</button>
 							) : (
-								<p className="text-muted-foreground text-xs">
-									{multiple ? "Captured photos appear here." : null}
-								</p>
+								<button
+									className="flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-5 py-2.5 font-medium text-sm text-white transition hover:bg-white/20 disabled:opacity-40"
+									disabled={isBusy}
+									onClick={() => void openCamera()}
+									type="button"
+								>
+									<CameraIcon className="size-4" aria-hidden="true" />
+									{cameraButtonLabel}
+								</button>
 							)}
 						</div>
 
-						{camera.isOpen ? (
-							<button
-								aria-label="Capture photo"
-								className="grid size-16 shrink-0 place-items-center rounded-full border-4 border-foreground/80 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:opacity-40"
-								disabled={!camera.isReady || isBusy}
-								onClick={captureCameraPhoto}
-								type="button"
-							>
-								<span className="size-12 rounded-full bg-foreground transition active:scale-90" />
-							</button>
-						) : (
-							<Button
-								className="shrink-0"
-								disabled={isBusy}
-								icon={<CameraIcon className="size-4" />}
-								onClick={() => void openCamera()}
-								type="button"
-								variant="outline"
-							>
-								{cameraButtonLabel}
-							</Button>
-						)}
-
-						{cameraOnly ? null : (
-							<Button
-								aria-label="Upload from device"
-								className="shrink-0"
-								disabled={isBusy}
-								icon={<ImageSquareIcon className="size-4" />}
-								onClick={openFileInput}
-								size="icon-lg"
-								type="button"
-								variant="outline"
-							/>
-						)}
+						<div className="justify-self-end">
+							{cameraOnly ? null : (
+								<button
+									aria-label="Upload from device"
+									className="grid size-12 place-items-center rounded-full bg-white/10 text-white transition hover:bg-white/20 disabled:opacity-40"
+									disabled={isBusy}
+									onClick={openFileInput}
+									type="button"
+								>
+									<ImageSquareIcon className="size-5" aria-hidden="true" />
+								</button>
+							)}
+						</div>
 					</div>
 
 					{cameraOnly ? null : (
@@ -438,29 +452,21 @@ const PhotoUploadDialogBase = ({
 						/>
 					)}
 
-					{withNote && pendingPhotos.length > 0 ? (
+					{withNote ? (
 						<Textarea
 							value={note}
 							onChange={(event) => setNote(event.target.value)}
 							placeholder="Optional note"
 							rows={2}
 							maxLength={200}
-							disabled={isBusy}
+							disabled={isBusy || pendingPhotos.length === 0}
 							aria-label={`Photo note${labelSuffix}`}
+							className="border-white/20 bg-white/5 text-white placeholder:text-white/50 disabled:opacity-50"
 						/>
 					) : null}
-				</div>
 
-				<DialogFooter>
 					<Button
-						type="button"
-						variant="outline"
-						disabled={isBusy}
-						onClick={() => onOpenChange(false)}
-					>
-						Cancel
-					</Button>
-					<Button
+						className="h-14 w-full bg-white font-semibold text-base text-black hover:bg-white/90"
 						type="button"
 						disabled={pendingPhotos.length === 0 || isBusy}
 						loading={isBusy}
@@ -469,7 +475,7 @@ const PhotoUploadDialogBase = ({
 					>
 						{confirmLabel}
 					</Button>
-				</DialogFooter>
+				</div>
 			</DialogContent>
 		</Dialog>
 	);
@@ -490,29 +496,31 @@ export const SinglePhotoUploadDialog = (props: PhotoUploadDialogProps) => (
 
 type SinglePhotoCaptureDialogProps = Pick<
 	PhotoUploadDialogBaseProps,
-	"open" | "onOpenChange" | "title" | "badgeLabel"
+	"open" | "onOpenChange" | "title" | "badgeLabel" | "cameraOnly"
 > & {
 	onCapture: (file: File) => void;
 };
 
-// Capture-only single-photo dialog. Reuses the camera/picker/preview UI but,
-// instead of uploading, hands the picked File back to the caller — for flows
-// where the target row does not exist yet (POS drop-off photo before checkout).
+// Capture-only single-photo dialog. Reuses the full-screen camera/picker/preview
+// UI but, instead of uploading, hands the picked File back to the caller — for
+// flows where the target row does not exist yet (POS drop-off photo before
+// checkout) or where the upload is bundled with other data (pickup event).
 //
-// Camera-only by design: drop-off is an intake action, so we want a live photo
-// of the items in front of the cashier, not a gallery pick. Trade-off: the
-// drop-off photo is required, so a device with no camera (or denied permission)
-// cannot create the Order — accepted, since the POS runs on store iPads. Do not
-// re-add "Upload from device" here without revisiting that decision.
+// Defaults to camera-only: drop-off is an intake action, so we want a live photo
+// of the items in front of the cashier, not a gallery pick. Trade-off: a device
+// with no camera (or denied permission) cannot complete it — accepted, since the
+// POS runs on store iPads. Pass cameraOnly={false} for flows that should still
+// allow a gallery pick (e.g. pickup).
 export const SinglePhotoCaptureDialog = ({
 	onCapture,
+	cameraOnly = true,
 	...props
 }: SinglePhotoCaptureDialogProps) => (
 	<PhotoUploadDialogBase
 		{...props}
 		multiple={false}
 		withNote={false}
-		cameraOnly
+		cameraOnly={cameraOnly}
 		onCapture={(files) => {
 			const [file] = files;
 			if (file) {

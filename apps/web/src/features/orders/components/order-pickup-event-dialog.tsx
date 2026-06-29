@@ -1,8 +1,4 @@
-import {
-	CameraIcon,
-	ImageSquareIcon,
-	WarningCircleIcon,
-} from "@phosphor-icons/react";
+import { CameraIcon } from "@phosphor-icons/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
 	createContext,
@@ -11,7 +7,6 @@ import {
 	useCallback,
 	useEffect,
 	useMemo,
-	useRef,
 	useState,
 } from "react";
 import { toast } from "sonner";
@@ -22,11 +17,8 @@ import {
 	InputOTPGroup,
 	InputOTPSlot,
 } from "@/components/ui/input-otp";
-import { useCameraCapture } from "@/features/orders/hooks/useCameraCapture";
-import {
-	ACCEPTED_IMAGE_TYPES,
-	isAcceptedImage,
-} from "@/features/orders/utils/photo-upload";
+import { SinglePhotoCaptureDialog } from "@/features/orders/components/photo-upload-dialog";
+import { isAcceptedImage } from "@/features/orders/utils/photo-upload";
 import {
 	createOrderPickupEvent,
 	type OrderDetail,
@@ -351,33 +343,8 @@ const PickupServiceRow = memo(
 PickupServiceRow.displayName = "PickupServiceRow";
 
 const PickupPhotoField = memo(() => {
-	const { file, previewUrl, setFile } = usePickupDialog();
-	const camera = useCameraCapture();
-	const inputRef = useRef<HTMLInputElement | null>(null);
-
-	const stopCamera = camera.stop;
-	// Release the camera when the field unmounts (dialog closes mid-capture).
-	useEffect(() => stopCamera, [stopCamera]);
-
-	const handleFileChange = useCallback(
-		(event: React.ChangeEvent<HTMLInputElement>) => {
-			const nextFile = event.target.files?.[0] ?? null;
-			setFile(nextFile);
-		},
-		[setFile],
-	);
-
-	const handleCapture = useCallback(async () => {
-		const blob = await camera.capture();
-		if (!blob) {
-			return;
-		}
-		setFile(
-			new File([blob], `pickup-${Date.now()}.jpg`, { type: "image/jpeg" }),
-		);
-		// Single still: drop the live feed so the captured preview shows in place.
-		stopCamera();
-	}, [camera, setFile, stopCamera]);
+	const { previewUrl, setFile } = usePickupDialog();
+	const [isCameraOpen, setIsCameraOpen] = useState(false);
 
 	return (
 		<div className="space-y-2">
@@ -385,87 +352,40 @@ const PickupPhotoField = memo(() => {
 				Pickup photo <span className="text-muted-foreground">(required)</span>
 			</p>
 
-			<div className="relative aspect-4/3 w-full overflow-hidden border bg-black sm:aspect-16/10">
-				{camera.isOpen ? (
-					<video
-						ref={camera.previewRef}
-						autoPlay
-						muted
-						playsInline
-						onLoadedMetadata={camera.markReady}
-						className="size-full object-cover"
-					/>
-				) : previewUrl ? (
-					<img
-						src={previewUrl}
-						alt="Pickup preview"
-						className="size-full object-contain"
-					/>
-				) : (
-					<div className="flex size-full flex-col items-center justify-center gap-2 px-6 text-center text-white/70">
-						<CameraIcon className="size-8 opacity-60" />
-						<p className="text-sm">Photo of the customer collecting items</p>
-					</div>
-				)}
-
-				{camera.error ? (
-					<div className="absolute inset-x-3 bottom-3 flex items-start gap-2 border border-destructive/40 bg-destructive px-3 py-2 text-sm text-destructive-foreground">
-						<WarningCircleIcon
-							className="mt-0.5 size-4 shrink-0"
-							weight="fill"
-						/>
-						<span>{camera.error}</span>
-					</div>
-				) : null}
-			</div>
-
-			<input
-				ref={inputRef}
-				type="file"
-				aria-label="Choose pickup photo"
-				accept={ACCEPTED_IMAGE_TYPES.join(",")}
-				capture="environment"
-				className="sr-only"
-				onChange={handleFileChange}
-			/>
-
-			<div className="flex items-center gap-3">
-				{camera.isOpen ? (
+			{/* Trigger + saved preview only — the full-screen dialog owns capture,
+			    file picker, and review (see PhotoUpload mandate in AGENTS.md). */}
+			<button
+				aria-label={previewUrl ? "Retake pickup photo" : "Add pickup photo"}
+				className="relative flex aspect-4/3 w-full items-center justify-center overflow-hidden border bg-black sm:aspect-16/10"
+				onClick={() => setIsCameraOpen(true)}
+				type="button"
+			>
+				{previewUrl ? (
 					<>
-						<div className="flex-1" />
-						<button
-							aria-label="Capture photo"
-							className="grid size-14 shrink-0 place-items-center rounded-full border-4 border-foreground/80 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:opacity-40"
-							disabled={!camera.isReady}
-							onClick={handleCapture}
-							type="button"
-						>
-							<span className="size-10 rounded-full bg-foreground transition active:scale-90" />
-						</button>
-						<div className="flex-1" />
+						<img
+							alt="Pickup preview"
+							className="size-full object-contain"
+							src={previewUrl}
+						/>
+						<span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 py-2 text-center text-white text-xs">
+							Tap to retake
+						</span>
 					</>
 				) : (
-					<Button
-						type="button"
-						variant="outline"
-						className="flex-1"
-						icon={<CameraIcon className="size-4" />}
-						onClick={() => void camera.open()}
-					>
-						{file ? "Retake" : "Open camera"}
-					</Button>
+					<div className="flex flex-col items-center justify-center gap-2 text-white/70">
+						<CameraIcon className="size-8 opacity-60" />
+						<span className="text-sm">Add pickup photo</span>
+					</div>
 				)}
+			</button>
 
-				<Button
-					type="button"
-					variant="outline"
-					size="icon-lg"
-					aria-label="Choose from device"
-					className="shrink-0"
-					icon={<ImageSquareIcon className="size-4" />}
-					onClick={() => inputRef.current?.click()}
-				/>
-			</div>
+			<SinglePhotoCaptureDialog
+				cameraOnly={false}
+				onCapture={setFile}
+				onOpenChange={setIsCameraOpen}
+				open={isCameraOpen}
+				title="Pickup photo"
+			/>
 		</div>
 	);
 });
