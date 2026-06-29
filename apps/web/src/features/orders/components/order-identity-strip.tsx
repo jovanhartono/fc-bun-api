@@ -25,6 +25,7 @@ import {
 import { formatOrderDateTime } from "@/features/orders/lib/format";
 import type { OrderActionGates } from "@/features/orders/lib/order-action-gates";
 import type { OrderDetail } from "@/lib/api";
+import { formatOrderServiceItemDetails } from "@/lib/order-service-item-details";
 import {
 	formatOrderStatus,
 	formatPaymentStatus,
@@ -148,13 +149,15 @@ export const OrderIdentityStrip = ({
 		openDialog({
 			title: "Open complaint",
 			description: "Log a customer complaint and optionally start a rework.",
+			contentClassName: "sm:max-w-2xl",
 			content: () => (
 				<OpenComplaintForm
 					closeDialog={closeDialog}
 					lines={gates.complaintableServices.map((service) => ({
 						id: service.id,
-						label:
-							service.item_code ?? service.service?.name ?? `#${service.id}`,
+						itemCode: service.item_code ?? `#${service.id}`,
+						serviceName: service.service?.name ?? "Service",
+						details: formatOrderServiceItemDetails(service),
 					}))}
 					mutation={openComplaintMutation}
 				/>

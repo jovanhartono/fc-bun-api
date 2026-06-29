@@ -1,13 +1,15 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { CheckIcon } from "@phosphor-icons/react";
 import type { UseMutationResult } from "@tanstack/react-query";
 import { Controller, FormProvider, useForm } from "react-hook-form";
 import { z } from "zod";
-import { SelectField } from "@/components/form/select-field";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import type { OpenComplaintPayload } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 const openComplaintSchema = z.object({
 	order_service_id: z.number().int().positive(),
@@ -20,7 +22,9 @@ type OpenComplaintValues = z.infer<typeof openComplaintSchema>;
 
 export interface ComplaintLineOption {
 	id: number;
-	label: string;
+	itemCode: string;
+	serviceName: string;
+	details: string;
 }
 
 type OpenComplaintMutation = UseMutationResult<
@@ -52,7 +56,6 @@ export const OpenComplaintForm = ({
 	});
 
 	const isPending = mutation.isPending;
-	const showLinePicker = lines.length > 1;
 
 	const onSubmit = async (values: OpenComplaintValues) => {
 		await mutation.mutateAsync(values);
@@ -62,33 +65,34 @@ export const OpenComplaintForm = ({
 	return (
 		<FormProvider {...form}>
 			<form
-				className="flex flex-col gap-4"
+				className="flex flex-col gap-5"
 				onSubmit={form.handleSubmit(onSubmit)}
 			>
-				{showLinePicker ? (
-					<Controller
-						control={form.control}
-						name="order_service_id"
-						render={({ field, fieldState }) => (
-							<Field data-invalid={fieldState.invalid}>
-								<FieldLabel htmlFor="complaint-line">Item</FieldLabel>
-								<SelectField
-									id="complaint-line"
-									items={lines.map((line) => ({
-										value: String(line.id),
-										label: line.label,
-									}))}
-									value={String(field.value)}
-									onValueChange={(value) => field.onChange(Number(value))}
-									disabled={isPending}
-									placeholder="Select item"
-									className="w-full"
-								/>
-								<FieldError errors={[fieldState.error]} />
-							</Field>
-						)}
-					/>
-				) : null}
+				<Controller
+					control={form.control}
+					name="order_service_id"
+					render={({ field, fieldState }) => (
+						<Field data-invalid={fieldState.invalid}>
+							<p className="text-sm font-medium">Which item?</p>
+							<div
+								aria-label="Item with complaint"
+								className="grid gap-2 sm:grid-cols-2"
+								role="radiogroup"
+							>
+								{lines.map((line) => (
+									<ComplaintLineCard
+										disabled={isPending}
+										isSelected={field.value === line.id}
+										key={line.id}
+										line={line}
+										onSelect={() => field.onChange(line.id)}
+									/>
+								))}
+							</div>
+							<FieldError errors={[fieldState.error]} />
+						</Field>
+					)}
+				/>
 
 				<Controller
 					control={form.control}
@@ -97,12 +101,13 @@ export const OpenComplaintForm = ({
 						<Field data-invalid={fieldState.invalid}>
 							<FieldLabel htmlFor="complaint-reason">Reason</FieldLabel>
 							<Textarea
-								id="complaint-reason"
-								placeholder="What is the customer unhappy about?"
-								disabled={isPending}
 								aria-invalid={fieldState.invalid}
-								value={field.value}
+								disabled={isPending}
+								id="complaint-reason"
 								onChange={field.onChange}
+								placeholder="What is the customer unhappy about?"
+								rows={4}
+								value={field.value}
 							/>
 							<FieldError errors={[fieldState.error]} />
 						</Field>
@@ -115,10 +120,10 @@ export const OpenComplaintForm = ({
 					render={({ field }) => (
 						<Field orientation="horizontal">
 							<Checkbox
-								id="complaint-start-rework"
 								checked={field.value}
-								onCheckedChange={(value) => field.onChange(Boolean(value))}
 								disabled={isPending}
+								id="complaint-start-rework"
+								onCheckedChange={(value) => field.onChange(Boolean(value))}
 							/>
 							<FieldLabel htmlFor="complaint-start-rework">
 								Start rework now (free re-clean on this order)
@@ -133,10 +138,10 @@ export const OpenComplaintForm = ({
 					render={({ field }) => (
 						<Field orientation="horizontal">
 							<Checkbox
-								id="complaint-voucher"
 								checked={field.value}
-								onCheckedChange={(value) => field.onChange(Boolean(value))}
 								disabled={isPending}
+								id="complaint-voucher"
+								onCheckedChange={(value) => field.onChange(Boolean(value))}
 							/>
 							<FieldLabel htmlFor="complaint-voucher">
 								Voucher promised
@@ -147,14 +152,14 @@ export const OpenComplaintForm = ({
 
 				<div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
 					<Button
+						disabled={isPending}
+						onClick={closeDialog}
 						type="button"
 						variant="outline"
-						onClick={closeDialog}
-						disabled={isPending}
 					>
 						Go back
 					</Button>
-					<Button type="submit" disabled={isPending}>
+					<Button disabled={isPending} type="submit">
 						{isPending ? "Opening…" : "Open complaint"}
 					</Button>
 				</div>
@@ -162,3 +167,59 @@ export const OpenComplaintForm = ({
 		</FormProvider>
 	);
 };
+
+// Shared radio group name so the cards are mutually exclusive at the DOM level
+// and get native arrow-key navigation.
+const COMPLAINT_LINE_RADIO_NAME = "complaint-line";
+
+interface ComplaintLineCardProps {
+	disabled: boolean;
+	isSelected: boolean;
+	line: ComplaintLineOption;
+	onSelect: () => void;
+}
+
+// A real (visually hidden) radio input wrapped by the styled card: native
+// radiogroup semantics and keyboard behavior, with the full card as the touch
+// target. order_service_id is unreadable on its own, so the card surfaces the
+// item code, service, and item details (brand · color · model · size).
+const ComplaintLineCard = ({
+	disabled,
+	isSelected,
+	line,
+	onSelect,
+}: ComplaintLineCardProps) => (
+	<label
+		className={cn(
+			"flex cursor-pointer items-start justify-between gap-3 border px-3 py-2.5 text-left transition active:scale-[0.99] has-[:focus-visible]:border-ring has-[:focus-visible]:ring-1 has-[:focus-visible]:ring-ring/50",
+			isSelected
+				? "border-foreground ring-1 ring-foreground"
+				: "border-border/70 hover:border-border hover:bg-muted/40",
+			disabled && "cursor-not-allowed opacity-60",
+		)}
+	>
+		<input
+			checked={isSelected}
+			className="sr-only"
+			disabled={disabled}
+			name={COMPLAINT_LINE_RADIO_NAME}
+			onChange={onSelect}
+			type="radio"
+			value={line.id}
+		/>
+		<span className="min-w-0 flex-1 space-y-1">
+			<span className="flex items-center gap-2">
+				<span className="truncate font-medium text-sm">{line.itemCode}</span>
+				<Badge className="shrink-0" variant="outline">
+					{line.serviceName}
+				</Badge>
+			</span>
+			<span className="block text-muted-foreground text-xs">
+				{line.details}
+			</span>
+		</span>
+		{isSelected ? (
+			<CheckIcon className="mt-0.5 size-4 shrink-0" weight="bold" />
+		) : null}
+	</label>
+);

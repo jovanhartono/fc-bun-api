@@ -1,8 +1,8 @@
 import {
 	CameraIcon,
 	ImageSquareIcon,
-	TrashIcon,
 	WarningCircleIcon,
+	XIcon,
 } from "@phosphor-icons/react";
 import { useMutation } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -43,6 +43,50 @@ const revokePhotos = (photos: PendingPhoto[]) => {
 	}
 };
 
+interface PhotoThumbProps {
+	disabled: boolean;
+	isActive: boolean;
+	onRemove: () => void;
+	onSelect: () => void;
+	photo: PendingPhoto;
+}
+
+// One captured/picked still in the bottom thumb strip (iOS-camera style): tap to
+// review it in the stage, the corner × removes it.
+const PhotoThumb = ({
+	disabled,
+	isActive,
+	onRemove,
+	onSelect,
+	photo,
+}: PhotoThumbProps) => (
+	<div className="relative shrink-0">
+		<button
+			aria-current={isActive}
+			aria-label={`Preview ${photo.file.name}`}
+			className={cn(
+				"block size-14 overflow-hidden border bg-muted transition",
+				isActive
+					? "border-foreground ring-1 ring-foreground"
+					: "border-border/70 opacity-80 hover:opacity-100",
+			)}
+			onClick={onSelect}
+			type="button"
+		>
+			<img alt="" className="size-full object-cover" src={photo.previewUrl} />
+		</button>
+		<button
+			aria-label={`Remove ${photo.file.name}`}
+			className="absolute -top-1.5 -right-1.5 grid size-5 place-items-center border border-border bg-background text-foreground shadow-sm disabled:opacity-50"
+			disabled={disabled}
+			onClick={onRemove}
+			type="button"
+		>
+			<XIcon className="size-3" aria-hidden="true" />
+		</button>
+	</div>
+);
+
 interface PhotoUploadDialogBaseProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
@@ -78,6 +122,7 @@ const PhotoUploadDialogBase = ({
 	const fileInputRef = useRef<HTMLInputElement | null>(null);
 	const camera = useCameraCapture();
 	const [pendingPhotos, setPendingPhotos] = useState<PendingPhoto[]>([]);
+	const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
 	const [note, setNote] = useState("");
 
 	const stopCamera = camera.stop;
@@ -88,6 +133,7 @@ const PhotoUploadDialogBase = ({
 			revokePhotos(previous);
 			return [];
 		});
+		setSelectedPhotoId(null);
 		setNote("");
 	}, [stopCamera]);
 
@@ -123,16 +169,18 @@ const PhotoUploadDialogBase = ({
 				return;
 			}
 
+			const created = accepted.map((file) => createPendingPhoto(file));
 			setPendingPhotos((previous) => {
 				if (!multiple) {
 					revokePhotos(previous);
-					return accepted.map((file) => createPendingPhoto(file));
+					return created;
 				}
-				return [
-					...previous,
-					...accepted.map((file) => createPendingPhoto(file)),
-				];
+				return [...previous, ...created];
 			});
+			const newest = created.at(-1);
+			if (newest) {
+				setSelectedPhotoId(newest.id);
+			}
 		},
 		[multiple],
 	);
@@ -165,9 +213,8 @@ const PhotoUploadDialogBase = ({
 			}),
 		]);
 		// Single-photo flows: stop after the shot so the still preview replaces the
-		// live feed in place, instead of the feed staying open with the preview
-		// stacked below it (which forces a scroll). Multiple-photo flows keep the
-		// camera open so consecutive shots can be taken without reopening it.
+		// live feed in the stage. Multiple-photo flows keep the camera open so
+		// consecutive shots can be taken — the shots pile up in the thumb strip.
 		if (!multiple) {
 			stopCamera();
 		}
@@ -183,6 +230,13 @@ const PhotoUploadDialogBase = ({
 				return true;
 			}),
 		);
+	};
+
+	// Tapping a thumb reviews it in the stage, so the live feed must yield to the
+	// still — stop the camera and let the user reopen it to shoot more.
+	const reviewPhoto = (photoId: string) => {
+		setSelectedPhotoId(photoId);
+		stopCamera();
 	};
 
 	const uploadMutation = useMutation({
@@ -220,19 +274,7 @@ const PhotoUploadDialogBase = ({
 		},
 	});
 
-	const handleClear = () => {
-		setPendingPhotos((previous) => {
-			revokePhotos(previous);
-			return [];
-		});
-		setNote("");
-	};
-
-	const handleRetake = () => {
-		handleClear();
-		void openCamera();
-	};
-
+	const isBusy = uploadMutation.isPending;
 	const photoNoun = multiple ? "photos" : "photo";
 	const labelSuffix = badgeLabel ? ` for ${badgeLabel}` : "";
 
@@ -250,6 +292,18 @@ const PhotoUploadDialogBase = ({
 		}
 		await uploadMutation.mutateAsync();
 	};
+
+	// The stage shows the live feed while shooting; otherwise the reviewed still
+	// (falling back to the latest shot if the selection was removed).
+	const selectedPhoto =
+		pendingPhotos.find((photo) => photo.id === selectedPhotoId) ??
+		pendingPhotos.at(-1) ??
+		null;
+	const cameraButtonLabel =
+		pendingPhotos.length === 0 ? "Open camera" : multiple ? "Camera" : "Retake";
+	const placeholderText = cameraOnly
+		? "Camera is required for this photo."
+		: "Open the camera or pick from your device.";
 
 	return (
 		<Dialog
@@ -276,221 +330,140 @@ const PhotoUploadDialogBase = ({
 					</DialogTitle>
 				</DialogHeader>
 
-				<div className="grid gap-4">
-					{cameraOnly ? null : (
-						<>
-							<div className="grid gap-2 sm:grid-cols-2">
-								<Button
-									type="button"
-									variant="outline"
-									className="h-12 justify-start"
-									icon={<CameraIcon className="size-4" />}
-									disabled={uploadMutation.isPending || camera.isOpen}
-									onClick={camera.open}
-								>
-									Camera
-								</Button>
-								<Button
-									type="button"
-									variant="outline"
-									className="h-12 justify-start"
-									icon={<ImageSquareIcon className="size-4" />}
-									disabled={uploadMutation.isPending}
-									onClick={openFileInput}
-								>
-									Upload from device
-								</Button>
-							</div>
-
-							<input
-								ref={fileInputRef}
-								type="file"
-								aria-label={`Choose ${photoNoun}${labelSuffix}`}
-								accept={ACCEPTED_IMAGE_TYPES.join(",")}
-								multiple={multiple}
-								className="sr-only"
-								onChange={(event) => {
-									addFiles(Array.from(event.target.files ?? []));
-								}}
-							/>
-						</>
-					)}
-
-					{camera.isOpen ? (
-						<div className="grid gap-3 border border-border bg-muted/20 p-3">
+				<div className="grid gap-3">
+					{/* Stage: live viewfinder, reviewed still, or empty hint. */}
+					<div className="relative aspect-[4/3] w-full overflow-hidden border border-border bg-black">
+						{camera.isOpen ? (
 							<video
 								ref={camera.previewRef}
 								autoPlay
 								muted
 								playsInline
 								onLoadedMetadata={camera.markReady}
-								className={cn(
-									"aspect-[4/3] border border-border bg-black object-cover",
-									cameraOnly ? "mx-auto max-h-80 w-auto" : "w-full",
-								)}
+								className="size-full object-cover"
 							/>
-
-							{camera.error ? (
-								<div className="flex items-start gap-2 border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-									<WarningCircleIcon
-										className="mt-0.5 size-4 shrink-0"
-										weight="fill"
-									/>
-									<span>{camera.error}</span>
-								</div>
-							) : null}
-
-							<div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-								{cameraOnly ? null : (
-									<Button
-										type="button"
-										variant="outline"
-										disabled={uploadMutation.isPending}
-										onClick={camera.stop}
-									>
-										Cancel
-									</Button>
-								)}
-								<Button
-									type="button"
-									disabled={!camera.isReady || uploadMutation.isPending}
-									onClick={captureCameraPhoto}
-								>
-									{camera.isReady ? "Capture" : "Loading..."}
-								</Button>
+						) : selectedPhoto ? (
+							<img
+								src={selectedPhoto.previewUrl}
+								alt={`Preview ${selectedPhoto.file.name}`}
+								className="size-full object-contain"
+							/>
+						) : (
+							<div className="flex size-full flex-col items-center justify-center gap-2 px-6 text-center text-sm text-white/70">
+								<CameraIcon className="size-8 opacity-60" />
+								<p>{placeholderText}</p>
 							</div>
-						</div>
-					) : null}
+						)}
 
-					{pendingPhotos.length > 0 ? (
-						<div className="grid gap-3">
-							<div className="flex items-center justify-between gap-3">
-								<p className="text-sm font-medium">
-									{multiple
-										? `Pending photos (${pendingPhotos.length})`
-										: "Pending photo"}
-								</p>
-								<Button
-									type="button"
-									size="sm"
-									variant="outline"
-									icon={
-										cameraOnly ? <CameraIcon className="size-4" /> : undefined
-									}
-									disabled={uploadMutation.isPending}
-									onClick={cameraOnly ? handleRetake : handleClear}
-								>
-									{cameraOnly ? "Retake" : "Clear"}
-								</Button>
-							</div>
-							<div
-								className={cn(
-									"grid gap-2",
-									multiple ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-1",
-								)}
-							>
-								{pendingPhotos.map((photo) => (
-									<div
-										key={photo.id}
-										className={cn(
-											"relative border border-border",
-											cameraOnly && "mx-auto w-fit",
-										)}
-									>
-										<img
-											src={photo.previewUrl}
-											alt={`Preview ${photo.file.name}`}
-											width={480}
-											height={360}
-											className={cn(
-												"aspect-[4/3] w-full object-cover",
-												cameraOnly && "mx-auto max-h-80 w-auto",
-											)}
-										/>
-										{cameraOnly ? null : (
-											<Button
-												type="button"
-												size="icon-sm"
-												variant="secondary"
-												className="absolute top-1 right-1 bg-background/90"
-												disabled={uploadMutation.isPending}
-												onClick={() => removePhoto(photo.id)}
-											>
-												<TrashIcon className="size-3.5" />
-												<span className="sr-only">
-													Remove {photo.file.name}
-												</span>
-											</Button>
-										)}
-									</div>
-								))}
-							</div>
-							{withNote ? (
-								<Textarea
-									value={note}
-									onChange={(event) => setNote(event.target.value)}
-									placeholder="Optional note"
-									rows={2}
-									maxLength={200}
-									disabled={uploadMutation.isPending}
-									aria-label={`Photo note${labelSuffix}`}
+						{camera.error ? (
+							<div className="absolute inset-x-3 bottom-3 flex items-start gap-2 border border-destructive/40 bg-destructive px-3 py-2 text-sm text-destructive-foreground">
+								<WarningCircleIcon
+									className="mt-0.5 size-4 shrink-0"
+									weight="fill"
 								/>
-							) : null}
-						</div>
-					) : cameraOnly ? (
-						<div
-							className={cn(
-								"grid gap-3 border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground",
-								camera.isOpen && "hidden",
-							)}
-						>
-							{camera.error ? (
-								<div className="flex items-start gap-2 border border-destructive/40 bg-destructive/5 px-3 py-2 text-left text-destructive">
-									<WarningCircleIcon
-										className="mt-0.5 size-4 shrink-0"
-										weight="fill"
+								<span>{camera.error}</span>
+							</div>
+						) : null}
+					</div>
+
+					{/* Control bar: thumb strip · shutter · device picker. */}
+					<div className="flex items-center gap-3">
+						<div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto py-1">
+							{pendingPhotos.length > 0 ? (
+								pendingPhotos.map((photo) => (
+									<PhotoThumb
+										disabled={isBusy}
+										isActive={!camera.isOpen && selectedPhoto?.id === photo.id}
+										key={photo.id}
+										onRemove={() => removePhoto(photo.id)}
+										onSelect={() => reviewPhoto(photo.id)}
+										photo={photo}
 									/>
-									<span>{camera.error}</span>
-								</div>
+								))
 							) : (
-								<p>Camera is required for the drop-off photo.</p>
+								<p className="text-muted-foreground text-xs">
+									{multiple ? "Captured photos appear here." : null}
+								</p>
 							)}
+						</div>
+
+						{camera.isOpen ? (
+							<button
+								aria-label="Capture photo"
+								className="grid size-16 shrink-0 place-items-center rounded-full border-4 border-foreground/80 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:opacity-40"
+								disabled={!camera.isReady || isBusy}
+								onClick={captureCameraPhoto}
+								type="button"
+							>
+								<span className="size-12 rounded-full bg-foreground transition active:scale-90" />
+							</button>
+						) : (
 							<Button
+								className="shrink-0"
+								disabled={isBusy}
+								icon={<CameraIcon className="size-4" />}
+								onClick={() => void openCamera()}
 								type="button"
 								variant="outline"
-								className="mx-auto"
-								icon={<CameraIcon className="size-4" />}
-								disabled={uploadMutation.isPending}
-								onClick={() => void openCamera()}
 							>
-								{camera.error ? "Try camera again" : "Open camera"}
+								{cameraButtonLabel}
 							</Button>
-						</div>
-					) : (
-						<div
-							className={cn(
-								"border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground",
-								camera.isOpen && "hidden",
-							)}
-						>
-							{multiple ? "No photos selected." : "No photo selected."}
-						</div>
+						)}
+
+						{cameraOnly ? null : (
+							<Button
+								aria-label="Upload from device"
+								className="shrink-0"
+								disabled={isBusy}
+								icon={<ImageSquareIcon className="size-4" />}
+								onClick={openFileInput}
+								size="icon-lg"
+								type="button"
+								variant="outline"
+							/>
+						)}
+					</div>
+
+					{cameraOnly ? null : (
+						<input
+							ref={fileInputRef}
+							type="file"
+							aria-label={`Choose ${photoNoun}${labelSuffix}`}
+							accept={ACCEPTED_IMAGE_TYPES.join(",")}
+							multiple={multiple}
+							className="sr-only"
+							onChange={(event) => {
+								addFiles(Array.from(event.target.files ?? []));
+							}}
+						/>
 					)}
+
+					{withNote && pendingPhotos.length > 0 ? (
+						<Textarea
+							value={note}
+							onChange={(event) => setNote(event.target.value)}
+							placeholder="Optional note"
+							rows={2}
+							maxLength={200}
+							disabled={isBusy}
+							aria-label={`Photo note${labelSuffix}`}
+						/>
+					) : null}
 				</div>
 
 				<DialogFooter>
 					<Button
 						type="button"
 						variant="outline"
-						disabled={uploadMutation.isPending}
+						disabled={isBusy}
 						onClick={() => onOpenChange(false)}
 					>
 						Cancel
 					</Button>
 					<Button
 						type="button"
-						disabled={pendingPhotos.length === 0 || uploadMutation.isPending}
-						loading={uploadMutation.isPending}
+						disabled={pendingPhotos.length === 0 || isBusy}
+						loading={isBusy}
 						loadingText="Uploading..."
 						onClick={handleConfirm}
 					>

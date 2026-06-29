@@ -1,4 +1,8 @@
-import { CameraIcon } from "@phosphor-icons/react";
+import {
+	CameraIcon,
+	ImageSquareIcon,
+	WarningCircleIcon,
+} from "@phosphor-icons/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
 	createContext,
@@ -18,6 +22,7 @@ import {
 	InputOTPGroup,
 	InputOTPSlot,
 } from "@/components/ui/input-otp";
+import { useCameraCapture } from "@/features/orders/hooks/useCameraCapture";
 import {
 	ACCEPTED_IMAGE_TYPES,
 	isAcceptedImage,
@@ -347,7 +352,12 @@ PickupServiceRow.displayName = "PickupServiceRow";
 
 const PickupPhotoField = memo(() => {
 	const { file, previewUrl, setFile } = usePickupDialog();
+	const camera = useCameraCapture();
 	const inputRef = useRef<HTMLInputElement | null>(null);
+
+	const stopCamera = camera.stop;
+	// Release the camera when the field unmounts (dialog closes mid-capture).
+	useEffect(() => stopCamera, [stopCamera]);
 
 	const handleFileChange = useCallback(
 		(event: React.ChangeEvent<HTMLInputElement>) => {
@@ -357,25 +367,58 @@ const PickupPhotoField = memo(() => {
 		[setFile],
 	);
 
+	const handleCapture = useCallback(async () => {
+		const blob = await camera.capture();
+		if (!blob) {
+			return;
+		}
+		setFile(
+			new File([blob], `pickup-${Date.now()}.jpg`, { type: "image/jpeg" }),
+		);
+		// Single still: drop the live feed so the captured preview shows in place.
+		stopCamera();
+	}, [camera, setFile, stopCamera]);
+
 	return (
 		<div className="space-y-2">
 			<p className="text-sm font-medium">
 				Pickup photo <span className="text-muted-foreground">(required)</span>
 			</p>
-			<div className="aspect-4/3 w-full overflow-hidden border bg-muted sm:aspect-16/10">
-				{previewUrl ? (
+
+			<div className="relative aspect-4/3 w-full overflow-hidden border bg-black sm:aspect-16/10">
+				{camera.isOpen ? (
+					<video
+						ref={camera.previewRef}
+						autoPlay
+						muted
+						playsInline
+						onLoadedMetadata={camera.markReady}
+						className="size-full object-cover"
+					/>
+				) : previewUrl ? (
 					<img
 						src={previewUrl}
 						alt="Pickup preview"
-						className="h-full w-full object-cover"
+						className="size-full object-contain"
 					/>
 				) : (
-					<div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center text-muted-foreground">
-						<CameraIcon className="size-8 opacity-50" />
+					<div className="flex size-full flex-col items-center justify-center gap-2 px-6 text-center text-white/70">
+						<CameraIcon className="size-8 opacity-60" />
 						<p className="text-sm">Photo of the customer collecting items</p>
 					</div>
 				)}
+
+				{camera.error ? (
+					<div className="absolute inset-x-3 bottom-3 flex items-start gap-2 border border-destructive/40 bg-destructive px-3 py-2 text-sm text-destructive-foreground">
+						<WarningCircleIcon
+							className="mt-0.5 size-4 shrink-0"
+							weight="fill"
+						/>
+						<span>{camera.error}</span>
+					</div>
+				) : null}
 			</div>
+
 			<input
 				ref={inputRef}
 				type="file"
@@ -385,15 +428,44 @@ const PickupPhotoField = memo(() => {
 				className="sr-only"
 				onChange={handleFileChange}
 			/>
-			<Button
-				type="button"
-				variant="outline"
-				className="w-full"
-				icon={<CameraIcon className="size-4" />}
-				onClick={() => inputRef.current?.click()}
-			>
-				{file ? "Replace photo" : "Choose photo"}
-			</Button>
+
+			<div className="flex items-center gap-3">
+				{camera.isOpen ? (
+					<>
+						<div className="flex-1" />
+						<button
+							aria-label="Capture photo"
+							className="grid size-14 shrink-0 place-items-center rounded-full border-4 border-foreground/80 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:opacity-40"
+							disabled={!camera.isReady}
+							onClick={handleCapture}
+							type="button"
+						>
+							<span className="size-10 rounded-full bg-foreground transition active:scale-90" />
+						</button>
+						<div className="flex-1" />
+					</>
+				) : (
+					<Button
+						type="button"
+						variant="outline"
+						className="flex-1"
+						icon={<CameraIcon className="size-4" />}
+						onClick={() => void camera.open()}
+					>
+						{file ? "Retake" : "Open camera"}
+					</Button>
+				)}
+
+				<Button
+					type="button"
+					variant="outline"
+					size="icon-lg"
+					aria-label="Choose from device"
+					className="shrink-0"
+					icon={<ImageSquareIcon className="size-4" />}
+					onClick={() => inputRef.current?.click()}
+				/>
+			</div>
 		</div>
 	);
 });
