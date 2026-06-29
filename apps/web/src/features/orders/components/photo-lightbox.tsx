@@ -103,29 +103,15 @@ export const PhotoLightbox = ({
 		);
 	}, [canNavigate, imageCount]);
 
-	useEffect(() => {
-		if (!open) {
-			return;
+	const handleKeyDown = (event: React.KeyboardEvent) => {
+		if (event.key === "ArrowLeft") {
+			event.preventDefault();
+			showPrevious();
+		} else if (event.key === "ArrowRight") {
+			event.preventDefault();
+			showNext();
 		}
-
-		const handleKeyDown = (event: KeyboardEvent) => {
-			if (event.key === "ArrowLeft") {
-				event.preventDefault();
-				showPrevious();
-			}
-
-			if (event.key === "ArrowRight") {
-				event.preventDefault();
-				showNext();
-			}
-		};
-
-		window.addEventListener("keydown", handleKeyDown);
-
-		return () => {
-			window.removeEventListener("keydown", handleKeyDown);
-		};
-	}, [open, showNext, showPrevious]);
+	};
 
 	const resetPointerState = () => {
 		pointerStateRef.current = {
@@ -202,6 +188,7 @@ export const PhotoLightbox = ({
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent
 				className="inset-0 z-[60] flex h-dvh max-h-dvh w-screen max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-none border-0 bg-black p-0 text-white ring-0 sm:max-w-none"
+				onKeyDown={handleKeyDown}
 				overlayClassName="z-[60] bg-black"
 				overlayForceRender
 				showCloseButton={false}
