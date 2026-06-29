@@ -157,51 +157,52 @@ export async function findComplaints(
 ) {
   const filters = buildComplaintListFilters(normalized, scopedStoreIds);
 
-  const items = await db
-    .select({
-      id: complaintsTable.id,
-      status: complaintsTable.status,
-      resolution: complaintsTable.resolution,
-      reason: complaintsTable.reason,
-      voucher_promised: complaintsTable.voucher_promised,
-      created_at: complaintsTable.created_at,
-      closed_at: complaintsTable.closed_at,
-      order_id: ordersTable.id,
-      order_code: ordersTable.code,
-      store_id: ordersTable.store_id,
-      store_name: storesTable.name,
-      customer_name: customersTable.name,
-      service_name: servicesTable.name,
-      opened_by_name: usersTable.name,
-    })
-    .from(complaintsTable)
-    .innerJoin(
-      ordersServicesTable,
-      eq(complaintsTable.order_service_id, ordersServicesTable.id)
-    )
-    .innerJoin(ordersTable, eq(ordersServicesTable.order_id, ordersTable.id))
-    .innerJoin(customersTable, eq(ordersTable.customer_id, customersTable.id))
-    .innerJoin(storesTable, eq(ordersTable.store_id, storesTable.id))
-    .leftJoin(
-      servicesTable,
-      eq(ordersServicesTable.service_id, servicesTable.id)
-    )
-    .innerJoin(usersTable, eq(complaintsTable.opened_by, usersTable.id))
-    .where(filters)
-    .orderBy(desc(complaintsTable.id))
-    .limit(normalized.limit)
-    .offset(normalized.offset);
-
-  const [counted] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(complaintsTable)
-    .innerJoin(
-      ordersServicesTable,
-      eq(complaintsTable.order_service_id, ordersServicesTable.id)
-    )
-    .innerJoin(ordersTable, eq(ordersServicesTable.order_id, ordersTable.id))
-    .innerJoin(customersTable, eq(ordersTable.customer_id, customersTable.id))
-    .where(filters);
+  const [items, [counted]] = await Promise.all([
+    db
+      .select({
+        id: complaintsTable.id,
+        status: complaintsTable.status,
+        resolution: complaintsTable.resolution,
+        reason: complaintsTable.reason,
+        voucher_promised: complaintsTable.voucher_promised,
+        created_at: complaintsTable.created_at,
+        closed_at: complaintsTable.closed_at,
+        order_id: ordersTable.id,
+        order_code: ordersTable.code,
+        store_id: ordersTable.store_id,
+        store_name: storesTable.name,
+        customer_name: customersTable.name,
+        service_name: servicesTable.name,
+        opened_by_name: usersTable.name,
+      })
+      .from(complaintsTable)
+      .innerJoin(
+        ordersServicesTable,
+        eq(complaintsTable.order_service_id, ordersServicesTable.id)
+      )
+      .innerJoin(ordersTable, eq(ordersServicesTable.order_id, ordersTable.id))
+      .innerJoin(customersTable, eq(ordersTable.customer_id, customersTable.id))
+      .innerJoin(storesTable, eq(ordersTable.store_id, storesTable.id))
+      .leftJoin(
+        servicesTable,
+        eq(ordersServicesTable.service_id, servicesTable.id)
+      )
+      .innerJoin(usersTable, eq(complaintsTable.opened_by, usersTable.id))
+      .where(filters)
+      .orderBy(desc(complaintsTable.id))
+      .limit(normalized.limit)
+      .offset(normalized.offset),
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(complaintsTable)
+      .innerJoin(
+        ordersServicesTable,
+        eq(complaintsTable.order_service_id, ordersServicesTable.id)
+      )
+      .innerJoin(ordersTable, eq(ordersServicesTable.order_id, ordersTable.id))
+      .innerJoin(customersTable, eq(ordersTable.customer_id, customersTable.id))
+      .where(filters),
+  ]);
 
   return { items, total: counted?.count ?? 0 };
 }

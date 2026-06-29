@@ -241,9 +241,13 @@ const ComplaintDetailPage = () => {
 
 export const Route = createFileRoute("/_admin/complaints/$complaintId")({
 	loader: async ({ context, params }) => {
-		await context.queryClient.ensureQueryData(
-			complaintDetailQueryOptions(Number(params.complaintId)),
-		);
+		const id = Number(params.complaintId);
+
+		if (!Number.isInteger(id) || id <= 0) {
+			return;
+		}
+
+		await context.queryClient.ensureQueryData(complaintDetailQueryOptions(id));
 	},
 	component: ComplaintDetailPage,
 });

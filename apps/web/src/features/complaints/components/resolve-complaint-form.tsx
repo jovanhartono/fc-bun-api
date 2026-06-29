@@ -5,7 +5,7 @@ import { z } from "zod";
 import { SelectField } from "@/components/form/select-field";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Field, FieldLabel } from "@/components/ui/field";
+import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import {
 	COMPLAINT_RESOLUTIONS,
@@ -15,7 +15,10 @@ import type { ResolveComplaintPayload } from "@/lib/api";
 
 const resolveSchema = z.object({
 	resolution: z.enum(COMPLAINT_RESOLUTIONS),
-	resolution_note: z.string().optional(),
+	resolution_note: z
+		.string()
+		.max(2000, "Keep it under 2000 characters.")
+		.optional(),
 	voucher_promised: z.boolean(),
 });
 
@@ -89,18 +92,20 @@ export const ResolveComplaintForm = ({
 				<Controller
 					control={form.control}
 					name="resolution_note"
-					render={({ field }) => (
-						<Field>
+					render={({ field, fieldState }) => (
+						<Field data-invalid={fieldState.invalid}>
 							<FieldLabel htmlFor="complaint-resolution-note">
 								Note (optional)
 							</FieldLabel>
 							<Textarea
+								aria-invalid={fieldState.invalid}
 								id="complaint-resolution-note"
 								placeholder="How was it resolved?"
 								disabled={isPending}
 								value={field.value ?? ""}
 								onChange={field.onChange}
 							/>
+							<FieldError errors={[fieldState.error]} />
 						</Field>
 					)}
 				/>

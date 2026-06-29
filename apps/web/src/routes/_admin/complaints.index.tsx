@@ -2,15 +2,15 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
 import dayjs from "dayjs";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { z } from "zod";
 import { DataTable } from "@/components/data-table";
+import { DebouncedSearchInput } from "@/components/debounced-search-input";
 import { SelectField } from "@/components/form/select-field";
 import { PageHeader } from "@/components/page-header";
 import { TablePagination } from "@/components/table-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import {
 	formatComplaintResolution,
 	formatComplaintStatus,
@@ -50,20 +50,18 @@ function buildComplaintsListParams(
 const ComplaintsPage = () => {
 	const navigate = useNavigate({ from: Route.fullPath });
 	const search = Route.useSearch();
-	const [searchInput, setSearchInput] = useState(search.search ?? "");
 
 	const complaintsQuery = useQuery(
 		complaintsPageQueryOptions(buildComplaintsListParams(search)),
 	);
 	const complaints = complaintsQuery.data?.items ?? [];
 
-	const submitSearch = () => {
-		const trimmed = searchInput.trim();
+	const handleSearchChange = (next: string) => {
 		void navigate({
 			search: (prev) => ({
 				...prev,
 				page: 1,
-				search: trimmed.length > 0 ? trimmed : undefined,
+				search: next || undefined,
 			}),
 		});
 	};
@@ -156,19 +154,14 @@ const ComplaintsPage = () => {
 				<Card>
 					<CardContent>
 						<div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-							<form
+							<DebouncedSearchInput
+								id="complaints-search"
+								value={search.search ?? ""}
+								onDebouncedChange={handleSearchChange}
+								placeholder="Search order code or customer…"
+								ariaLabel="Search complaints"
 								className="flex-1"
-								onSubmit={(event) => {
-									event.preventDefault();
-									submitSearch();
-								}}
-							>
-								<Input
-									placeholder="Search order code or customer…"
-									value={searchInput}
-									onChange={(event) => setSearchInput(event.target.value)}
-								/>
-							</form>
+							/>
 							<SelectField
 								items={STATUS_FILTER_ITEMS}
 								value={search.status ?? ""}

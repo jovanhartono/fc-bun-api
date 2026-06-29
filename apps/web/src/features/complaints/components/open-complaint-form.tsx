@@ -13,7 +13,11 @@ import { cn } from "@/lib/utils";
 
 const openComplaintSchema = z.object({
 	order_service_id: z.number().int().positive(),
-	reason: z.string().trim().min(1, "Describe the complaint."),
+	reason: z
+		.string()
+		.trim()
+		.min(1, "Describe the complaint.")
+		.max(2000, "Keep it under 2000 characters."),
 	voucher_promised: z.boolean(),
 	start_rework: z.boolean(),
 });

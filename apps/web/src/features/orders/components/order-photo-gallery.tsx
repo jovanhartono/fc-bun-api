@@ -92,6 +92,7 @@ export function OrderPhotoGallery({
 									"aspect-square w-full bg-muted object-cover",
 									thumbnailImageClassName,
 								)}
+								decoding="async"
 								height={480}
 								loading="lazy"
 								src={item.image_url}
