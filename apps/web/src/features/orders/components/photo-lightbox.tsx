@@ -13,7 +13,6 @@ import {
 	DialogDescription,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
 
 const SWIPE_THRESHOLD = 56;
 
@@ -61,7 +60,6 @@ export const PhotoLightbox = ({
 	title = "Attachment Viewer",
 }: PhotoLightboxProps) => {
 	const [activeIndex, setActiveIndex] = useState(initialIndex);
-	const filmstripRef = useRef<HTMLDivElement | null>(null);
 	const pointerStateRef = useRef<{
 		deltaX: number;
 		deltaY: number;
@@ -81,18 +79,6 @@ export const PhotoLightbox = ({
 			setActiveIndex(initialIndex);
 		}
 	}, [open, initialIndex]);
-
-	// Keep the active filmstrip thumb in view as the image changes (arrows, swipe,
-	// or thumb tap). block: "nearest" prevents the dialog/page from scrolling.
-	useEffect(() => {
-		if (!open) {
-			return;
-		}
-		const thumb = filmstripRef.current?.children[activeIndex];
-		if (thumb instanceof HTMLElement) {
-			thumb.scrollIntoView({ block: "nearest", inline: "center" });
-		}
-	}, [open, activeIndex]);
 
 	const imageCount = items.length;
 	const canNavigate = imageCount > 1;
@@ -296,35 +282,6 @@ export const PhotoLightbox = ({
 							</p>
 						</div>
 					</div>
-
-					{canNavigate ? (
-						<div
-							className="flex gap-2 overflow-x-auto border-t border-white/10 bg-zinc-950 px-4 py-3 [scrollbar-width:thin]"
-							ref={filmstripRef}
-						>
-							{items.map((item, index) => (
-								<button
-									aria-current={index === activeIndex}
-									aria-label={`View image ${index + 1} of ${imageCount}`}
-									className={cn(
-										"relative size-14 shrink-0 overflow-hidden border transition",
-										index === activeIndex
-											? "border-white opacity-100 ring-1 ring-white"
-											: "border-white/20 opacity-60 hover:opacity-100",
-									)}
-									key={item.id}
-									onClick={() => setActiveIndex(index)}
-									type="button"
-								>
-									<img
-										alt=""
-										className="size-full object-cover"
-										src={item.image_url}
-									/>
-								</button>
-							))}
-						</div>
-					) : null}
 				</div>
 			</DialogContent>
 		</Dialog>
