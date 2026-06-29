@@ -29,9 +29,8 @@ type SubjectService = NonNullable<
   Awaited<ReturnType<typeof findComplaintSubjectService>>
 >;
 
-// A rework is a free OrderService line on the SAME order: original line stays
-// picked_up, this new line re-enters the queue (ADR-0013). Adding it flips the
-// order rollup completed → processing via recomputeOrderRollup.
+// A rework is a free OrderService line on the same order (ADR-0013); adding it
+// flips the order rollup back to processing.
 async function createReworkLine(
   tx: DbExecutor,
   {

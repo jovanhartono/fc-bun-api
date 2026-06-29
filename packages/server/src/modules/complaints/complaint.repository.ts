@@ -27,9 +27,8 @@ export async function insertComplaint(
   return created;
 }
 
-// Compare-and-set close: only an OPEN complaint transitions, so two concurrent
-// resolves can't both win and overwrite each other's outcome. Returns undefined
-// when the complaint was already closed.
+// Compare-and-set on status='open' so concurrent resolves can't both win.
+// Returns undefined when the complaint was already closed.
 export async function closeComplaintIfOpen(
   executor: DbExecutor,
   id: number,
@@ -46,36 +45,20 @@ export async function closeComplaintIfOpen(
 export function findOpenComplaintForService(serviceId: number) {
   return db.query.complaintsTable.findFirst({
     where: { order_service_id: serviceId, status: "open" },
-    columns: { id: true },
   });
 }
 
 export function findComplaintById(id: number) {
   return db.query.complaintsTable.findFirst({
     where: { id },
-    columns: { id: true, status: true, order_service_id: true },
   });
 }
 
-// The original complained line plus the order context needed to spawn a rework
-// (store for access, code for the rework item_code).
+// The complained line plus the order context needed to spawn a rework.
 export function findComplaintSubjectService(serviceId: number) {
   return db.query.ordersServicesTable.findFirst({
     where: { id: serviceId },
-    columns: {
-      id: true,
-      status: true,
-      service_id: true,
-      brand: true,
-      color: true,
-      model: true,
-      size: true,
-    },
-    with: {
-      order: {
-        columns: { id: true, code: true, store_id: true },
-      },
-    },
+    with: { order: true },
   });
 }
 

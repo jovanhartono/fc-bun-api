@@ -54,11 +54,8 @@ export const getOrderActionGates = (
 	const cancellableProducts = products.filter(
 		(item) => !item.refunded_at && !item.cancelled_at,
 	);
-	// ADR-0013: a complaint is a post-pickup grievance, so only picked_up lines
-	// are complainable, and only if they have no open complaint already. Rework
-	// lines are excluded — a failed rework escalates to a refund of the original
-	// line, not a fresh complaint against the rework (a rework subject would also
-	// skew the complaint-rate denominator, which counts complaint_id IS NULL).
+	// ADR-0013: only picked_up lines with no open complaint are complainable;
+	// rework lines themselves are never re-complained.
 	const complaintableServices = services.filter(
 		(service) =>
 			!service.reworkOf &&

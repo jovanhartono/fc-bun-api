@@ -47,8 +47,7 @@ const ComplaintDetailPage = () => {
 	const openDialog = useDialog((state) => state.openDialog);
 	const closeDialog = useDialog((state) => state.closeDialog);
 
-	// Resolved once data loads; the rework button only renders after the guard
-	// below, by which point the real order id is in the cache.
+	// 0 until data loads; the rework button only renders after the guard below.
 	const orderId = complaintQuery.data?.orderService?.order?.id ?? 0;
 	const reworkMutation = useAddReworkMutation(id, orderId);
 	const resolveMutation = useResolveComplaintMutation(id, orderId);

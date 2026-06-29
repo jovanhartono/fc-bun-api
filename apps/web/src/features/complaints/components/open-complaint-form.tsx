@@ -55,7 +55,6 @@ export const OpenComplaintForm = ({
 	const showLinePicker = lines.length > 1;
 
 	const onSubmit = async (values: OpenComplaintValues) => {
-		// Zod already trims `reason`; values satisfies OpenComplaintPayload.
 		await mutation.mutateAsync(values);
 		closeDialog();
 	};

@@ -61,8 +61,7 @@ export const useResolveComplaintMutation = (
 					queryKey: queryKeys.complaintDetail(complaintId),
 				}),
 				queryClient.invalidateQueries({ queryKey: ["complaints"] }),
-				// Closing a complaint clears the "Complaint" badge the order-detail
-				// service row derives from its open complaints.
+				// Refresh the order so its "Complaint" badge clears.
 				queryClient.invalidateQueries({
 					queryKey: queryKeys.orderDetail(orderId),
 				}),

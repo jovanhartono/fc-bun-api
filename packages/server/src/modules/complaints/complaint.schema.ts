@@ -6,8 +6,7 @@ import {
 } from "@/modules/orders/order.schema";
 import { normalizePagination } from "@/utils/pagination";
 
-// Open a complaint against a picked_up OrderService. `start_rework` spawns the
-// first free rework line in the same transaction (ADR-0013).
+// `start_rework` spawns the first free rework line in the same transaction.
 export const POSTComplaintSchema = z.object({
   order_service_id: z.coerce.number().int().positive(),
   reason: z.string().trim().min(1).max(2000),
@@ -15,7 +14,6 @@ export const POSTComplaintSchema = z.object({
   start_rework: z.boolean().optional().default(false),
 });
 
-// Close a complaint, recording how it resolved.
 export const PATCHComplaintResolveSchema = z.object({
   resolution: z.enum(complaintResolutionEnum.enumValues),
   resolution_note: z.string().trim().max(2000).optional(),
