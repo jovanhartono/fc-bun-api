@@ -46,7 +46,10 @@ export const useAddReworkMutation = (complaintId: number, orderId: number) => {
 	});
 };
 
-export const useResolveComplaintMutation = (complaintId: number) => {
+export const useResolveComplaintMutation = (
+	complaintId: number,
+	orderId: number,
+) => {
 	const queryClient = useQueryClient();
 
 	return useMutation({
@@ -58,6 +61,11 @@ export const useResolveComplaintMutation = (complaintId: number) => {
 					queryKey: queryKeys.complaintDetail(complaintId),
 				}),
 				queryClient.invalidateQueries({ queryKey: ["complaints"] }),
+				// Closing a complaint clears the "Complaint" badge the order-detail
+				// service row derives from its open complaints.
+				queryClient.invalidateQueries({
+					queryKey: queryKeys.orderDetail(orderId),
+				}),
 			]);
 		},
 	});

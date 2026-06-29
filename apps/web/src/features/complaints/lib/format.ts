@@ -1,12 +1,5 @@
 import type { ComplaintResolution, ComplaintStatus } from "@/lib/api";
-
-type BadgeVariant =
-	| "secondary"
-	| "success"
-	| "danger"
-	| "warning"
-	| "info"
-	| "outline";
+import type { BadgeVariant } from "@/lib/status";
 
 const statusLabels: Record<ComplaintStatus, string> = {
 	open: "Open",

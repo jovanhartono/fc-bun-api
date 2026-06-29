@@ -25,13 +25,12 @@ import {
 } from "@/lib/status";
 import { useDialog } from "@/stores/dialog-store";
 
-const Detail = ({
-	label,
-	children,
-}: {
+interface DetailProps {
 	label: string;
 	children: ReactNode;
-}) => (
+}
+
+const Detail = ({ label, children }: DetailProps) => (
 	<div className="flex flex-col gap-0.5">
 		<span className="font-medium text-[11px] text-muted-foreground uppercase tracking-wide">
 			{label}
@@ -52,7 +51,7 @@ const ComplaintDetailPage = () => {
 	// below, by which point the real order id is in the cache.
 	const orderId = complaintQuery.data?.orderService?.order?.id ?? 0;
 	const reworkMutation = useAddReworkMutation(id, orderId);
-	const resolveMutation = useResolveComplaintMutation(id);
+	const resolveMutation = useResolveComplaintMutation(id, orderId);
 
 	const detail = complaintQuery.data;
 
