@@ -5,20 +5,18 @@ import type { JWTPayload } from "@/types";
 
 // The service takes its DB handle as a parameter on every repository call, so a
 // set of in-memory doubles exercises the full orchestration (gates, rework-line
-// construction, CAS close) without a database. Tests mutate `repo`/`rollup`/
-// `authz` to drive each branch and capture what the service wrote.
+// construction) without a database. Tests mutate `repo`/`rollup`/`authz` to
+// drive each branch and capture what the service wrote.
 type AnyObj = Record<string, unknown>;
 
 const repo = {
   subject: undefined as AnyObj | undefined,
-  openComplaint: undefined as AnyObj | undefined,
+  existingComplaint: undefined as AnyObj | undefined,
   complaintById: undefined as AnyObj | undefined,
   reworkCount: 0,
-  closeResult: undefined as AnyObj | undefined,
   // captured writes
   insertedComplaint: undefined as AnyObj | undefined,
   insertedRework: undefined as AnyObj | undefined,
-  closePatch: undefined as AnyObj | undefined,
 };
 
 const rollup = {
@@ -69,26 +67,22 @@ mock.module("@/utils/authorization", () => ({
 
 mock.module("@/modules/complaints/complaint.repository", () => ({
   findComplaintSubjectService: () => Promise.resolve(repo.subject),
-  findOpenComplaintForService: () => Promise.resolve(repo.openComplaint),
+  findComplaintForService: () => Promise.resolve(repo.existingComplaint),
   findComplaintById: () => Promise.resolve(repo.complaintById),
   countReworkLinesForOrder: () => Promise.resolve(repo.reworkCount),
   insertComplaint: (_executor: unknown, values: AnyObj) => {
     repo.insertedComplaint = values;
-    return Promise.resolve({ id: 99, status: "open", ...values });
+    return Promise.resolve({ id: 99, ...values });
   },
   insertReworkLine: (_executor: unknown, values: AnyObj) => {
     repo.insertedRework = values;
     return Promise.resolve({ id: 500, ...values });
   },
-  closeComplaintIfOpen: (_executor: unknown, _id: number, patch: AnyObj) => {
-    repo.closePatch = patch;
-    return Promise.resolve(repo.closeResult);
-  },
   findComplaintDetailById: () => Promise.resolve(undefined),
   findComplaints: () => Promise.resolve({ items: [], total: 0 }),
 }));
 
-const { addRework, openComplaint, resolveComplaint } = await import(
+const { addRework, openComplaint } = await import(
   "@/modules/complaints/complaint.service"
 );
 
@@ -97,6 +91,7 @@ const USER = { id: 42, role: "cashier" } as unknown as JWTPayload;
 const makeSubject = (over: AnyObj = {}) => ({
   id: 10,
   status: "picked_up",
+  complaint_id: null,
   service_id: 3,
   brand: "Nike",
   color: "white",
@@ -119,13 +114,11 @@ const captureRejection = async (
 
 beforeEach(() => {
   repo.subject = makeSubject();
-  repo.openComplaint = undefined;
+  repo.existingComplaint = undefined;
   repo.complaintById = undefined;
   repo.reworkCount = 0;
-  repo.closeResult = undefined;
   repo.insertedComplaint = undefined;
   repo.insertedRework = undefined;
-  repo.closePatch = undefined;
   rollup.calls = [];
   authz.assertCalls = [];
   authz.storeIds = [];
@@ -137,7 +130,6 @@ const open = (body: AnyObj = {}) =>
     body: {
       order_service_id: 10,
       reason: "Still dirty",
-      voucher_promised: false,
       start_rework: false,
       ...body,
     } as never,
@@ -160,12 +152,21 @@ describe("openComplaint", () => {
     );
   });
 
-  it("rejects when an open complaint already exists for the item", async () => {
-    repo.openComplaint = { id: 5 };
+  it("rejects opening a complaint on a rework line", async () => {
+    repo.subject = makeSubject({ complaint_id: 5 });
     const error = await captureRejection(open());
     expect(error).toBeInstanceOf(BadRequestException);
     expect((error as Error).message).toBe(
-      "An open complaint already exists for this item"
+      "Cannot open a complaint on a rework line"
+    );
+  });
+
+  it("rejects when a complaint already exists for the item", async () => {
+    repo.existingComplaint = { id: 5 };
+    const error = await captureRejection(open());
+    expect(error).toBeInstanceOf(BadRequestException);
+    expect((error as Error).message).toBe(
+      "A complaint already exists for this item"
     );
   });
 
@@ -181,10 +182,9 @@ describe("openComplaint", () => {
     expect(result.rework).toBeNull();
     expect(repo.insertedRework).toBeUndefined();
     expect(rollup.calls).toHaveLength(0);
-    expect(repo.insertedComplaint).toMatchObject({
+    expect(repo.insertedComplaint).toEqual({
       order_service_id: 10,
       reason: "Still dirty",
-      voucher_promised: false,
       opened_by: 42,
     });
   });
@@ -233,15 +233,18 @@ describe("addRework", () => {
     expect((error as Error).message).toBe("Complaint not found");
   });
 
-  it("rejects when the complaint is already closed", async () => {
-    repo.complaintById = { id: 99, status: "closed", order_service_id: 10 };
+  it("rejects when the original line is no longer picked_up", async () => {
+    repo.complaintById = { id: 99, order_service_id: 10 };
+    repo.subject = makeSubject({ status: "refunded" });
     const error = await captureRejection(add());
     expect(error).toBeInstanceOf(BadRequestException);
-    expect((error as Error).message).toBe("Complaint is already closed");
+    expect((error as Error).message).toBe(
+      "Cannot add a rework once the original line is no longer picked up"
+    );
   });
 
-  it("adds a sequential rework line to an open complaint", async () => {
-    repo.complaintById = { id: 99, status: "open", order_service_id: 10 };
+  it("adds a sequential rework line to the complaint", async () => {
+    repo.complaintById = { id: 99, order_service_id: 10 };
     repo.reworkCount = 1;
 
     const line = await add();
@@ -258,90 +261,27 @@ describe("addRework", () => {
   });
 });
 
-describe("resolveComplaint", () => {
-  const resolve = (body: AnyObj = {}) =>
-    resolveComplaint({
-      user: USER,
-      complaintId: 99,
-      body: { resolution: "refund", ...body } as never,
-    });
-
-  beforeEach(() => {
-    repo.complaintById = { id: 99, status: "open", order_service_id: 10 };
-    repo.closeResult = { id: 99, status: "closed", resolution: "refund" };
-  });
-
-  it("closes an open complaint via compare-and-set and returns the row", async () => {
-    const result = await resolve({ resolution_note: "Refunded at counter" });
-
-    expect(result).toMatchObject({
-      id: 99,
-      status: "closed",
-      resolution: "refund",
-    });
-    expect(repo.closePatch).toMatchObject({
-      status: "closed",
-      resolution: "refund",
-      resolution_note: "Refunded at counter",
-      closed_by: 42,
-    });
-    expect(repo.closePatch?.closed_at).toBeInstanceOf(Date);
-  });
-
-  it("defaults resolution_note to null when omitted", async () => {
-    await resolve();
-    expect(repo.closePatch?.resolution_note).toBeNull();
-  });
-
-  it("omits voucher_promised from the patch unless provided", async () => {
-    await resolve();
-    expect(repo.closePatch).not.toHaveProperty("voucher_promised");
-  });
-
-  it("includes voucher_promised in the patch when provided", async () => {
-    await resolve({ voucher_promised: true });
-    expect(repo.closePatch?.voucher_promised).toBe(true);
-  });
-
-  it("rejects when the CAS finds the complaint already closed", async () => {
-    repo.closeResult = undefined;
-    const error = await captureRejection(resolve());
-    expect(error).toBeInstanceOf(BadRequestException);
-    expect((error as Error).message).toBe("Complaint is already closed");
-  });
-
-  it("rejects resolving a complaint that is already closed before the CAS", async () => {
-    repo.complaintById = { id: 99, status: "closed", order_service_id: 10 };
-    const error = await captureRejection(resolve());
-    expect(error).toBeInstanceOf(BadRequestException);
-    expect((error as Error).message).toBe("Complaint is already closed");
-  });
-});
-
 describe("normalizeComplaintListQuery", () => {
   it("applies default pagination when no query is given", () => {
     expect(normalizeComplaintListQuery()).toEqual({
       limit: 25,
       offset: 0,
       search: undefined,
-      status: undefined,
       store_id: undefined,
     });
   });
 
-  it("passes through status, store_id, and search filters", () => {
+  it("passes through store_id and search filters", () => {
     expect(
       normalizeComplaintListQuery({
         limit: 10,
         offset: 20,
-        status: "open",
         store_id: 3,
         search: "ORD-001",
       })
     ).toEqual({
       limit: 10,
       offset: 20,
-      status: "open",
       store_id: 3,
       search: "ORD-001",
     });

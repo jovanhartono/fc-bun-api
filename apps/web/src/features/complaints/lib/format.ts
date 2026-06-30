@@ -1,41 +1,27 @@
-import type { ComplaintResolution, ComplaintStatus } from "@/lib/api";
 import type { BadgeVariant } from "@/lib/status";
 
-const statusLabels: Record<ComplaintStatus, string> = {
-	open: "Open",
-	closed: "Closed",
-};
+// The Complaint carries no stored status (ADR-0013 amendment) — its outcome is
+// derived from the lines: refunded if the original line was refunded, reworked
+// if any rework line points back, else pending.
+interface ComplaintOutcomeInput {
+	refunded: boolean;
+	reworkCount: number;
+}
 
-export const formatComplaintStatus = (status: ComplaintStatus) =>
-	statusLabels[status];
+interface ComplaintOutcome {
+	label: string;
+	variant: BadgeVariant;
+}
 
-export const getComplaintStatusBadgeVariant = (
-	status: ComplaintStatus,
-): BadgeVariant => (status === "open" ? "warning" : "secondary");
-
-const resolutionLabels: Record<ComplaintResolution, string> = {
-	rework: "Rework",
-	refund: "Refund",
-	rejected: "Rejected",
-};
-
-export const formatComplaintResolution = (resolution: ComplaintResolution) =>
-	resolutionLabels[resolution];
-
-export const getComplaintResolutionBadgeVariant = (
-	resolution: ComplaintResolution,
-): BadgeVariant => {
-	if (resolution === "refund") {
-		return "danger";
+export const getComplaintOutcome = ({
+	refunded,
+	reworkCount,
+}: ComplaintOutcomeInput): ComplaintOutcome => {
+	if (refunded) {
+		return { label: "Refunded", variant: "danger" };
 	}
-	if (resolution === "rejected") {
-		return "outline";
+	if (reworkCount > 0) {
+		return { label: "Reworked", variant: "success" };
 	}
-	return "success";
+	return { label: "Pending", variant: "warning" };
 };
-
-export const COMPLAINT_RESOLUTIONS = [
-	"rework",
-	"refund",
-	"rejected",
-] as const satisfies readonly ComplaintResolution[];

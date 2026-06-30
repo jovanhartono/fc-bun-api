@@ -1,4 +1,4 @@
-import { ArrowClockwiseIcon, CheckCircleIcon } from "@phosphor-icons/react";
+import { ArrowClockwiseIcon } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import dayjs from "dayjs";
@@ -7,23 +7,13 @@ import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ResolveComplaintForm } from "@/features/complaints/components/resolve-complaint-form";
-import {
-	useAddReworkMutation,
-	useResolveComplaintMutation,
-} from "@/features/complaints/hooks/useComplaintMutations";
-import {
-	formatComplaintResolution,
-	formatComplaintStatus,
-	getComplaintResolutionBadgeVariant,
-	getComplaintStatusBadgeVariant,
-} from "@/features/complaints/lib/format";
+import { useAddReworkMutation } from "@/features/complaints/hooks/useComplaintMutations";
+import { getComplaintOutcome } from "@/features/complaints/lib/format";
 import { complaintDetailQueryOptions } from "@/lib/query-options";
 import {
 	formatOrderServiceStatus,
 	getOrderServiceStatusBadgeVariant,
 } from "@/lib/status";
-import { useDialog } from "@/stores/dialog-store";
 
 interface DetailProps {
 	label: string;
@@ -44,13 +34,10 @@ const ComplaintDetailPage = () => {
 	const id = Number(complaintId);
 
 	const complaintQuery = useQuery(complaintDetailQueryOptions(id));
-	const openDialog = useDialog((state) => state.openDialog);
-	const closeDialog = useDialog((state) => state.closeDialog);
 
 	// 0 until data loads; the rework button only renders after the guard below.
 	const orderId = complaintQuery.data?.orderService?.order?.id ?? 0;
 	const reworkMutation = useAddReworkMutation(id, orderId);
-	const resolveMutation = useResolveComplaintMutation(id, orderId);
 
 	const detail = complaintQuery.data;
 
@@ -69,44 +56,27 @@ const ComplaintDetailPage = () => {
 
 	const subject = detail.orderService;
 	const order = detail.orderService.order;
-	const isOpen = detail.status === "open";
-
-	const handleResolve = () => {
-		openDialog({
-			title: "Resolve complaint",
-			description: "Record how this complaint was resolved.",
-			content: () => (
-				<ResolveComplaintForm
-					closeDialog={closeDialog}
-					defaultVoucherPromised={detail.voucher_promised}
-					mutation={resolveMutation}
-				/>
-			),
-		});
-	};
+	// Refund is the terminal rung (ADR-0013) — rework only while picked_up.
+	const canRework = subject.status === "picked_up";
+	const outcome = getComplaintOutcome({
+		refunded: subject.status === "refunded",
+		reworkCount: detail.reworkLines.length,
+	});
 
 	return (
 		<>
 			<PageHeader
 				title={`Complaint #${detail.id}`}
 				actions={
-					isOpen ? (
-						<div className="flex gap-2">
-							<Button
-								variant="outline"
-								onClick={() => reworkMutation.mutate()}
-								disabled={reworkMutation.isPending}
-								icon={<ArrowClockwiseIcon className="size-4" />}
-							>
-								Start rework
-							</Button>
-							<Button
-								onClick={handleResolve}
-								icon={<CheckCircleIcon className="size-4" />}
-							>
-								Resolve
-							</Button>
-						</div>
+					canRework ? (
+						<Button
+							variant="outline"
+							onClick={() => reworkMutation.mutate()}
+							disabled={reworkMutation.isPending}
+							icon={<ArrowClockwiseIcon className="size-4" />}
+						>
+							Start rework
+						</Button>
 					) : null
 				}
 			/>
@@ -116,21 +86,7 @@ const ComplaintDetailPage = () => {
 					<CardHeader>
 						<CardTitle className="flex flex-wrap items-center gap-2">
 							Complaint
-							<Badge variant={getComplaintStatusBadgeVariant(detail.status)}>
-								{formatComplaintStatus(detail.status)}
-							</Badge>
-							{detail.resolution ? (
-								<Badge
-									variant={getComplaintResolutionBadgeVariant(
-										detail.resolution,
-									)}
-								>
-									{formatComplaintResolution(detail.resolution)}
-								</Badge>
-							) : null}
-							{detail.voucher_promised ? (
-								<Badge variant="info">Voucher promised</Badge>
-							) : null}
+							<Badge variant={outcome.variant}>{outcome.label}</Badge>
 						</CardTitle>
 					</CardHeader>
 					<CardContent className="grid gap-4">
@@ -175,28 +131,6 @@ const ComplaintDetailPage = () => {
 								{dayjs(detail.created_at).format("DD MMM YYYY HH:mm")}
 							</Detail>
 						</div>
-
-						{detail.status === "closed" ? (
-							<div className="grid gap-4 border-t pt-4">
-								<div className="grid grid-cols-2 gap-4">
-									<Detail label="Closed by">
-										{detail.closedBy?.name ?? "—"}
-									</Detail>
-									<Detail label="Closed at">
-										{detail.closed_at
-											? dayjs(detail.closed_at).format("DD MMM YYYY HH:mm")
-											: "—"}
-									</Detail>
-								</div>
-								{detail.resolution_note ? (
-									<Detail label="Resolution note">
-										<span className="whitespace-pre-wrap">
-											{detail.resolution_note}
-										</span>
-									</Detail>
-								) : null}
-							</div>
-						) : null}
 					</CardContent>
 				</Card>
 

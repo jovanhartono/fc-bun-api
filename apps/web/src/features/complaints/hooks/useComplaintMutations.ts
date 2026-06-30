@@ -4,8 +4,6 @@ import {
 	type OpenComplaintPayload,
 	openComplaint,
 	queryKeys,
-	type ResolveComplaintPayload,
-	resolveComplaint,
 } from "@/lib/api";
 
 export const useOpenComplaintMutation = (orderId: number) => {
@@ -41,30 +39,6 @@ export const useAddReworkMutation = (complaintId: number, orderId: number) => {
 					queryKey: queryKeys.orderDetail(orderId),
 				}),
 				queryClient.invalidateQueries({ queryKey: ["orders"] }),
-			]);
-		},
-	});
-};
-
-export const useResolveComplaintMutation = (
-	complaintId: number,
-	orderId: number,
-) => {
-	const queryClient = useQueryClient();
-
-	return useMutation({
-		mutationFn: (payload: ResolveComplaintPayload) =>
-			resolveComplaint(complaintId, payload),
-		onSuccess: async () => {
-			await Promise.all([
-				queryClient.invalidateQueries({
-					queryKey: queryKeys.complaintDetail(complaintId),
-				}),
-				queryClient.invalidateQueries({ queryKey: ["complaints"] }),
-				// Refresh the order so its "Complaint" badge clears.
-				queryClient.invalidateQueries({
-					queryKey: queryKeys.orderDetail(orderId),
-				}),
 			]);
 		},
 	});

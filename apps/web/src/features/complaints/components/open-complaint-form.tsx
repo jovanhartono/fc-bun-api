@@ -18,7 +18,6 @@ const openComplaintSchema = z.object({
 		.trim()
 		.min(1, "Describe the complaint.")
 		.max(2000, "Keep it under 2000 characters."),
-	voucher_promised: z.boolean(),
 	start_rework: z.boolean(),
 });
 
@@ -54,7 +53,6 @@ export const OpenComplaintForm = ({
 		defaultValues: {
 			order_service_id: lines[0]?.id ?? 0,
 			reason: "",
-			voucher_promised: false,
 			start_rework: true,
 		},
 	});
@@ -131,24 +129,6 @@ export const OpenComplaintForm = ({
 							/>
 							<FieldLabel htmlFor="complaint-start-rework">
 								Start rework now (free re-clean on this order)
-							</FieldLabel>
-						</Field>
-					)}
-				/>
-
-				<Controller
-					control={form.control}
-					name="voucher_promised"
-					render={({ field }) => (
-						<Field orientation="horizontal">
-							<Checkbox
-								checked={field.value}
-								disabled={isPending}
-								id="complaint-voucher"
-								onCheckedChange={(value) => field.onChange(Boolean(value))}
-							/>
-							<FieldLabel htmlFor="complaint-voucher">
-								Voucher promised
 							</FieldLabel>
 						</Field>
 					)}

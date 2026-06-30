@@ -1,20 +1,18 @@
 import { db } from "@/db";
 import { BadRequestException, NotFoundException } from "@/errors";
 import {
-  closeComplaintIfOpen,
   countReworkLinesForOrder,
   findComplaintById,
   findComplaintDetailById,
+  findComplaintForService,
   findComplaintSubjectService,
   findComplaints,
-  findOpenComplaintForService,
   insertComplaint,
   insertReworkLine,
 } from "@/modules/complaints/complaint.repository";
 import {
   type GetComplaintsQuery,
   normalizeComplaintListQuery,
-  type PatchComplaintResolveInput,
   type PostComplaintInput,
 } from "@/modules/complaints/complaint.schema";
 import {
@@ -72,13 +70,10 @@ async function createReworkLine(
   return line;
 }
 
-async function loadOpenComplaintSubject(user: JWTPayload, complaintId: number) {
+async function loadComplaintSubject(user: JWTPayload, complaintId: number) {
   const complaint = await findComplaintById(complaintId);
   if (!complaint) {
     throw new NotFoundException("Complaint not found");
-  }
-  if (complaint.status !== "open") {
-    throw new BadRequestException("Complaint is already closed");
   }
 
   const subject = await findComplaintSubjectService(complaint.order_service_id);
@@ -87,6 +82,14 @@ async function loadOpenComplaintSubject(user: JWTPayload, complaintId: number) {
   }
 
   await assertStoreAccess(user, subject.order.store_id);
+
+  // Refund is the terminal rung of the ladder (ADR-0013) — no rework once the
+  // original line has left picked_up.
+  if (subject.status !== "picked_up") {
+    throw new BadRequestException(
+      "Cannot add a rework once the original line is no longer picked up"
+    );
+  }
 
   return { complaint, subject };
 }
@@ -111,18 +114,21 @@ export async function openComplaint({
     );
   }
 
-  const existingOpen = await findOpenComplaintForService(subject.id);
-  if (existingOpen) {
-    throw new BadRequestException(
-      "An open complaint already exists for this item"
-    );
+  // A rework line is itself an OrderService; complaints attach only to real
+  // lines (ADR-0013) so the one-per-line rule and the rate denominator hold.
+  if (subject.complaint_id !== null) {
+    throw new BadRequestException("Cannot open a complaint on a rework line");
+  }
+
+  const existing = await findComplaintForService(subject.id);
+  if (existing) {
+    throw new BadRequestException("A complaint already exists for this item");
   }
 
   return db.transaction(async (tx) => {
     const complaint = await insertComplaint(tx, {
       order_service_id: subject.id,
       reason: body.reason,
-      voucher_promised: body.voucher_promised,
       opened_by: user.id,
     });
 
@@ -145,10 +151,7 @@ export async function addRework({
   user: JWTPayload;
   complaintId: number;
 }) {
-  const { complaint, subject } = await loadOpenComplaintSubject(
-    user,
-    complaintId
-  );
+  const { complaint, subject } = await loadComplaintSubject(user, complaintId);
 
   return db.transaction((tx) =>
     createReworkLine(tx, {
@@ -157,36 +160,6 @@ export async function addRework({
       userId: user.id,
     })
   );
-}
-
-export async function resolveComplaint({
-  user,
-  complaintId,
-  body,
-}: {
-  user: JWTPayload;
-  complaintId: number;
-  body: PatchComplaintResolveInput;
-}) {
-  const { complaint } = await loadOpenComplaintSubject(user, complaintId);
-
-  const patch = {
-    status: "closed" as const,
-    resolution: body.resolution,
-    resolution_note: body.resolution_note ?? null,
-    closed_by: user.id,
-    closed_at: new Date(),
-    ...(body.voucher_promised === undefined
-      ? {}
-      : { voucher_promised: body.voucher_promised }),
-  };
-
-  // CAS on status='open' so a concurrent resolve can't overwrite the outcome.
-  const updated = await closeComplaintIfOpen(db, complaint.id, patch);
-  if (!updated) {
-    throw new BadRequestException("Complaint is already closed");
-  }
-  return updated;
 }
 
 export async function getComplaintDetail(user: JWTPayload, id: number) {

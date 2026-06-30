@@ -253,6 +253,7 @@ const PhotoUploadDialogBase = ({
 			});
 
 			const trimmedNote = withNote ? note.trim() || undefined : undefined;
+			// TODO: make this parallel instead of waterfall request
 			for (const photo of validatedPhotos) {
 				await uploadPhoto?.({
 					file: photo.file,

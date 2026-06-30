@@ -35,11 +35,6 @@ export const relations = defineRelations(schema, (r) => ({
       to: r.complaintsTable.opened_by,
       alias: "complaint_opened_by",
     }),
-    complaintsClosed: r.many.complaintsTable({
-      from: r.usersTable.id,
-      to: r.complaintsTable.closed_by,
-      alias: "complaint_closed_by",
-    }),
     orderServiceStatusLogs: r.many.orderServiceStatusLogsTable(),
     orderServices: r.many.ordersServicesTable(),
     orderServiceUploadedPhotos: r.many.orderServicesImagesTable(),
@@ -249,11 +244,6 @@ export const relations = defineRelations(schema, (r) => ({
       to: r.usersTable.id,
       alias: "complaint_opened_by",
       optional: false,
-    }),
-    closedBy: r.one.usersTable({
-      from: r.complaintsTable.closed_by,
-      to: r.usersTable.id,
-      alias: "complaint_closed_by",
     }),
   },
 

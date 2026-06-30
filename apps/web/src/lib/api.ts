@@ -120,11 +120,7 @@ export type ComplaintDetail = Extract<
 	InferResponseType<typeof complaintDetailRoute>,
 	{ success: true }
 >["data"];
-export type ComplaintStatus = "open" | "closed";
-export type ComplaintResolution = "rework" | "refund" | "rejected";
-
 export type FetchComplaintsQuery = {
-	status?: ComplaintStatus;
 	store_id?: number;
 	search?: string;
 	limit?: number;
@@ -134,14 +130,7 @@ export type FetchComplaintsQuery = {
 export type OpenComplaintPayload = {
 	order_service_id: number;
 	reason: string;
-	voucher_promised?: boolean;
 	start_rework?: boolean;
-};
-
-export type ResolveComplaintPayload = {
-	resolution: ComplaintResolution;
-	resolution_note?: string;
-	voucher_promised?: boolean;
 };
 export type OrderServiceLookup = Extract<
 	InferResponseType<typeof orderServiceByItemCodeRoute>,
@@ -1021,7 +1010,6 @@ export async function fetchComplaintsPage(
 							...(query.offset !== undefined
 								? { offset: String(query.offset) }
 								: {}),
-							...(query.status ? { status: query.status } : {}),
 							...(query.store_id !== undefined
 								? { store_id: String(query.store_id) }
 								: {}),
@@ -1059,18 +1047,6 @@ export async function addComplaintRework(complaintId: number) {
 	return parseResponse(
 		rpcWithAuth().api.admin.complaints[":id"].rework.$post({
 			param: { id: String(complaintId) },
-		}),
-	);
-}
-
-export async function resolveComplaint(
-	complaintId: number,
-	payload: ResolveComplaintPayload,
-) {
-	return parseResponse(
-		rpcWithAuth().api.admin.complaints[":id"].$patch({
-			param: { id: String(complaintId) },
-			json: payload,
 		}),
 	);
 }

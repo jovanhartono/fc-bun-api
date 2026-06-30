@@ -54,13 +54,13 @@ export const getOrderActionGates = (
 	const cancellableProducts = products.filter(
 		(item) => !item.refunded_at && !item.cancelled_at,
 	);
-	// ADR-0013: only picked_up lines with no open complaint are complainable;
-	// rework lines themselves are never re-complained.
+	// ADR-0013: only picked_up lines with no complaint yet are complainable
+	// (one complaint per line, lifetime); rework lines are never re-complained.
 	const complaintableServices = services.filter(
 		(service) =>
 			!service.reworkOf &&
 			service.status === "picked_up" &&
-			!(service.complaints ?? []).some((entry) => entry.status === "open"),
+			(service.complaints ?? []).length === 0,
 	);
 	const isPaid = detail.payment_status === "paid";
 	// ADR-0009: items are ready but the Order is unpaid — explain why pickup is

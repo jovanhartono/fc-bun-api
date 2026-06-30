@@ -2,7 +2,6 @@ import { Hono } from "hono";
 import { StatusCodes } from "http-status-codes";
 import {
   GETComplaintsQuerySchema,
-  PATCHComplaintResolveSchema,
   POSTComplaintSchema,
 } from "@/modules/complaints/complaint.schema";
 import {
@@ -10,7 +9,6 @@ import {
   getComplaintDetail,
   listComplaints,
   openComplaint,
-  resolveComplaint,
 } from "@/modules/complaints/complaint.service";
 import { idParamSchema } from "@/schema/param";
 import type { JWTPayload } from "@/types";
@@ -52,20 +50,6 @@ const app = new Hono()
     const rework = await addRework({ user, complaintId: id });
 
     return c.json(success(rework, "Rework added"), StatusCodes.CREATED);
-  })
-  .patch(
-    "/:id",
-    idParamSchema,
-    zodValidator("json", PATCHComplaintResolveSchema),
-    async (c) => {
-      const user = c.get("jwtPayload") as JWTPayload;
-      const { id } = c.req.valid("param");
-      const body = c.req.valid("json");
-
-      const complaint = await resolveComplaint({ user, complaintId: id, body });
-
-      return c.json(success(complaint, "Complaint resolved"));
-    }
-  );
+  });
 
 export default app;

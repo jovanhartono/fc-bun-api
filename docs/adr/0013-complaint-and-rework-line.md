@@ -36,3 +36,33 @@ We model a **Complaint** as a first-class, append-only record linked to the orig
 - **A complained Order has an unstable `completed_at`** and can re-enter `processing`. Any "completed in period" count reflects the rework date; `completed` is no longer strictly terminal at the Order level for the ~1–2% of Orders with a rework.
 - **Worker-productivity reporting counts rework labor at ₀ revenue** — a worker who reworks a pair did real work that bills nothing. Acceptable at 1–2%; revisit only if the signal grows.
 - **The voucher remains manual** until/unless a customer-scoped Campaign concept is built; the Complaint record is where the promise lives in the meantime.
+
+## Amendment 2026-06-30 — Complaint drops its status pipeline
+
+A code review (findings #1/#2) surfaced two problems with the authored `status`/`resolution` pipeline on the Complaint:
+
+1. `resolution: "refund"` was settable by **any** staff with **no actual refund** anywhere — the record could claim an escalation that never moved money (the route is JWT-gated, not role-gated, and the field is just a label).
+2. `addRework` only checked the Complaint was `open`, never the original line's state, so a free Rework could be attached to an already-`refunded` line, inverting the ladder.
+
+The deeper issue: the Complaint's `status`/`resolution` is a **second, authored** status pipeline sitting on top of facts that already live on the lines. This repo's spine is "**status is derived from the truth-source, never authored**" (Order status rolls up from line states). The Complaint violated that.
+
+**Decision: the Complaint becomes a write-once grievance log.** The row is `order_service_id`, `reason`, `opened_by`, `created_at` — nothing else. Its outcome is **derived from the lines**, never stored:
+
+- **reworked** → a Rework line exists (`orders_services.complaint_id = complaint.id`)
+- **refunded** → the original line's status is `refunded`
+- **pending** → neither
+
+This **supersedes** these original Decisions:
+
+- `status` (`open`/`closed`) and `resolution` (`rework`/`refund`/`rejected`) columns — **dropped**, with their enums (`complaint_status_enum`, `complaint_resolution_enum`), the `resolution_note` column, the status index, and the `closed_requires_resolution` CHECK.
+- "at most one **open** Complaint per line (partial unique index)" → **one Complaint per original line for its lifetime** (`order_service_id` is `UNIQUE`). A Complaint is the whole grievance *episode*; "still bad after a rework" is handled *inside* it (another Rework, or escalate to refund), not by opening a second Complaint.
+- The `"rejected"` outcome — **deleted**. A Complaint row is an *already-accepted* grievance; the shop does not record "we declined".
+- "resolving is open to any staff" + the `PATCH /:id` resolve endpoint — **removed**. The row never mutates after open, so there is no resolve endpoint at all.
+- `voucher_promised`, `closed_by`, `closed_at`, `updated_at` — **dropped**. The voucher stays fully **out of band and untracked** in v1 (it was already "out of band"; we stop half-tracking the promise).
+
+**Surviving correctness guards:**
+
+- `openComplaint` rejects a subject that is itself a Rework line (`complaint_id IS NOT NULL`) — complaints attach only to real lines, keeping the one-per-line rule and the complaint-rate denominator (which excludes Rework lines) coherent.
+- `addRework` rejects unless the original line is still `picked_up`. Once it is `refunded` (the terminal rung), the ladder is done. This replaces the old "is the Complaint open?" gate and is the fix for finding #2.
+
+The escalation ladder is unchanged in spirit — Rework (0..N) first, admin-only refund of the original line as the terminal rung — but its *position is read from the lines*, not written onto the Complaint. The refund/reversal module stays complaint-agnostic; the `addRework` `picked_up` gate prevents the only incoherent state that decoupling could create. Finding #1 disappears outright: there is no `resolution` field left to lie.

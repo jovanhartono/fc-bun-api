@@ -13,7 +13,6 @@ import type { NormalizedComplaintListQuery } from "@/modules/complaints/complain
 import type { DbExecutor } from "@/modules/orders/order-status-machine";
 
 type ComplaintInsert = typeof complaintsTable.$inferInsert;
-type ComplaintUpdate = Partial<typeof complaintsTable.$inferInsert>;
 type ReworkLineInsert = typeof ordersServicesTable.$inferInsert;
 
 export async function insertComplaint(
@@ -27,24 +26,10 @@ export async function insertComplaint(
   return created;
 }
 
-// Compare-and-set on status='open' so concurrent resolves can't both win.
-// Returns undefined when the complaint was already closed.
-export async function closeComplaintIfOpen(
-  executor: DbExecutor,
-  id: number,
-  patch: ComplaintUpdate
-) {
-  const [updated] = await executor
-    .update(complaintsTable)
-    .set(patch)
-    .where(and(eq(complaintsTable.id, id), eq(complaintsTable.status, "open")))
-    .returning();
-  return updated;
-}
-
-export function findOpenComplaintForService(serviceId: number) {
+// One complaint per original line, lifetime (ADR-0013 amendment).
+export function findComplaintForService(serviceId: number) {
   return db.query.complaintsTable.findFirst({
-    where: { order_service_id: serviceId, status: "open" },
+    where: { order_service_id: serviceId },
   });
 }
 
@@ -123,7 +108,6 @@ export function findComplaintDetailById(id: number) {
         orderBy: { id: "asc" },
       },
       openedBy: { columns: { id: true, name: true } },
-      closedBy: { columns: { id: true, name: true } },
     },
   });
 }
@@ -134,9 +118,6 @@ function buildComplaintListFilters(
 ) {
   const search = normalized.search;
   return and(
-    normalized.status
-      ? eq(complaintsTable.status, normalized.status)
-      : undefined,
     normalized.store_id
       ? eq(ordersTable.store_id, normalized.store_id)
       : undefined,
@@ -161,12 +142,12 @@ export async function findComplaints(
     db
       .select({
         id: complaintsTable.id,
-        status: complaintsTable.status,
-        resolution: complaintsTable.resolution,
         reason: complaintsTable.reason,
-        voucher_promised: complaintsTable.voucher_promised,
         created_at: complaintsTable.created_at,
-        closed_at: complaintsTable.closed_at,
+        // Outcome is derived from the lines (ADR-0013 amendment): the subject
+        // line's status (refunded?) plus whether any rework line points back.
+        subject_status: ordersServicesTable.status,
+        rework_count: sql<number>`(SELECT count(*)::int FROM orders_services rw WHERE rw.complaint_id = ${complaintsTable.id})`,
         order_id: ordersTable.id,
         order_code: ordersTable.code,
         store_id: ordersTable.store_id,

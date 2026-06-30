@@ -207,16 +207,6 @@ export const cancelReasonEnum = pgEnum("cancel_reason_enum", [
   "duplicate_order",
   "other",
 ]);
-export const complaintStatusEnum = pgEnum("complaint_status_enum", [
-  "open",
-  "closed",
-]);
-export const complaintResolutionEnum = pgEnum("complaint_resolution_enum", [
-  "rework",
-  "refund",
-  "rejected",
-]);
-
 export const campaignsTable = pgTable(
   "campaigns",
   {
@@ -616,8 +606,6 @@ export const ordersServicesTable = pgTable(
 export const complaintsTable = pgTable(
   "complaints",
   {
-    closed_at: timestamp("closed_at"),
-    closed_by: integer("closed_by").references(() => usersTable.id),
     created_at: timestamp("created_at").defaultNow().notNull(),
     id: integer().primaryKey().generatedAlwaysAsIdentity(),
     opened_by: integer("opened_by")
@@ -629,28 +617,12 @@ export const complaintsTable = pgTable(
       })
       .notNull(),
     reason: text("reason").notNull(),
-    resolution: complaintResolutionEnum("resolution"),
-    resolution_note: text("resolution_note"),
-    status: complaintStatusEnum("status").default("open").notNull(),
-    updated_at: timestamp("updated_at")
-      .defaultNow()
-      .notNull()
-      .$onUpdate(() => new Date()),
-    voucher_promised: boolean("voucher_promised").default(false).notNull(),
   },
   (table) => [
-    index("complaints_order_service_idx").on(table.order_service_id),
-    index("complaints_status_idx").on(table.status),
     index("complaints_opened_by_idx").on(table.opened_by),
-    // At most one OPEN complaint per complained line.
-    uniqueIndex("complaints_one_open_per_service_uidx")
-      .on(table.order_service_id)
-      .where(sql`${table.status} = 'open'`),
-    // A closed complaint must record how it resolved.
-    check(
-      "complaints_closed_requires_resolution_check",
-      sql`${table.status} != 'closed' OR ${table.resolution} IS NOT NULL`
-    ),
+    // One Complaint per original line, lifetime (ADR-0013 amendment). The
+    // outcome is derived from the lines, not stored — so there is no status.
+    uniqueIndex("complaints_order_service_uidx").on(table.order_service_id),
   ]
 );
 
