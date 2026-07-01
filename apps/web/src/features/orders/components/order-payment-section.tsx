@@ -71,6 +71,12 @@ const PaidDetails = ({ detail }: { detail: OrderDetail }) => (
 				<dd className="tabular-nums">{formatOrderDateTime(detail.paid_at)}</dd>
 			</div>
 		) : null}
+		{detail.paidBy ? (
+			<div className="flex items-center justify-between gap-4">
+				<dt className="text-muted-foreground">Marked by</dt>
+				<dd className="font-medium">{detail.paidBy.name}</dd>
+			</div>
+		) : null}
 	</dl>
 );
 

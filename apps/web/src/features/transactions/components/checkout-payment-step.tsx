@@ -13,6 +13,7 @@ import {
 	FieldSet,
 } from "@/components/ui/field";
 import type { TransactionDraftValues } from "@/features/transactions/cart/cart";
+import { VoucherCodeEntry } from "@/features/transactions/components/voucher-code-entry";
 import { useCheckoutPricing } from "@/features/transactions/hooks/useCheckoutPricing";
 import { useTransactionsPageContext } from "@/features/transactions/lib/transactions-context";
 import type { Campaign } from "@/lib/api";
@@ -22,6 +23,7 @@ import {
 } from "@/lib/query-options";
 import { cn } from "@/lib/utils";
 import { formatIDRCurrency } from "@/shared/utils";
+import { useTransactionsPageStore } from "@/stores/transactions-store";
 
 // Step ③ — money, kept together: campaign, manual discount, the running total
 // breakdown, and tender. Campaign eligibility ("Usable") and the discount it
@@ -30,6 +32,9 @@ export const CheckoutPaymentStep = () => {
 	const { visibleStores } = useTransactionsPageContext();
 	const { subtotal, pricing } = useCheckoutPricing();
 	const form = useFormContext<TransactionDraftValues>();
+	const resolvedVoucherEntries = useTransactionsPageStore(
+		(s) => s.resolvedVoucherEntries,
+	);
 	const selectedStoreId =
 		useWatch({ control: form.control, name: "selectedStoreId" }) ?? "";
 
@@ -62,6 +67,8 @@ export const CheckoutPaymentStep = () => {
 
 	// Only campaigns whose rules pass for the current store + cart total. Same
 	// eligibility filter the old picker used — ineligible ones are hidden.
+	// Voucher (code-mode) campaigns are entered by code, never listed as tiles —
+	// the server already omits them, but filter defensively so one can't leak in.
 	const eligibleCampaigns = useMemo(() => {
 		if (selectedStoreNumber === undefined) {
 			return [];
@@ -69,6 +76,7 @@ export const CheckoutPaymentStep = () => {
 		const now = new Date();
 		return (campaignsQuery.data ?? []).filter(
 			(campaign) =>
+				campaign.redemption_mode !== "code" &&
 				campaignIneligibilityReason(campaign, {
 					now,
 					grossTotal: subtotal,
@@ -93,6 +101,21 @@ export const CheckoutPaymentStep = () => {
 		}
 	}, [eligibleCampaigns, selectedStoreNumber, campaignsQuery.isPending, form]);
 
+	// Applied vouchers live in the store (they drive the price preview via
+	// useCheckoutPricing). Mirror their codes into the form field so
+	// toOrderPayload submits exactly the codes the preview priced — the store is
+	// the single source of truth and the form field is its submit-time mirror.
+	useEffect(() => {
+		const codes = resolvedVoucherEntries.map((entry) => entry.code);
+		const current = form.getValues("appliedVoucherCodes");
+		if (
+			codes.length !== current.length ||
+			codes.some((code, index) => code !== current[index])
+		) {
+			form.setValue("appliedVoucherCodes", codes, { shouldValidate: true });
+		}
+	}, [resolvedVoucherEntries, form]);
+
 	return (
 		<div className="grid gap-5">
 			<Controller
@@ -112,6 +135,10 @@ export const CheckoutPaymentStep = () => {
 								)
 							}
 							selectedIds={field.value}
+						/>
+						<VoucherCodeEntry
+							storeId={selectedStoreNumber}
+							subtotal={subtotal}
 						/>
 						<FieldError errors={[fieldState.error]} />
 					</FieldSet>
