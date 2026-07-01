@@ -202,4 +202,12 @@ describe("toOrderPayload", () => {
 		expect(payload.payment_status).toBe("paid");
 		expect(payload.discount).toBe("2500");
 	});
+
+	test("carries applied voucher codes into voucher_codes, trimmed", () => {
+		const payload = toOrderPayload({
+			...draft,
+			appliedVoucherCodes: ["  ABC123DE  ", "XYZ789FG"],
+		});
+		expect(payload.voucher_codes).toEqual(["ABC123DE", "XYZ789FG"]);
+	});
 });
