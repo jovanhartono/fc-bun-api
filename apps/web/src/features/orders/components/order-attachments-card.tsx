@@ -3,11 +3,12 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { OrderSectionHeader } from "@/features/orders/components/order-section-header";
 import {
-	PhotoLightbox,
-	type PhotoLightboxItem,
-} from "@/features/orders/components/photo-lightbox";
+	OrderPhotoGallery,
+	type OrderPhotoGalleryItem,
+} from "@/features/orders/components/order-photo-gallery";
+import { OrderSectionHeader } from "@/features/orders/components/order-section-header";
+import { PhotoLightbox } from "@/features/orders/components/photo-lightbox";
 import { SinglePhotoUploadDialog } from "@/features/orders/components/photo-upload-dialog";
 import { formatOrderDateTime } from "@/features/orders/lib/format";
 import { uploadOrderDropoffPhoto } from "@/features/orders/utils/photo-upload";
@@ -95,7 +96,12 @@ const DropoffAttachment = ({
 						/>
 					</button>
 				</div>
-			) : null}
+			) : (
+				<div className="flex aspect-16/10 flex-col items-center justify-center gap-2 border bg-muted px-6 text-center text-muted-foreground">
+					<CameraIcon className="size-8 opacity-50" />
+					<p className="text-sm">No drop-off photo yet</p>
+				</div>
+			)}
 
 			{order.dropoff_photo_uploaded_at ? (
 				<p className="text-muted-foreground text-xs">
@@ -148,91 +154,41 @@ const PickupsAttachment = ({
 }: {
 	pickupEvents: PickupEvent[];
 }) => {
-	const [previewIndex, setPreviewIndex] = useState<number | null>(null);
-
-	const eventsWithImage = pickupEvents.filter((event) =>
-		Boolean(event.image_url),
-	);
-
-	const lightboxItems: PhotoLightboxItem[] = eventsWithImage.map((event) => {
-		const pickedUpAt = formatOrderDateTime(event.picked_up_at);
-		const pickedUpBy = event.picked_up_by?.name ?? "unknown operator";
-		return {
-			alt: `Pickup on ${pickedUpAt} by ${pickedUpBy}`,
-			created_at: event.picked_up_at,
-			id: `pickup-${event.id}`,
-			image_url: event.image_url ?? "",
-			primaryLabel: `Pickup · ${pickedUpBy}`,
-		};
-	});
-
-	const openPreview = (eventId: number) => {
-		const index = eventsWithImage.findIndex((event) => event.id === eventId);
-		if (index >= 0) {
-			setPreviewIndex(index);
-		}
-	};
+	// Pickup photos are required at capture, so every event carries an image;
+	// the gallery owns the thumbnail grid + lightbox, the caption keeps the
+	// at-a-glance "when / by whom" audit trail this section is the only home for.
+	const items: OrderPhotoGalleryItem[] = pickupEvents
+		.filter((event) => Boolean(event.image_url))
+		.map((event) => {
+			const pickedUpAt = formatOrderDateTime(event.picked_up_at);
+			const pickedUpBy = event.picked_up_by?.name ?? "unknown operator";
+			return {
+				alt: `Pickup on ${pickedUpAt} by ${pickedUpBy}`,
+				caption: (
+					<div className="grid gap-0.5">
+						<p className="font-medium text-sm leading-tight">{pickedUpAt}</p>
+						<p className="text-muted-foreground text-xs">by {pickedUpBy}</p>
+					</div>
+				),
+				created_at: event.picked_up_at,
+				id: event.id,
+				image_url: event.image_url ?? "",
+				note: `Pickup · ${pickedUpBy}`,
+			};
+		});
 
 	return (
 		<section className="grid content-start gap-3">
 			<AttachmentLabel>Pickups</AttachmentLabel>
-
-			{pickupEvents.length > 0 ? (
-				<div className="grid grid-cols-2 gap-3">
-					{pickupEvents.map((event) => {
-						const pickedUpAt = formatOrderDateTime(event.picked_up_at);
-						const pickedUpBy = event.picked_up_by?.name ?? "unknown operator";
-
-						return (
-							<div className="grid gap-1.5 text-sm" key={event.id}>
-								{event.image_url ? (
-									<button
-										aria-label={`Open pickup photo from ${pickedUpAt}`}
-										className="block w-full focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring/50"
-										onClick={() => openPreview(event.id)}
-										type="button"
-									>
-										<img
-											alt={`Pickup on ${pickedUpAt} by ${pickedUpBy}`}
-											className="aspect-16/10 w-full border object-cover"
-											height={200}
-											loading="lazy"
-											src={event.image_url}
-											width={320}
-										/>
-									</button>
-								) : (
-									<div className="flex aspect-16/10 items-center justify-center border bg-muted text-muted-foreground text-xs">
-										No photo
-									</div>
-								)}
-								<div className="grid gap-0.5">
-									<p className="font-medium leading-tight">{pickedUpAt}</p>
-									<p className="text-muted-foreground text-xs">
-										by {pickedUpBy}
-									</p>
-								</div>
-							</div>
-						);
-					})}
-				</div>
-			) : (
-				<p className="text-muted-foreground text-sm">No pickups yet.</p>
-			)}
-
-			{lightboxItems.length > 0 ? (
-				<PhotoLightbox
-					initialIndex={previewIndex ?? 0}
-					items={lightboxItems}
-					onOpenChange={(open) => {
-						if (!open) {
-							setPreviewIndex(null);
-						}
-					}}
-					open={previewIndex !== null}
-					title="Pickup photo"
-				/>
-			) : null}
+			<OrderPhotoGallery
+				emptyState={
+					<p className="text-muted-foreground text-sm">No pickups yet.</p>
+				}
+				gridClassName="grid-cols-2 gap-3 sm:grid-cols-2"
+				items={items}
+				thumbnailImageClassName="aspect-16/10"
+				title="Pickup photo"
+			/>
 		</section>
 	);
 };

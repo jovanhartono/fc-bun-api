@@ -19,6 +19,7 @@ import { useOpenComplaintMutation } from "@/features/complaints/hooks/useComplai
 import { CancelOrderForm } from "@/features/orders/components/cancel-order-form";
 import { OrderCourierForm } from "@/features/orders/components/order-courier-form";
 import { OrderPickupEventDialog } from "@/features/orders/components/order-pickup-event-dialog";
+import { PaymentStatusBadge } from "@/features/orders/components/payment-status-badge";
 import { RefundOrderForm } from "@/features/orders/components/refund-order-form";
 import {
 	useCancelOrderMutation,
@@ -30,10 +31,8 @@ import type { OrderDetail } from "@/lib/api";
 import { formatOrderServiceItemDetails } from "@/lib/order-service-item-details";
 import {
 	formatOrderStatus,
-	formatPaymentStatus,
 	formatRefundStatus,
 	getOrderStatusBadgeVariant,
-	getPaymentStatusBadgeVariant,
 	getRefundStatusBadgeVariant,
 } from "@/lib/status";
 import { useDialog } from "@/stores/dialog-store";
@@ -229,11 +228,7 @@ export const OrderIdentityStrip = ({
 							<Badge variant={getOrderStatusBadgeVariant(detail.status)}>
 								{formatOrderStatus(detail.status)}
 							</Badge>
-							<Badge
-								variant={getPaymentStatusBadgeVariant(detail.payment_status)}
-							>
-								{formatPaymentStatus(detail.payment_status)}
-							</Badge>
+							<PaymentStatusBadge status={detail.payment_status} />
 							{detail.refund_status !== "none" ? (
 								<Badge
 									variant={getRefundStatusBadgeVariant(detail.refund_status)}
