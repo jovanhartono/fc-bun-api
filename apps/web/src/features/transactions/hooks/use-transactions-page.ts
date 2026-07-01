@@ -40,6 +40,7 @@ const transactionDraftSchema = z
 			.min(1, "Phone number is required.")
 			.refine(isValidPhoneNumber, "Invalid phone number"),
 		selectedCampaignIds: z.array(z.string()),
+		appliedVoucherCodes: z.array(z.string()),
 		selectedPaymentMethodId: z.string(),
 		selectedCourierId: z.string(),
 		manualDiscount: z
@@ -184,9 +185,13 @@ export function useTransactionsPageBootstrap(): TransactionsPageBootstrap {
 	});
 
 	const resetCart = useCallback(() => {
-		const { setSubmitError, setDropoffPhoto } =
+		const { setSubmitError, setDropoffPhoto, clearResolvedVouchers } =
 			useTransactionsPageStore.getState();
-		resetTransactionDraft(form, { setSubmitError, setDropoffPhoto });
+		resetTransactionDraft(form, {
+			setSubmitError,
+			setDropoffPhoto,
+			clearResolvedVouchers,
+		});
 	}, [form]);
 
 	const onValidSubmit = useCallback(
@@ -279,6 +284,7 @@ export function useTransactionsPageBootstrap(): TransactionsPageBootstrap {
 				shouldDirty: true,
 				shouldValidate: true,
 			});
+			useTransactionsPageStore.getState().clearResolvedVouchers();
 		},
 		[currentUserKey, form],
 	);
